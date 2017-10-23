@@ -98,7 +98,7 @@ public class INodeMap {
       
       @Override
       public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
-          List<INode> removedINodes) {
+          List<INode> removedINodes, List<Long> removedUCFiles) {
         // Nothing to do
       }
       
@@ -110,13 +110,14 @@ public class INodeMap {
       
       @Override
       public ContentSummaryComputationContext computeContentSummary(
-          ContentSummaryComputationContext summary) {
+          int snapshotId, ContentSummaryComputationContext summary) {
         return null;
       }
       
       @Override
       public Counts cleanSubtree(int snapshotId, int priorSnapshotId,
-          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
+          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
+          List<Long> removedUCFiles) {
         return null;
       }
 

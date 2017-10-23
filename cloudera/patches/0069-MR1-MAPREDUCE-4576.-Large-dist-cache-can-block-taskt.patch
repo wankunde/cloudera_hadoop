@@ -1,7 +1,7 @@
 From 332bc52cc06a553a551dfee5296c5d96b1decd3d Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 11 Sep 2012 14:34:27 +0000
-Subject: [PATCH 069/924] MR1: MAPREDUCE-4576. Large dist cache can block
+Subject: [PATCH 0069/2639] MR1: MAPREDUCE-4576. Large dist cache can block
  tasktracker heartbeat (Robert Evans via tgraves).
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1383430 13f79535-47bb-0310-9956-ffa450edef68

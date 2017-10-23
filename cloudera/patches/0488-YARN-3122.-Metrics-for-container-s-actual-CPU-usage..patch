@@ -1,8 +1,8 @@
 From b167c163780d82ca4600516a577e2ebdc4519a2e Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 4 Mar 2015 17:33:30 -0800
-Subject: [PATCH 488/924] YARN-3122. Metrics for container's actual CPU usage.
- (Anubhav Dhoot via kasha)
+Subject: [PATCH 0488/2639] YARN-3122. Metrics for container's actual CPU
+ usage. (Anubhav Dhoot via kasha)
 
 (cherry picked from commit 53947f37c7a84a84ef4ab1a3cab63ff27c078385)
 (cherry picked from commit 1749094fab45ff772d950af7a1a48b8a0adba778)

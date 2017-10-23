@@ -1,7 +1,7 @@
 From 706b1b0cdfd119df575afb576f40a369fde158e2 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Tue, 17 Feb 2015 14:38:00 -0800
-Subject: [PATCH 457/924] MAPREDUCE-6234. TestHighRamJob fails due to the
+Subject: [PATCH 0457/2639] MAPREDUCE-6234. TestHighRamJob fails due to the
  change in MAPREDUCE-5785. (Masatake Iwasaki via
  kasha)
 

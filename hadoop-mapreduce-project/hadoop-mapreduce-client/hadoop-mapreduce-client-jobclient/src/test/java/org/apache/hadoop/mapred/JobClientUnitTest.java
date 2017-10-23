@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -35,6 +36,7 @@ import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.junit.Assert;
@@ -52,6 +54,42 @@ public class JobClientUnitTest {
     void setCluster(Cluster cluster) {
       this.cluster = cluster;
     }
+
+  }
+
+  public class TestJobClientGetJob extends TestJobClient {
+
+    int lastGetJobRetriesCounter = 0;
+    int getJobRetriesCounter = 0;
+    int getJobRetries = 0;
+    RunningJob runningJob;
+
+    TestJobClientGetJob(JobConf jobConf) throws IOException {
+      super(jobConf);
+    }
+
+    public int getLastGetJobRetriesCounter() {
+      return lastGetJobRetriesCounter;
+    }
+
+    public void setGetJobRetries(int getJobRetries) {
+      this.getJobRetries = getJobRetries;
+    }
+
+    public void setRunningJob(RunningJob runningJob) {
+      this.runningJob = runningJob;
+    }
+
+    protected RunningJob getJobInner(final JobID jobid) throws IOException {
+      if (getJobRetriesCounter >= getJobRetries) {
+        lastGetJobRetriesCounter = getJobRetriesCounter;
+        getJobRetriesCounter = 0;
+        return runningJob;
+      }
+      getJobRetriesCounter++;
+      return null;
+    }
+
   }
 
   @Test
@@ -124,6 +162,7 @@ public class JobClientUnitTest {
 
     JobStatus mockJobStatus = mock(JobStatus.class);
     when(mockJobStatus.getJobID()).thenReturn(jobID);
+    when(mockJobStatus.getJobName()).thenReturn(jobID.toString());
     when(mockJobStatus.getState()).thenReturn(JobStatus.State.RUNNING);
     when(mockJobStatus.getStartTime()).thenReturn(startTime);
     when(mockJobStatus.getUsername()).thenReturn("mockuser");
@@ -178,6 +217,54 @@ public class JobClientUnitTest {
 
     when(mockCluster.getJob(id)).thenReturn(null);
 
+    assertNull(client.getJob(id));
+  }
+
+  @Test
+  public void testGetJobRetry() throws Exception {
+
+    //To prevent the test from running for a very long time, lower the retry
+    JobConf conf = new JobConf();
+    conf.setInt(MRJobConfig.MR_CLIENT_JOB_MAX_RETRIES, 2);
+
+    TestJobClientGetJob client = new TestJobClientGetJob(conf);
+    JobID id = new JobID("ajob", 1);
+    RunningJob rj = mock(RunningJob.class);
+    client.setRunningJob(rj);
+
+    //no retry
+    assertNotNull(client.getJob(id));
+    assertEquals(client.getLastGetJobRetriesCounter(), 0);
+
+    //2 retries
+    client.setGetJobRetries(2);
+    assertNotNull(client.getJob(id));
+    assertEquals(client.getLastGetJobRetriesCounter(), 2);
+
+    //beyond yarn.app.mapreduce.client.job.max-retries, will get null
+    client.setGetJobRetries(3);
+    assertNull(client.getJob(id));
+  }
+
+  @Test
+  public void testGetJobRetryDefault() throws Exception {
+
+    //To prevent the test from running for a very long time, lower the retry
+    JobConf conf = new JobConf();
+
+    TestJobClientGetJob client = new TestJobClientGetJob(conf);
+    JobID id = new JobID("ajob", 1);
+    RunningJob rj = mock(RunningJob.class);
+    client.setRunningJob(rj);
+
+    //3 retries (default)
+    client.setGetJobRetries(MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
+    assertNotNull(client.getJob(id));
+    assertEquals(client.getLastGetJobRetriesCounter(),
+        MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
+
+    //beyond yarn.app.mapreduce.client.job.max-retries, will get null
+    client.setGetJobRetries(MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES + 1);
     assertNull(client.getJob(id));
   }
 

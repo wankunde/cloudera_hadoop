@@ -249,6 +249,8 @@ public final class HdfsServerConstants {
     /** Temporary replica: created for replication and relocation only. */
     TEMPORARY(4);
 
+    private static final ReplicaState[] cachedValues = ReplicaState.values();
+
     private final int value;
 
     private ReplicaState(int v) {
@@ -260,12 +262,12 @@ public final class HdfsServerConstants {
     }
 
     public static ReplicaState getState(int v) {
-      return ReplicaState.values()[v];
+      return cachedValues[v];
     }
 
     /** Read from in */
     public static ReplicaState read(DataInput in) throws IOException {
-      return values()[in.readByte()];
+      return cachedValues[in.readByte()];
     }
 
     /** Write to out */
@@ -307,7 +309,6 @@ public final class HdfsServerConstants {
   }
   
   public static final String NAMENODE_LEASE_HOLDER = "HDFS_NameNode";
-  public static final long NAMENODE_LEASE_RECHECK_INTERVAL = 2000;
 
   public static final String CRYPTO_XATTR_ENCRYPTION_ZONE =
       "raw.hdfs.crypto.encryption.zone";

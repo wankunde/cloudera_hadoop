@@ -33,7 +33,6 @@ import javax.net.ssl.SSLException;
 
 import org.junit.Assert;
 
-import org.apache.commons.httpclient.HttpStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.io.IOUtils;
@@ -57,6 +56,7 @@ import org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.http.HttpStatus;
 import org.junit.Test;
 
 import com.google.common.net.HttpHeaders;
@@ -247,9 +247,11 @@ public class TestAMWebApp {
       HttpURLConnection conn = (HttpURLConnection) httpUrl.openConnection();
       conn.setInstanceFollowRedirects(false);
       conn.connect();
-      String expectedURL =
-          scheme + conf.get(YarnConfiguration.PROXY_ADDRESS)
-              + ProxyUriUtils.getPath(app.getAppID(), "/mapreduce");
+
+      // Because we're not calling from the proxy's address, we'll be redirected
+      String expectedURL = scheme + conf.get(YarnConfiguration.PROXY_ADDRESS)
+          + ProxyUriUtils.getPath(app.getAppID(), "/mapreduce", true);
+
       Assert.assertEquals(expectedURL,
         conn.getHeaderField(HttpHeaders.LOCATION));
       Assert.assertEquals(HttpStatus.SC_MOVED_TEMPORARILY,

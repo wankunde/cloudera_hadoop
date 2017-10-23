@@ -1,7 +1,7 @@
 From 2f47dfb198ff2d731e193e24bbdea2eca35f052d Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 10 Oct 2014 13:03:29 -0700
-Subject: [PATCH 637/924] HDFS-7198. Fix "unchecked conversion" warning in
+Subject: [PATCH 0637/2639] HDFS-7198. Fix "unchecked conversion" warning in
  DFSClient#getPathTraceScope (cmccabe)
 
 (cherry picked from commit 1ceb3269337e321e352b7cd9f946c5c52dcfddfa)

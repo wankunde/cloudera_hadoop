@@ -1,7 +1,7 @@
 From 1cb00f4593bce677bfee7ad604bc8823b5b15162 Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Thu, 20 Aug 2015 08:02:54 -0700
-Subject: [PATCH 721/924] HDFS-8828. Utilize Snapshot diff report to build
+Subject: [PATCH 0721/2639] HDFS-8828. Utilize Snapshot diff report to build
  diff copy list in distcp. (Yufei Gu via Yongjun
  Zhang)
 

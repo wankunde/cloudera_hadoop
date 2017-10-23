@@ -1,7 +1,7 @@
 From af0538c494da8384306e6407e5a61c1142b04e8d Mon Sep 17 00:00:00 2001
 From: junping_du <junping_du@apache.org>
 Date: Thu, 2 Oct 2014 08:02:59 -0700
-Subject: [PATCH 355/924] YARN-1979. TestDirectoryCollection fails when the
+Subject: [PATCH 0355/2639] YARN-1979. TestDirectoryCollection fails when the
  umask is unusual. (Contributed by Vinod Kumar
  Vavilapalli and Tsuyoshi OZAWA)
 

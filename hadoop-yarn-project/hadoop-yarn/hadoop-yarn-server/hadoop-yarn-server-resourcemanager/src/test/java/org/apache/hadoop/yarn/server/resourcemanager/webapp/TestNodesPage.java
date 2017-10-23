@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodesPage.NodesBlock;
@@ -40,15 +39,14 @@ import com.google.inject.Module;
 public class TestNodesPage {
   
   final int numberOfRacks = 2;
-  final int numberOfNodesPerRack = 6;
+  final int numberOfNodesPerRack = 7;
   // The following is because of the way TestRMWebApp.mockRMContext creates
   // nodes.
-  final int numberOfLostNodesPerRack = numberOfNodesPerRack
-      / NodeState.values().length;
+  final int numberOfLostNodesPerRack = 1;
 
   // Number of Actual Table Headers for NodesPage.NodesBlock might change in
   // future. In that case this value should be adjusted to the new value.
-  final int numberOfThInMetricsTable = 16;
+  final int numberOfThInMetricsTable = 17;
   final int numberOfActualTableHeaders = 13;
 
   private Injector injector;
@@ -84,7 +82,7 @@ public class TestNodesPage {
         .print("<th");
     Mockito.verify(
         writer,
-        Mockito.times(numberOfRacks * numberOfNodesPerRack
+        Mockito.times(numberOfRacks * (numberOfNodesPerRack - 1)
             * numberOfActualTableHeaders + numberOfThInMetricsTable)).print(
         "<td");
   }

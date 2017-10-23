@@ -1,7 +1,7 @@
 From 333e45052e7d8d52dece3b51078a0b6a51082253 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 27 Aug 2014 12:25:07 -0700
-Subject: [PATCH 343/924] MAPREDUCE-6054. native-task: Speed up tests.
+Subject: [PATCH 0343/2639] MAPREDUCE-6054. native-task: Speed up tests.
  Contributed by Todd Lipcon.
 
 (cherry picked from commit bfd1d75d875b6ba261fdb1825d0f151b026c2d24)

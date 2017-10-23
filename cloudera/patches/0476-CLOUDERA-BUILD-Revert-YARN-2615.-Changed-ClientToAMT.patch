@@ -1,10 +1,10 @@
 From 67e9168a3f9369579f695db64b051d0f7f704c50 Mon Sep 17 00:00:00 2001
 From: Anubhav Dhoot <adhoot@cloudera.com>
 Date: Wed, 18 Feb 2015 05:23:06 -0800
-Subject: [PATCH 476/924] CLOUDERA-BUILD Revert "YARN-2615. Changed
+Subject: [PATCH 0476/2639] CLOUDERA-BUILD Revert "YARN-2615. Changed
  ClientToAMTokenIdentifier/RM(Timeline)DelegationTokenIdentifier
- to use protobuf as payload. Contributed by Junping
- Du"
+ to use protobuf as payload. Contributed by
+ Junping Du"
 
 This reverts commit 73a1b7722360ab9ced57ba5e27d09169b06b75d4.
 

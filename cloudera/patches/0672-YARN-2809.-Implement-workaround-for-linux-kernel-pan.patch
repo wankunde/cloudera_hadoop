@@ -1,7 +1,7 @@
 From e203ea778429842e4f6f4c4bc4ed9d8fde586192 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Tue, 10 Feb 2015 17:27:21 +0000
-Subject: [PATCH 672/924] YARN-2809. Implement workaround for linux kernel
+Subject: [PATCH 0672/2639] YARN-2809. Implement workaround for linux kernel
  panic when removing cgroup. Contributed by Nathan
  Roberts (cherry picked from commit
  3f5431a22fcef7e3eb9aceeefe324e5b7ac84049)

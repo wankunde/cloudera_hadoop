@@ -1,7 +1,7 @@
 From 4f56f893759aa8d9eb100706fdb6d8d3d24e62d3 Mon Sep 17 00:00:00 2001
 From: Vinod Kumar Vavilapalli <vinodkv@apache.org>
 Date: Wed, 22 Apr 2015 17:26:13 -0700
-Subject: [PATCH 674/924] YARN-3366. Enhanced NodeManager to support
+Subject: [PATCH 0674/2639] YARN-3366. Enhanced NodeManager to support
  classifying/shaping outgoing network bandwidth
  traffic originating from YARN containers
  Contributed by Sidharta Seethana.

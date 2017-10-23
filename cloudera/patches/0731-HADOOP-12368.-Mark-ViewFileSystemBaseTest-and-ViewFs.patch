@@ -1,7 +1,7 @@
-From e0f18312807638af2308ce586e6cdd6ee0ecaeb0 Mon Sep 17 00:00:00 2001
+From 6ba9a600a709897ebbf41437d8428a7bc545c302 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Mon, 31 Aug 2015 18:17:14 -0700
-Subject: [PATCH 731/924] HADOOP-12368. Mark ViewFileSystemBaseTest and
+Subject: [PATCH 0731/2639] HADOOP-12368. Mark ViewFileSystemBaseTest and
  ViewFsBaseTest as abstract.
 
 (cherry picked from commit 7ad3556ed38560585579172aa68356f37b2288c8)

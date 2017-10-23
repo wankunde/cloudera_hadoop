@@ -1,7 +1,7 @@
 From 57971678e0d2905547e2abcec6b842d9be1833f1 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Tue, 4 Nov 2014 10:27:41 -0800
-Subject: [PATCH 227/924] HADOOP-11165. TestUTF8 fails when run against java
+Subject: [PATCH 0227/2639] HADOOP-11165. TestUTF8 fails when run against java
  8. Contributed by Stephen Chu.
 
 (cherry picked from commit 85da71c2d3c565a8920e47fe3925e8e0bef353a5)

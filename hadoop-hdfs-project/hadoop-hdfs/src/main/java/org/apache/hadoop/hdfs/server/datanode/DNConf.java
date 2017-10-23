@@ -50,6 +50,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_RESTART_REPLICA_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_RESTART_REPLICA_EXPIRY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BP_READY_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BP_READY_TIMEOUT_DEFAULT;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -68,7 +70,10 @@ public class DNConf {
   final int socketTimeout;
   final int socketWriteTimeout;
   final int socketKeepaliveTimeout;
-  
+  private final int transferSocketSendBufferSize;
+  private final int transferSocketRecvBufferSize;
+  private final boolean tcpNoDelay;
+
   final boolean transferToAllowed;
   final boolean dropCacheBehindWrites;
   final boolean syncBehindWrites;
@@ -82,6 +87,7 @@ public class DNConf {
   final long heartBeatInterval;
   final long blockReportInterval;
   final long blockReportSplitThreshold;
+  final long ibrInterval;
   final long initialBlockReportDelayMs;
   final long cacheReportInterval;
   final long dfsclientSlowIoWarningThresholdMs;
@@ -99,6 +105,8 @@ public class DNConf {
 
   final long maxLockedMemory;
 
+  private final long bpReadyTimeout;
+
   public DNConf(Configuration conf) {
     this.conf = conf;
     socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
@@ -108,8 +116,17 @@ public class DNConf {
     socketKeepaliveTimeout = conf.getInt(
         DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY,
         DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT);
-    
-    /* Based on results on different platforms, we might need set the default 
+    this.transferSocketSendBufferSize = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_KEY,
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_DEFAULT);
+    this.transferSocketRecvBufferSize = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_KEY,
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT);
+    this.tcpNoDelay = conf.getBoolean(
+        DFSConfigKeys.DFS_DATA_TRANSFER_SERVER_TCPNODELAY,
+        DFSConfigKeys.DFS_DATA_TRANSFER_SERVER_TCPNODELAY_DEFAULT);
+
+    /* Based on results on different platforms, we might need set the default
      * to false on some of them. */
     transferToAllowed = conf.getBoolean(
         DFS_DATANODE_TRANSFERTO_ALLOWED_KEY,
@@ -138,6 +155,9 @@ public class DNConf {
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
     this.blockReportInterval = conf.getLong(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
         DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT);
+    this.ibrInterval = conf.getLong(
+        DFSConfigKeys.DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_KEY,
+        DFSConfigKeys.DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_DEFAULT);
     this.blockReportSplitThreshold = conf.getLong(DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY,
                                             DFS_BLOCKREPORT_SPLIT_THRESHOLD_DEFAULT);
     this.cacheReportInterval = conf.getLong(DFS_CACHEREPORT_INTERVAL_MSEC_KEY,
@@ -191,6 +211,10 @@ public class DNConf {
     this.restartReplicaExpiry = conf.getLong(
         DFS_DATANODE_RESTART_REPLICA_EXPIRY_KEY,
         DFS_DATANODE_RESTART_REPLICA_EXPIRY_DEFAULT) * 1000L;
+
+    this.bpReadyTimeout = conf.getLong(
+        DFS_DATANODE_BP_READY_TIMEOUT_KEY,
+        DFS_DATANODE_BP_READY_TIMEOUT_DEFAULT);
   }
 
   // We get minimumNameNodeVersion via a method so it can be mocked out in tests.
@@ -263,5 +287,21 @@ public class DNConf {
    */
   public boolean getIgnoreSecurePortsForTesting() {
     return ignoreSecurePortsForTesting;
+  }
+
+  public long getBpReadyTimeout() {
+    return bpReadyTimeout;
+  }
+
+  public int getTransferSocketRecvBufferSize() {
+    return transferSocketRecvBufferSize;
+  }
+
+  public int getTransferSocketSendBufferSize() {
+    return transferSocketSendBufferSize;
+  }
+
+  public boolean getDataTransferServerTcpNoDelay() {
+    return tcpNoDelay;
   }
 }

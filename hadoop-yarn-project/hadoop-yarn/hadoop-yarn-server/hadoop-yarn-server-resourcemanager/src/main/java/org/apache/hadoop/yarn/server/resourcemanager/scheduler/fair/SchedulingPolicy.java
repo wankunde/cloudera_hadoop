@@ -96,8 +96,25 @@ public abstract class SchedulingPolicy {
     }
     return getInstance(clazz);
   }
-  
+
+  /**
+   * Initialize the scheduling policy with cluster resources.
+   * @deprecated  Since it doesn't track cluster resource changes, replaced by
+   * {@link #initialize(FSContext)}.
+   *
+   * @param clusterCapacity cluster resources
+   */
+  @Deprecated
   public void initialize(Resource clusterCapacity) {}
+
+  /**
+   * Initialize the scheduling policy with a {@link FSContext} object, which has
+   * a pointer to the cluster resources among other information.
+   *
+   * @param fsContext a {@link FSContext} object which has a pointer to the
+   *                  cluster resources
+   */
+  public void initialize(FSContext fsContext) {}
 
   /**
    * The {@link ResourceCalculator} returned by this method should be used
@@ -175,17 +192,6 @@ public abstract class SchedulingPolicy {
    */
   public abstract boolean checkIfUsageOverFairShare(
       Resource usage, Resource fairShare);
-
-  /**
-   * Check if a leaf queue's AM resource usage over its limit under this policy
-   *
-   * @param usage {@link Resource} the resource used by application masters
-   * @param maxAMResource {@link Resource} the maximum allowed resource for
-   *                                      application masters
-   * @return true if AM resource usage is over the limit
-   */
-  public abstract boolean checkIfAMResourceUsageOverLimit(
-      Resource usage, Resource maxAMResource);
 
   /**
    * Get headroom by calculating the min of <code>clusterAvailable</code> and

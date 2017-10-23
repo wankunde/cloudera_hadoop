@@ -1,7 +1,7 @@
 From 95ae070e409f5acaca0eaf90a8b8e69631d68d69 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 20 Oct 2014 18:24:53 -0700
-Subject: [PATCH 208/924] HDFS-7266. HDFS Peercache enabled check should not
+Subject: [PATCH 0208/2639] HDFS-7266. HDFS Peercache enabled check should not
  lock on object (awang via cmccabe)
 
 (cherry picked from commit 4799570dfdb7987c2ac39716143341e9a3d9b7d2)

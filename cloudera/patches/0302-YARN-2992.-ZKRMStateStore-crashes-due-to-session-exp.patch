@@ -1,7 +1,7 @@
 From f13f7de6d176f975b0a4fefbe9a1f34e8afd2013 Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Fri, 26 Dec 2014 17:59:58 -0800
-Subject: [PATCH 302/924] YARN-2992. ZKRMStateStore crashes due to session
+Subject: [PATCH 0302/2639] YARN-2992. ZKRMStateStore crashes due to session
  expiry. Contributed by Karthik Kambatla (cherry
  picked from commit
  1454efe5d4fe4214ec5ef9142d55dbeca7dab953)

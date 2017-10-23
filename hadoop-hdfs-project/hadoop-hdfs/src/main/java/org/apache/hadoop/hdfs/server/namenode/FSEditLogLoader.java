@@ -28,6 +28,7 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -368,7 +370,7 @@ public class FSEditLogLoader {
             replication, addCloseOp.mtime, addCloseOp.atime,
             addCloseOp.blockSize, true, addCloseOp.clientName,
             addCloseOp.clientMachine, addCloseOp.storagePolicyId);
-        fsNamesys.leaseManager.addLease(addCloseOp.clientName, path);
+        fsNamesys.leaseManager.addLease(addCloseOp.clientName, newFile.getId());
 
         // add the op into retry cache if necessary
         if (toAddRetryCache) {
@@ -393,8 +395,12 @@ public class FSEditLogLoader {
           
           // add the op into retry cache is necessary
           if (toAddRetryCache) {
+            HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
+                HdfsFileStatus.EMPTY_NAME, newFile,
+                BlockStoragePolicySuite.ID_UNSPECIFIED,
+                Snapshot.CURRENT_STATE_ID, false, iip);
             fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
-                addCloseOp.rpcCallId, lb);
+                addCloseOp.rpcCallId, new LastBlockWithStatus(lb, stat));
           }
         }
       }
@@ -403,7 +409,7 @@ public class FSEditLogLoader {
       // update the block list.
       
       // Update the salient file attributes.
-      newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
+      newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID, false);
       newFile.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       updateBlocks(fsDir, addCloseOp, newFile);
       break;
@@ -423,7 +429,7 @@ public class FSEditLogLoader {
       final INodeFile file = INodeFile.valueOf(iip.getINode(0), path);
 
       // Update the salient file attributes.
-      file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
+      file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID, false);
       file.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       updateBlocks(fsDir, addCloseOp, file);
 
@@ -437,9 +443,9 @@ public class FSEditLogLoader {
             "File is not under construction: " + path);
       }
       // One might expect that you could use removeLease(holder, path) here,
-      // but OP_CLOSE doesn't serialize the holder. So, remove by path.
+      // but OP_CLOSE doesn't serialize the holder. So, remove the inode.
       if (file.isUnderConstruction()) {
-        fsNamesys.leaseManager.removeLeaseWithPrefixPath(path);
+        fsNamesys.leaseManager.removeLeases(Lists.newArrayList(file.getId()));
         file.toCompleteFile(file.getModificationTime());
       }
       break;
@@ -649,8 +655,8 @@ public class FSEditLogLoader {
           renameReservedPathsOnUpgrade(reassignLeaseOp.path, logVersion);
       INodeFile pendingFile = fsDir.getINode(path).asFile();
       Preconditions.checkState(pendingFile.isUnderConstruction());
-      fsNamesys.reassignLeaseInternal(lease,
-          path, reassignLeaseOp.newHolder, pendingFile);
+      fsNamesys.reassignLeaseInternal(lease, reassignLeaseOp.newHolder,
+          pendingFile);
       break;
     }
     case OP_START_LOG_SEGMENT:
@@ -664,6 +670,7 @@ public class FSEditLogLoader {
           renameReservedPathsOnUpgrade(createSnapshotOp.snapshotRoot,
               logVersion);
       String path = fsNamesys.getSnapshotManager().createSnapshot(
+          fsDir.getFSNamesystem().getLeaseManager(),
           snapshotRoot, createSnapshotOp.snapshotName);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntryWithPayload(createSnapshotOp.rpcClientId,
@@ -685,7 +692,7 @@ public class FSEditLogLoader {
       collectedBlocks.clear();
       fsNamesys.dir.removeFromInodeMap(removedINodes);
       removedINodes.clear();
-      
+
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(deleteSnapshotOp.rpcClientId,
             deleteSnapshotOp.rpcCallId);

@@ -1,7 +1,7 @@
 From 4b6de668f0abd0de35206039aea580684ee2f019 Mon Sep 17 00:00:00 2001
 From: Brandon Li <brandonli@apache.org>
 Date: Mon, 17 Nov 2014 13:16:43 -0800
-Subject: [PATCH 270/924] HDFS-7146. NFS ID/Group lookup requires SSSD
+Subject: [PATCH 0270/2639] HDFS-7146. NFS ID/Group lookup requires SSSD
  enumeration on the server. Contributed by Yongjun
  Zhang
 

@@ -19,6 +19,8 @@
 package org.apache.hadoop.security.token;
 
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Bytes;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +34,7 @@ import java.io.*;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.UUID;
 
 /**
  * The client-side form of the token.
@@ -70,10 +73,10 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @param service the service for this token
    */
   public Token(byte[] identifier, byte[] password, Text kind, Text service) {
-    this.identifier = identifier;
-    this.password = password;
-    this.kind = kind;
-    this.service = service;
+    this.identifier = (identifier == null)? new byte[0] : identifier;
+    this.password = (password == null)? new byte[0] : password;
+    this.kind = (kind == null)? new Text() : kind;
+    this.service = (service == null)? new Text() : service;
   }
 
   /**
@@ -91,10 +94,10 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @param other the token to clone
    */
   public Token(Token<T> other) {
-    this.identifier = other.identifier;
-    this.password = other.password;
-    this.kind = other.kind;
-    this.service = other.service;
+    this.identifier = other.identifier.clone();
+    this.password = other.password.clone();
+    this.kind = new Text(other.kind);
+    this.service = new Text(other.service);
   }
 
   /**
@@ -118,7 +121,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
       cls = tokenKindMap.get(kind);
     }
     if (cls == null) {
-      LOG.warn("Cannot find class for token kind " + kind);
+      LOG.debug("Cannot find class for token kind " + kind);
       return null;
     }
     return cls;
@@ -195,8 +198,37 @@ public class Token<T extends TokenIdentifier> implements Writable {
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static class PrivateToken<T extends TokenIdentifier> extends Token<T> {
+    final private Text publicService;
+
     public PrivateToken(Token<T> token) {
       super(token);
+      publicService = new Text(token.getService());
+    }
+
+    public Text getPublicService() {
+      return publicService;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      if (!super.equals(o)) {
+        return false;
+      }
+      PrivateToken<?> that = (PrivateToken<?>) o;
+      return publicService.equals(that.publicService);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = super.hashCode();
+      result = 31 * result + publicService.hashCode();
+      return result;
     }
   }
 
@@ -337,7 +369,12 @@ public class Token<T extends TokenIdentifier> implements Writable {
     identifierToString(buffer);
     return buffer.toString();
   }
-  
+
+  public String buildCacheKey() {
+    return UUID.nameUUIDFromBytes(
+        Bytes.concat(kind.getBytes(), identifier, password)).toString();
+  }
+
   private static ServiceLoader<TokenRenewer> renewers =
       ServiceLoader.load(TokenRenewer.class);
 

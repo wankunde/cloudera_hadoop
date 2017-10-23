@@ -1,7 +1,7 @@
 From 1278a456f994f3e10beebccc5e8375cc2197c5f3 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 24 Jul 2014 08:24:05 +0000
-Subject: [PATCH 331/924] MAPREDUCE-6000. native-task: Simplify
+Subject: [PATCH 0331/2639] MAPREDUCE-6000. native-task: Simplify
  ByteBufferDataReader/Writer. Contributed by Todd
  Lipcon.
 

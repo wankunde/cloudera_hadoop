@@ -1,8 +1,8 @@
 From 4788537750e2023bbe840a58202e9e8fd8d35280 Mon Sep 17 00:00:00 2001
 From: Allen Wittenauer <aw@apache.org>
 Date: Thu, 15 Jan 2015 11:56:16 -0800
-Subject: [PATCH 662/924] HADOOP-8989. hadoop fs -find feature (Jonathan Allen
- via aw) (cherry picked from commit
+Subject: [PATCH 0662/2639] HADOOP-8989. hadoop fs -find feature (Jonathan
+ Allen via aw) (cherry picked from commit
  c060d60a4016afe71ba7650b92733c3089ba973c)
 
 ---

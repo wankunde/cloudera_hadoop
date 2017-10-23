@@ -1,8 +1,9 @@
 From 930b870b0ed8cb64979d772d60c342805256e370 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Wed, 25 Feb 2015 21:15:44 -0800
-Subject: [PATCH 402/924] HADOOP-11620. Add support for load balancing across
- a group of KMS for HA. Contributed by Arun Suresh.
+Subject: [PATCH 0402/2639] HADOOP-11620. Add support for load balancing
+ across a group of KMS for HA. Contributed by Arun
+ Suresh.
 
 (cherry picked from commit 71385f9b70e22618db3f3d2b2c6dca3b1e82c317)
 

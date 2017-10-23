@@ -35,6 +35,7 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -105,7 +106,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   private final DecimalFormat mbpsFormat = new DecimalFormat("0.00");
 
   private final boolean reportReadErrorImmediately;
-  private long maxDelay = MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY;
+  private long maxPenalty = MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY;
   private int maxHostFailures;
 
   public ShuffleSchedulerImpl(JobConf job, TaskStatus status,
@@ -136,7 +137,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     this.reportReadErrorImmediately = job.getBoolean(
         MRJobConfig.SHUFFLE_NOTIFY_READERROR, true);
 
-    this.maxDelay = job.getLong(MRJobConfig.MAX_SHUFFLE_FETCH_RETRY_DELAY,
+    this.maxPenalty = job.getLong(MRJobConfig.MAX_SHUFFLE_FETCH_RETRY_DELAY,
         MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY);
     this.maxHostFailures = job.getInt(
         MRJobConfig.MAX_SHUFFLE_FETCH_HOST_FAILURES,
@@ -252,9 +253,26 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     }
   }
 
+  @VisibleForTesting
+  synchronized int hostFailureCount(String hostname) {
+    int failures = 0;
+    if (hostFailures.containsKey(hostname)) {
+      failures = hostFailures.get(hostname).get();
+    }
+    return failures;
+  }
+
+  @VisibleForTesting
+  synchronized int fetchFailureCount(TaskAttemptID mapId) {
+    int failures = 0;
+    if (failureCounts.containsKey(mapId)) {
+      failures = failureCounts.get(mapId).get();
+    }
+    return failures;
+  }
+
   public synchronized void copyFailed(TaskAttemptID mapId, MapHost host,
       boolean readError, boolean connectExcpt) {
-    host.penalize();
     int failures = 1;
     if (failureCounts.containsKey(mapId)) {
       IntWritable x = failureCounts.get(mapId);
@@ -283,21 +301,29 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       }
     }
 
-    checkAndInformJobTracker(failures, mapId, readError, connectExcpt, hostFail);
+    checkAndInformMRAppMaster(failures, mapId, readError, connectExcpt,
+        hostFail);
 
     checkReducerHealth();
 
     long delay = (long) (INITIAL_PENALTY *
         Math.pow(PENALTY_GROWTH_RATE, failures));
-    if (delay > maxDelay) {
-      delay = maxDelay;
-    }
-
-    penalties.add(new Penalty(host, delay));
+    penalize(host, Math.min(delay, maxPenalty));
 
     failedShuffleCounter.increment(1);
   }
-  
+
+  /**
+   * Ask the shuffle scheduler to penalize a given host for a given amount
+   * of time before it reassigns a new fetcher to fetch from the host.
+   * @param host The host to penalize.
+   * @param delay The time to wait for before retrying
+   */
+  void penalize(MapHost host, long delay) {
+    host.penalize();
+    penalties.add(new Penalty(host, delay));
+  }
+
   public void reportLocalError(IOException ioe) {
     try {
       LOG.error("Shuffle failed : local error on this node: "
@@ -308,15 +334,15 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     reporter.reportException(ioe);
   }
 
-  // Notify the JobTracker
+  // Notify the MRAppMaster
   // after every read error, if 'reportReadErrorImmediately' is true or
   // after every 'maxFetchFailuresBeforeReporting' failures
-  private void checkAndInformJobTracker(
+  private void checkAndInformMRAppMaster(
       int failures, TaskAttemptID mapId, boolean readError,
       boolean connectExcpt, boolean hostFailed) {
     if (connectExcpt || (reportReadErrorImmediately && readError)
         || ((failures % maxFetchFailuresBeforeReporting) == 0) || hostFailed) {
-      LOG.info("Reporting fetch failure for " + mapId + " to jobtracker.");
+      LOG.info("Reporting fetch failure for " + mapId + " to MRAppMaster.");
       status.addFetchFailedMap((org.apache.hadoop.mapred.TaskAttemptID) mapId);
     }
   }
@@ -407,25 +433,29 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
 
   public synchronized MapHost getHost() throws InterruptedException {
-      while(pendingHosts.isEmpty()) {
-        wait();
-      }
+    while(pendingHosts.isEmpty()) {
+      wait();
+    }
 
-      MapHost host = null;
-      Iterator<MapHost> iter = pendingHosts.iterator();
-      int numToPick = random.nextInt(pendingHosts.size());
-      for (int i=0; i <= numToPick; ++i) {
-        host = iter.next();
-      }
+    Iterator<MapHost> iter = pendingHosts.iterator();
+    // Safe to take one because we know pendingHosts isn't empty
+    MapHost host = iter.next();
+    int numToPick = random.nextInt(pendingHosts.size());
+    for (int i = 0; i < numToPick; ++i) {
+      host = iter.next();
+    }
 
-      pendingHosts.remove(host);
-      host.markBusy();
+    pendingHosts.remove(host);
+    host.markBusy();
 
-      LOG.info("Assigning " + host + " with " + host.getNumKnownMapOutputs() +
-               " to " + Thread.currentThread().getName());
-      SHUFFLE_START.set(Time.monotonicNow());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "Assigning " + host + " with " + host.getNumKnownMapOutputs() + " to "
+              + Thread.currentThread().getName());
+    }
+    SHUFFLE_START.set(Time.monotonicNow());
 
-      return host;
+    return host;
   }
 
   public synchronized List<TaskAttemptID> getMapsForHost(MapHost host) {
@@ -451,8 +481,10 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
         host.addKnownMap(id);
       }
     }
-    LOG.info("assigned " + includedMaps + " of " + totalSize + " to " +
-             host + " to " + Thread.currentThread().getName());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("assigned " + includedMaps + " of " + totalSize + " to " + host
+          + " to " + Thread.currentThread().getName());
+    }
     return result;
   }
 

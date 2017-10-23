@@ -109,6 +109,10 @@ public class Resources {
     return NONE;
   }
   
+  public static boolean isNone(Resource other) {
+    return NONE.equals(other);
+  }
+
   public static Resource unbounded() {
     return UNBOUNDED;
   }
@@ -137,6 +141,24 @@ public class Resources {
     return subtractFrom(clone(lhs), rhs);
   }
 
+  /**
+   * Subtract <code>rhs</code> from <code>lhs</code> and reset any negative
+   * values to zero.
+   * @param lhs {@link Resource} to subtract from
+   * @param rhs {@link Resource} to subtract
+   * @return the value of lhs after subtraction
+   */
+  public static Resource subtractFromNonNegative(Resource lhs, Resource rhs) {
+    subtractFrom(lhs, rhs);
+    if (lhs.getMemory() < 0) {
+      lhs.setMemory(0);
+    }
+    if (lhs.getVirtualCores() < 0) {
+      lhs.setVirtualCores(0);
+    }
+    return lhs;
+  }
+
   public static Resource negate(Resource resource) {
     return subtract(NONE, resource);
   }
@@ -150,7 +172,19 @@ public class Resources {
   public static Resource multiply(Resource lhs, double by) {
     return multiplyTo(clone(lhs), by);
   }
-  
+
+  /**
+   * Multiply @param rhs by @param by, and add the result to @param lhs
+   * without creating any new {@link Resource} object
+   */
+  public static Resource multiplyAndAddTo(
+      Resource lhs, Resource rhs, double by) {
+    lhs.setMemory(lhs.getMemory() + (int)(rhs.getMemory() * by));
+    lhs.setVirtualCores(lhs.getVirtualCores()
+        + (int)(rhs.getVirtualCores() * by));
+    return lhs;
+  }
+
   public static Resource multiplyAndNormalizeUp(
       ResourceCalculator calculator,Resource lhs, double by, Resource factor) {
     return calculator.multiplyAndNormalizeUp(lhs, by, factor);
@@ -165,6 +199,13 @@ public class Resources {
     Resource out = clone(lhs);
     out.setMemory((int)(lhs.getMemory() * by));
     out.setVirtualCores((int)(lhs.getVirtualCores() * by));
+    return out;
+  }
+
+  public static Resource multiplyAndRoundUp(Resource lhs, double by) {
+    Resource out = clone(lhs);
+    out.setMemory((int)Math.ceil(lhs.getMemory() * by));
+    out.setVirtualCores((int)Math.ceil(lhs.getVirtualCores() * by));
     return out;
   }
   

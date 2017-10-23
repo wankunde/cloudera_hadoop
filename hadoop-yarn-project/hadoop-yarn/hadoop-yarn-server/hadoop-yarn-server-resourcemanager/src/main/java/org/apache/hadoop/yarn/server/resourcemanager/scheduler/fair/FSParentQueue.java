@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -37,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
@@ -61,7 +61,7 @@ public class FSParentQueue extends FSQueue {
     super(name, scheduler, parent);
   }
   
-  public void addChildQueue(FSQueue child) {
+  void addChildQueue(FSQueue child) {
     writeLock.lock();
     try {
       childQueues.add(child);
@@ -70,7 +70,7 @@ public class FSParentQueue extends FSQueue {
     }
   }
 
-  public void removeChildQueue(FSQueue child) {
+  void removeChildQueue(FSQueue child) {
     writeLock.lock();
     try {
       childQueues.remove(child);
@@ -80,20 +80,20 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public void recomputeShares() {
+  public void updateInternal(boolean checkStarvation) {
     readLock.lock();
     try {
       policy.computeShares(childQueues, getFairShare());
       for (FSQueue childQueue : childQueues) {
         childQueue.getMetrics().setFairShare(childQueue.getFairShare());
-        childQueue.recomputeShares();
+        childQueue.updateInternal(checkStarvation);
       }
     } finally {
       readLock.unlock();
     }
   }
 
-  public void recomputeSteadyShares() {
+  void recomputeSteadyShares() {
     readLock.lock();
     try {
       policy.computeSteadyShares(childQueues, getSteadyFairShare());
@@ -160,17 +160,15 @@ public class FSParentQueue extends FSQueue {
       for (FSQueue childQueue : childQueues) {
         childQueue.updateDemand();
         Resource toAdd = childQueue.getDemand();
+        demand = Resources.add(demand, toAdd);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Counting resource from " + childQueue.getName() + " " +
               toAdd + "; Total resource consumption for " + getName() +
               " now " + demand);
         }
-        demand = Resources.add(demand, toAdd);
-        demand = Resources.componentwiseMin(demand, maxRes);
-        if (Resources.equals(demand, maxRes)) {
-          break;
-        }
       }
+      // Cap demand to maxShare to limit allocation to maxShare
+      demand = Resources.componentwiseMin(demand, maxRes);
     } finally {
       writeLock.unlock();
     }
@@ -192,7 +190,7 @@ public class FSParentQueue extends FSQueue {
   
   @Override
   public List<QueueUserACLInfo> getQueueUserAclInfo(UserGroupInformation user) {
-    List<QueueUserACLInfo> userAcls = new ArrayList<QueueUserACLInfo>();
+    List<QueueUserACLInfo> userAcls = new ArrayList<>();
     
     // Add queue acls
     userAcls.add(getUserAclInfo(user));
@@ -250,33 +248,6 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public RMContainer preemptContainer() {
-    RMContainer toBePreempted = null;
-
-    // Find the childQueue which is most over fair share
-    FSQueue candidateQueue = null;
-    Comparator<Schedulable> comparator = policy.getComparator();
-
-    readLock.lock();
-    try {
-      for (FSQueue queue : childQueues) {
-        if (candidateQueue == null ||
-            comparator.compare(queue, candidateQueue) > 0) {
-          candidateQueue = queue;
-        }
-      }
-    } finally {
-      readLock.unlock();
-    }
-
-    // Let the selected queue choose which of its container to preempt
-    if (candidateQueue != null) {
-      toBePreempted = candidateQueue.preemptContainer();
-    }
-    return toBePreempted;
-  }
-
-  @Override
   public List<FSQueue> getChildQueues() {
     readLock.lock();
     try {
@@ -299,7 +270,7 @@ public class FSParentQueue extends FSQueue {
     super.policy = policy;
   }
   
-  public void incrementRunnableApps() {
+  void incrementRunnableApps() {
     writeLock.lock();
     try {
       runnableApps++;
@@ -308,7 +279,7 @@ public class FSParentQueue extends FSQueue {
     }
   }
   
-  public void decrementRunnableApps() {
+  void decrementRunnableApps() {
     writeLock.lock();
     try {
       runnableApps--;
@@ -351,5 +322,35 @@ public class FSParentQueue extends FSQueue {
       SchedulerApplicationAttempt schedulerAttempt, RMContainer rmContainer) {
     // TODO Auto-generated method stub
     
+  }
+
+  @Override
+  protected void dumpStateInternal(StringBuilder sb) {
+    ResourceWeights weights =
+        scheduler.getAllocationConfiguration().getQueueWeight(getName());
+    Resource maxShare =
+        scheduler.getAllocationConfiguration().getMaxResources(getName());
+    Resource minShare =
+        scheduler.getAllocationConfiguration().getMinResources(getName());
+    float maxAMShare=
+        scheduler.getAllocationConfiguration().getQueueMaxAMShare(getName());
+
+    sb.append("{Name: " + getName() +
+        ", Weight: " + weights +
+        ", Policy: " + policy.getName() +
+        ", FairShare: " + getFairShare() +
+        ", SteadyFairShare: " + getSteadyFairShare() +
+        ", MaxShare: " + maxShare +
+        ", MinShare: " + minShare +
+        ", ResourceUsage: " + getResourceUsage() +
+        ", Demand: " + getDemand() +
+        ", MaxAMShare: " + maxAMShare +
+        ", Runnable: " + getNumRunnableApps() +
+        "}");
+
+    for(FSQueue child : getChildQueues()) {
+      sb.append(", ");
+      child.dumpStateInternal(sb);
+    }
   }
 }

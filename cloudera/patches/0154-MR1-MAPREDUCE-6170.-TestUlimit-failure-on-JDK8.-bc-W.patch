@@ -1,8 +1,8 @@
 From bc23fe731297e7f9881f19f849b858132a7bc732 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Thu, 20 Nov 2014 15:13:39 -0800
-Subject: [PATCH 154/924] MR1: MAPREDUCE-6170. TestUlimit failure on JDK8. (bc
- Wong via kasha)
+Subject: [PATCH 0154/2639] MR1: MAPREDUCE-6170. TestUlimit failure on JDK8.
+ (bc Wong via kasha)
 
 (cherry-picked from commit 2dff54ebc8a3a541209c333dbdbbafe82b02e6e9)
 

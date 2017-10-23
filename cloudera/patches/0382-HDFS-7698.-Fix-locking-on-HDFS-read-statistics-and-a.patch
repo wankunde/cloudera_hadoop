@@ -1,7 +1,7 @@
 From 9af92564550ec2771841921cce8099aece68d463 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Thu, 5 Feb 2015 23:57:36 +0800
-Subject: [PATCH 382/924] HDFS-7698. Fix locking on HDFS read statistics and
+Subject: [PATCH 0382/2639] HDFS-7698. Fix locking on HDFS read statistics and
  add a method for clearing them. (Colin P. McCabe
  via yliu)
 

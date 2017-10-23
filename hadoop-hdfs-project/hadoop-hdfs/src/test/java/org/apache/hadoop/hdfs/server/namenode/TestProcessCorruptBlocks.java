@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.junit.Test;
 
@@ -259,15 +260,19 @@ public class TestProcessCorruptBlocks {
   }
 
   private static NumberReplicas countReplicas(final FSNamesystem namesystem, ExtendedBlock block) {
-    return namesystem.getBlockManager().countNodes(block.getLocalBlock());
+    final BlockManager blockManager = namesystem.getBlockManager();
+    return blockManager.countNodes(blockManager.getStoredBlock(
+        block.getLocalBlock()));
   }
 
   private void corruptBlock(MiniDFSCluster cluster, FileSystem fs, final Path fileName,
       int dnIndex, ExtendedBlock block) throws IOException {
-    // corrupt the block on datanode dnIndex
+    // Truncate the block on the first datanode that has not been corrupted,
+    // so that directory scanner can discover the corruption from file size
+    // change.
     // the indexes change once the nodes are restarted.
     // But the datadirectory will not change
-    assertTrue(cluster.corruptReplica(dnIndex, block));
+    cluster.getMaterializedReplica(0, block).truncateData(10);
 
     DataNodeProperties dnProps = cluster.stopDataNode(0);
 

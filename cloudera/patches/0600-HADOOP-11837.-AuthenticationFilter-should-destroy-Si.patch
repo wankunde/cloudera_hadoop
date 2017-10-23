@@ -1,7 +1,7 @@
 From eec6530a085cf5fc57eb19b0f7e2b87d5cae422d Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Fri, 17 Apr 2015 10:59:47 -0700
-Subject: [PATCH 600/924] HADOOP-11837. AuthenticationFilter should destroy
+Subject: [PATCH 0600/2639] HADOOP-11837. AuthenticationFilter should destroy
  SignerSecretProvider in Tomcat deployments.
  Contributed by Bowen Zhang.
 

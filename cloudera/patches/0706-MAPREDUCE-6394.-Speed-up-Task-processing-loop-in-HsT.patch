@@ -1,7 +1,7 @@
 From bf60e13540d9d0ac998f5882abb4321c4c62ede1 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Fri, 31 Jul 2015 18:17:54 +0000
-Subject: [PATCH 706/924] MAPREDUCE-6394. Speed up Task processing loop in
+Subject: [PATCH 0706/2639] MAPREDUCE-6394. Speed up Task processing loop in
  HsTasksBlock#render(). Contributed by Ray Chiang
 
 (cherry picked from commit d0e0ba8010b72f58ddede5303f2b88404263d4bf)

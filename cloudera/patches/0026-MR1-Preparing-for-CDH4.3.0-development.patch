@@ -1,7 +1,7 @@
 From 0f806c570a61b94bd71e9908257f3ec32f478f6b Mon Sep 17 00:00:00 2001
 From: Jenkins slave <kitchen-build@cloudera.com>
 Date: Wed, 30 Jan 2013 10:29:08 -0800
-Subject: [PATCH 026/924] MR1: Preparing for CDH4.3.0 development (cherry
+Subject: [PATCH 0026/2639] MR1: Preparing for CDH4.3.0 development (cherry
  picked from commit
  e13ca434a83095632e868c8a3a6f935c27b3dffb)
 

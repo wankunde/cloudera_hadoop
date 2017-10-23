@@ -1,7 +1,7 @@
-From 7c5cf088e929dac9f6d2747344264fd2d87bdd64 Mon Sep 17 00:00:00 2001
+From bea931003d2463a6811daff0dadfe32813b68f8e Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Wed, 9 Sep 2015 18:17:15 -0700
-Subject: [PATCH 771/924] removing accidental file in MAPREDUCE-6415
+Subject: [PATCH 0771/2639] removing accidental file in MAPREDUCE-6415
 
 (cherry picked from commit b539bb41bbb3d1e271572e7fe230b6566cf826dc)
 

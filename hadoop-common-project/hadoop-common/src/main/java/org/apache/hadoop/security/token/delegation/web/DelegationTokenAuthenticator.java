@@ -20,6 +20,7 @@ package org.apache.hadoop.security.token.delegation.web;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.Authenticator;
@@ -56,6 +57,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   private static final String HTTP_PUT = "PUT";
 
   public static final String OP_PARAM = "op";
+  private static final String OP_PARAM_EQUALS = OP_PARAM + "=";
 
   public static final String DELEGATION_TOKEN_HEADER =
       "X-Hadoop-Delegation-Token";
@@ -112,10 +114,16 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
     if (token instanceof DelegationTokenAuthenticatedURL.Token) {
       hasDt = ((DelegationTokenAuthenticatedURL.Token) token).
           getDelegationToken() != null;
+      if (hasDt) {
+        LOG.trace("Delegation token found: {}",
+            ((DelegationTokenAuthenticatedURL.Token) token)
+                .getDelegationToken());
+      }
     }
     if (!hasDt) {
       String queryStr = url.getQuery();
       hasDt = (queryStr != null) && queryStr.contains(DELEGATION_PARAM + "=");
+      LOG.trace("hasDt={}, queryStr={}", hasDt, queryStr);
     }
     return hasDt;
   }
@@ -124,7 +132,14 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   public void authenticate(URL url, AuthenticatedURL.Token token)
       throws IOException, AuthenticationException {
     if (!hasDelegationToken(url, token)) {
+      // check and renew TGT to handle potential expiration
+      UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
+      LOG.debug("No delegation token found for url={}, token={}, authenticating"
+          + " with {}", url, token, authenticator.getClass());
       authenticator.authenticate(url, token);
+    } else {
+      LOG.debug("Authenticated from delegation token. url={}, token={}",
+          url, token);
     }
   }
 
@@ -281,27 +296,41 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
     }
     url = new URL(sb.toString());
     AuthenticatedURL aUrl = new AuthenticatedURL(this, connConfigurator);
-    HttpURLConnection conn = aUrl.openConnection(url, token);
-    conn.setRequestMethod(operation.getHttpMethod());
-    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
-    if (hasResponse) {
-      String contentType = conn.getHeaderField(CONTENT_TYPE);
-      contentType = (contentType != null) ? contentType.toLowerCase()
-                                          : null;
-      if (contentType != null &&
-          contentType.contains(APPLICATION_JSON_MIME)) {
-        try {
-          ObjectMapper mapper = new ObjectMapper();
-          ret = mapper.readValue(conn.getInputStream(), Map.class);
-        } catch (Exception ex) {
-          throw new AuthenticationException(String.format(
-              "'%s' did not handle the '%s' delegation token operation: %s",
-              url.getAuthority(), operation, ex.getMessage()), ex);
+    org.apache.hadoop.security.token.Token<AbstractDelegationTokenIdentifier>
+        dt = null;
+    if (token instanceof DelegationTokenAuthenticatedURL.Token
+        && operation.requiresKerberosCredentials()) {
+      // Unset delegation token to trigger fall-back authentication.
+      dt = ((DelegationTokenAuthenticatedURL.Token) token).getDelegationToken();
+      ((DelegationTokenAuthenticatedURL.Token) token).setDelegationToken(null);
+    }
+    try {
+      HttpURLConnection conn = aUrl.openConnection(url, token);
+      conn.setRequestMethod(operation.getHttpMethod());
+      HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+      if (hasResponse) {
+        String contentType = conn.getHeaderField(CONTENT_TYPE);
+        contentType = (contentType != null) ? contentType.toLowerCase()
+            : null;
+        if (contentType != null &&
+            contentType.contains(APPLICATION_JSON_MIME)) {
+          try {
+            ObjectMapper mapper = new ObjectMapper();
+            ret = mapper.readValue(conn.getInputStream(), Map.class);
+          } catch (Exception ex) {
+            throw new AuthenticationException(String.format(
+                "'%s' did not handle the '%s' delegation token operation: %s",
+                url.getAuthority(), operation, ex.getMessage()), ex);
+          }
+        } else {
+          throw new AuthenticationException(String.format("'%s' did not " +
+                  "respond with JSON to the '%s' delegation token operation",
+              url.getAuthority(), operation));
         }
-      } else {
-        throw new AuthenticationException(String.format("'%s' did not " +
-                "respond with JSON to the '%s' delegation token operation",
-            url.getAuthority(), operation));
+      }
+    } finally {
+      if (dt != null) {
+        ((DelegationTokenAuthenticatedURL.Token) token).setDelegationToken(dt);
       }
     }
     return ret;

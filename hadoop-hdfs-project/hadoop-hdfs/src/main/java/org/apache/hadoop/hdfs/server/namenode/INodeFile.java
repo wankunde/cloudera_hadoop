@@ -158,12 +158,22 @@ public class INodeFile extends INodeWithAdditionalFields
     return this;
   }
 
+  /**
+   * Compare the metadata with another INodeFile.
+   * AclFeature needs equals() check on top of object reference
+   * check as HDFS-7456 AclFeature de-duplication fix available
+   * in the upstream is not backported yet. Also just as in
+   * upstream, only local AclFeatures are used for comparison.
+   */
   @Override
   public boolean metadataEquals(INodeFileAttributes other) {
     return other != null
         && getHeaderLong()== other.getHeaderLong()
         && getPermissionLong() == other.getPermissionLong()
-        && getAclFeature() == other.getAclFeature()
+        && ((getFsimageAclFeature() == other.getFsimageAclFeature()) ||
+        (getFsimageAclFeature() != null &&
+            other.getFsimageAclFeature() != null &&
+            getFsimageAclFeature().equals(other.getFsimageAclFeature())))
         && getXAttrFeature() == other.getXAttrFeature();
   }
 
@@ -322,7 +332,7 @@ public class INodeFile extends INodeWithAdditionalFields
       sf.getDiffs().saveSelf2Snapshot(latestSnapshotId, this, null);
     }
   }
-  
+
   public FileDiffList getDiffs() {
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
     if (sf != null) {
@@ -475,11 +485,11 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public Quota.Counts cleanSubtree(final int snapshot, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       return sf.cleanFile(this, snapshot, priorSnapshotId, collectedBlocks,
-          removedINodes);
+          removedINodes, removedUCFiles);
     }
     Quota.Counts counts = Quota.Counts.newInstance();
     if (snapshot == CURRENT_STATE_ID) {
@@ -487,13 +497,16 @@ public class INodeFile extends INodeWithAdditionalFields
         // this only happens when deleting the current file and the file is not
         // in any snapshot
         computeQuotaUsage(counts, false);
-        destroyAndCollectBlocks(collectedBlocks, removedINodes);
+        destroyAndCollectBlocks(collectedBlocks, removedINodes, removedUCFiles);
       } else {
+        FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
         // when deleting the current file and the file is in snapshot, we should
         // clean the 0-sized block if the file is UC
-        FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
         if (uc != null) {
           uc.cleanZeroSizeBlock(this, collectedBlocks);
+          if (removedUCFiles != null) {
+            removedUCFiles.add(getId());
+          }
         }
       }
     }
@@ -502,23 +515,26 @@ public class INodeFile extends INodeWithAdditionalFields
 
   @Override
   public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     if (blocks != null && collectedBlocks != null) {
       for (BlockInfo blk : blocks) {
         collectedBlocks.addDeleteBlock(blk);
         blk.setBlockCollection(null);
       }
     }
-    setBlocks(null);
+    setBlocks(BlockInfo.EMPTY_ARRAY);
     clear();
     removedINodes.add(this);
-    
+
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       sf.clearDiffs();
     }
+    if (isUnderConstruction() && removedUCFiles != null) {
+      removedUCFiles.add(getId());
+    }
   }
-  
+
   @Override
   public String getName() {
     // Get the full path name of this inode.
@@ -540,7 +556,7 @@ public class INodeFile extends INodeWithAdditionalFields
         dsDelta = diskspaceConsumed();
       } else if (last < lastSnapshotId) {
         dsDelta = computeFileSize(true, false) * getFileReplication();
-      } else {      
+      } else {
         int sid = fileDiffList.getSnapshotById(lastSnapshotId);
         dsDelta = diskspaceConsumed(sid);
       }
@@ -554,9 +570,9 @@ public class INodeFile extends INodeWithAdditionalFields
 
   @Override
   public final ContentSummaryComputationContext computeContentSummary(
-      final ContentSummaryComputationContext summary) {
+      int snapshotId, final ContentSummaryComputationContext summary) {
     computeContentSummary4Snapshot(summary.getCounts());
-    computeContentSummary4Current(summary.getCounts());
+    computeContentSummary4Current(snapshotId, summary.getCounts());
     return summary;
   }
 
@@ -579,14 +595,16 @@ public class INodeFile extends INodeWithAdditionalFields
     }
   }
 
-  private void computeContentSummary4Current(final Content.Counts counts) {
+  private void computeContentSummary4Current(
+      int snapshotId, final Content.Counts counts) {
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
     if (sf != null && sf.isCurrentFileDeleted()) {
       return;
     }
 
-    counts.add(Content.LENGTH, computeFileSize());
     counts.add(Content.FILE, 1);
+    final long fileLen = computeFileSize(snapshotId);
+    counts.add(Content.LENGTH, fileLen);
     counts.add(Content.DISKSPACE, diskspaceConsumed());
   }
 
@@ -665,7 +683,7 @@ public class INodeFile extends INodeWithAdditionalFields
       return diskspaceConsumed();
     }
   }
-  
+
   /**
    * Return the penultimate allocated block for this file.
    */

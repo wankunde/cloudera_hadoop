@@ -1,7 +1,7 @@
 From 09e1dc49424781ad93f03a421fed0b7d385e9b43 Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Tue, 6 Jan 2015 14:15:57 -0800
-Subject: [PATCH 484/924] YARN-2978. Fixed potential NPE while getting queue
+Subject: [PATCH 0484/2639] YARN-2978. Fixed potential NPE while getting queue
  info. Contributed by Varun Saxena (cherry picked
  from commit
  dd57c2047bfd21910acc38c98153eedf1db75169)

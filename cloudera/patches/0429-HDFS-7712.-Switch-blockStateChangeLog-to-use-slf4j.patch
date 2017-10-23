@@ -1,7 +1,8 @@
 From 20e4b8887763f62080cb7167510493184611778e Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 3 Feb 2015 15:01:16 -0800
-Subject: [PATCH 429/924] HDFS-7712. Switch blockStateChangeLog to use slf4j.
+Subject: [PATCH 0429/2639] HDFS-7712. Switch blockStateChangeLog to use
+ slf4j.
 
 Conflicts:
 	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java

@@ -1,7 +1,7 @@
 From 3fd00896adf7100296e2703b03a994d999d78ebd Mon Sep 17 00:00:00 2001
 From: Juan Yu <jyu@cloudera.com>
 Date: Tue, 2 Sep 2014 18:13:43 -0700
-Subject: [PATCH 143/924] MR1: CLOUDERA-BUILD update cdh version for
+Subject: [PATCH 0143/2639] MR1: CLOUDERA-BUILD update cdh version for
  packaging.
 
 (cherry picked from commit 2db30fe4bd382089a3aec3d847fa7140f89bba9d)

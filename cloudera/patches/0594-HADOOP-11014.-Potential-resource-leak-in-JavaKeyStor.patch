@@ -1,7 +1,7 @@
 From 49a39e5470bd36adb482cda736a507df55de78f8 Mon Sep 17 00:00:00 2001
 From: Tsuyoshi Ozawa <ozawa@apache.org>
 Date: Wed, 25 Mar 2015 16:59:40 +0900
-Subject: [PATCH 594/924] HADOOP-11014. Potential resource leak in
+Subject: [PATCH 0594/2639] HADOOP-11014. Potential resource leak in
  JavaKeyStoreProvider due to unclosed stream.
  (ozawa)
 

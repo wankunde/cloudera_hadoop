@@ -1,7 +1,7 @@
 From db9733893752ef81eeda6957416b2592c9040e18 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@cloudera.com>
 Date: Tue, 28 Oct 2014 12:08:26 +0530
-Subject: [PATCH 233/924] HDFS-6741. Improve permission denied message when
+Subject: [PATCH 0233/2639] HDFS-6741. Improve permission denied message when
  FSPermissionChecker#checkOwner fails. Contributed
  by Stephen Chu and Harsh J. (harsh)
 

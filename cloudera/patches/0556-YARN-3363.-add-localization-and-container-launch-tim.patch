@@ -1,10 +1,10 @@
 From 63c55654cc18e940974ecdb8e9a6840087e3a953 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@apache.org>
 Date: Fri, 1 May 2015 16:39:21 -0700
-Subject: [PATCH 556/924] YARN-3363. add localization and container launch
- time to ContainerMetrics at NM to show these timing
- information for each active container. (zxu via
- rkanter)
+Subject: [PATCH 0556/2639] YARN-3363. add localization and container launch
+ time to ContainerMetrics at NM to show these
+ timing information for each active container.
+ (zxu via rkanter)
 
 (cherry picked from commit ac7d152901e29b1f444507fe4e421eb6e1402b5a)
 

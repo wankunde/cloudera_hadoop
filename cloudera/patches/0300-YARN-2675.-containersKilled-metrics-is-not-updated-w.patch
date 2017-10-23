@@ -1,7 +1,7 @@
 From 00600f235e07a96ac0a39504b1e5a925dc856648 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Fri, 19 Dec 2014 16:00:24 -0800
-Subject: [PATCH 300/924] YARN-2675. containersKilled metrics is not updated
+Subject: [PATCH 0300/2639] YARN-2675. containersKilled metrics is not updated
  when the container is killed during localization.
  (Zhihai Xu via kasha)
 

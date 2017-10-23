@@ -70,6 +70,7 @@ import org.apache.hadoop.tracing.TraceAdminProtocol;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.tracing.TracerConfigurationManager;
 import org.apache.hadoop.util.ExitUtil.ExitException;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
@@ -463,7 +464,7 @@ public class NameNode implements NameNodeStatusMXBean {
 
   public static InetSocketAddress getAddress(Configuration conf) {
     URI filesystemURI = FileSystem.getDefaultUri(conf);
-    return getAddress(filesystemURI);
+    return getAddressCheckLogical(conf, filesystemURI);
   }
 
 
@@ -485,6 +486,30 @@ public class NameNode implements NameNodeStatusMXBean {
           HdfsConstants.HDFS_URI_SCHEME));
     }
     return getAddress(authority);
+  }
+
+  public static String composeNotStartedMessage(NamenodeRole role) {
+    return role + " still not started";
+  }
+
+  /**
+   * Get the NN address from the URI. If the uri is logical, default address is
+   * returned. Otherwise return the DNS-resolved address of the URI.
+   *
+   * @param conf configuration
+   * @param filesystemURI URI of the file system
+   * @return address of file system
+   */
+  public static InetSocketAddress getAddressCheckLogical(Configuration conf,
+      URI filesystemURI) {
+    InetSocketAddress retAddr;
+    if (HAUtil.isLogicalUri(conf, filesystemURI)) {
+      retAddr = InetSocketAddress.createUnresolved(filesystemURI.getAuthority(),
+          DEFAULT_PORT);
+    } else {
+      retAddr = getAddress(filesystemURI);
+    }
+    return retAddr;
   }
 
   public static URI getUri(InetSocketAddress namenode) {
@@ -639,6 +664,11 @@ public class NameNode implements NameNodeStatusMXBean {
     NameNode.initMetrics(conf, this.getRole());
     StartupProgressMetrics.register(startupProgress);
 
+    pauseMonitor = new JvmPauseMonitor();
+    pauseMonitor.init(conf);
+    pauseMonitor.start();
+    metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
+
     if (NamenodeRole.NAMENODE == role) {
       startHttpServer(conf);
     }
@@ -658,11 +688,7 @@ public class NameNode implements NameNodeStatusMXBean {
       httpServer.setNameNodeAddress(getNameNodeAddress());
       httpServer.setFSImage(getFSImage());
     }
-    
-    pauseMonitor = new JvmPauseMonitor(conf);
-    pauseMonitor.start();
-    metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
-    
+
     startCommonServices(conf);
   }
   
@@ -824,13 +850,22 @@ public class NameNode implements NameNodeStatusMXBean {
         haContext.writeUnlock();
       }
     } catch (IOException e) {
-      this.stop();
+      this.stopAtException(e);
       throw e;
     } catch (HadoopIllegalArgumentException e) {
-      this.stop();
+      this.stopAtException(e);
       throw e;
     }
     this.started.set(true);
+  }
+
+  private void stopAtException(Exception e){
+    try {
+      this.stop();
+    } catch (Exception ex) {
+      LOG.warn("Encountered exception when handling exception ("
+          + e.getMessage() + "):", ex);
+    }
   }
 
   protected HAState createHAState(StartupOption startOpt) {
@@ -943,6 +978,22 @@ public class NameNode implements NameNodeStatusMXBean {
    */
   public InetSocketAddress getHttpsAddress() {
     return httpServer.getHttpsAddress();
+  }
+
+  /**
+   * @return NameNodeHttpServer, used by unit tests to ensure a full shutdown,
+   * so that no bind exception is thrown during restart.
+   */
+  @VisibleForTesting
+  public void joinHttpServer() {
+    if (httpServer != null) {
+      try {
+        httpServer.join();
+      } catch (InterruptedException e) {
+        LOG.info("Caught InterruptedException joining NameNodeHttpServer", e);
+        Thread.currentThread().interrupt();
+      }
+    }
   }
 
   /**
@@ -1171,7 +1222,6 @@ public class NameNode implements NameNodeStatusMXBean {
           newSharedEditLog.logEdit(op);
 
           if (op.opCode == FSEditLogOpCodes.OP_END_LOG_SEGMENT) {
-            newSharedEditLog.logSync();
             newSharedEditLog.endCurrentLogSegment(false);
             LOG.debug("ending log segment because of END_LOG_SEGMENT op in "
                 + stream);
@@ -1422,6 +1472,10 @@ public class NameNode implements NameNodeStatusMXBean {
     LOG.info("createNameNode " + Arrays.asList(argv));
     if (conf == null)
       conf = new HdfsConfiguration();
+    // Parse out some generic args into Configuration.
+    GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+    argv = hParser.getRemainingArgs();
+    // Parse the rest, NN specific args.
     StartupOption startOpt = parseArguments(argv);
     if (startOpt == null) {
       printUsage(System.err);

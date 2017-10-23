@@ -19,17 +19,17 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import org.apache.hadoop.metrics2.MetricsRecord;
-import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.impl.MetricsRecords;
+import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doReturn;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class TestContainerMetrics {
@@ -38,13 +38,10 @@ public class TestContainerMetrics {
   public void testContainerMetricsFlow() throws InterruptedException {
     final String ERR = "Error in number of records";
 
-    // Create a dummy MetricsSystem
-    MetricsSystem system = mock(MetricsSystem.class);
-    doReturn(this).when(system).register(anyString(), anyString(), any());
-
     MetricsCollectorImpl collector = new MetricsCollectorImpl();
     ContainerId containerId = mock(ContainerId.class);
-    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId, 100);
+    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId,
+        100, 1);
 
     metrics.recordMemoryUsage(1024);
     metrics.getMetrics(collector, true);
@@ -66,23 +63,22 @@ public class TestContainerMetrics {
     collector.clear();
 
     metrics.getMetrics(collector, true);
-    assertEquals(ERR, 0, collector.getRecords().size());
+    assertEquals(ERR, 1, collector.getRecords().size());
+    collector.clear();
 
     Thread.sleep(110);
     metrics.getMetrics(collector, true);
-    assertEquals(ERR, 0, collector.getRecords().size());
+    assertEquals(ERR, 1, collector.getRecords().size());
   }
 
   @Test
   public void testContainerMetricsLimit() throws InterruptedException {
     final String ERR = "Error in number of records";
 
-    MetricsSystem system = mock(MetricsSystem.class);
-    doReturn(this).when(system).register(anyString(), anyString(), any());
-
     MetricsCollectorImpl collector = new MetricsCollectorImpl();
     ContainerId containerId = mock(ContainerId.class);
-    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId, 100);
+    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId,
+        100, 1);
 
     int anyPmemLimit = 1024;
     int anyVmemLimit = 2048;
@@ -116,5 +112,42 @@ public class TestContainerMetrics {
         anyLocalizationDuration);
 
     collector.clear();
+  }
+
+  @Test
+  public void testContainerMetricsFinished() throws InterruptedException {
+    MetricsSystemImpl system = new MetricsSystemImpl();
+    system.init("test");
+
+    ApplicationId appId = ApplicationId.newInstance(1234, 3);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 4);
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
+    ContainerMetrics metrics1 = ContainerMetrics.forContainer(system,
+        containerId1, 1, 0);
+    ContainerId containerId2 = ContainerId.newContainerId(appAttemptId, 2);
+    ContainerMetrics metrics2 = ContainerMetrics.forContainer(system,
+        containerId2, 1, 0);
+    ContainerId containerId3 = ContainerId.newContainerId(appAttemptId, 3);
+    ContainerMetrics metrics3 = ContainerMetrics.forContainer(system,
+        containerId3, 1, 0);
+    metrics1.finished();
+    metrics2.finished();
+    system.sampleMetrics();
+    system.sampleMetrics();
+    Thread.sleep(100);
+    // verify metrics1 is unregistered
+    assertTrue(metrics1 != ContainerMetrics.forContainer(
+        system, containerId1, 1, 0));
+    // verify metrics2 is unregistered
+    assertTrue(metrics2 != ContainerMetrics.forContainer(
+        system, containerId2, 1, 0));
+    // verify metrics3 is still registered
+    assertTrue(metrics3 == ContainerMetrics.forContainer(
+        system, containerId3, 1, 0));
+    // move stop() to the end to verify registering containerId1 and
+    // containerId2 won't get MetricsException thrown.
+    system.stop();
+    system.shutdown();
   }
 }

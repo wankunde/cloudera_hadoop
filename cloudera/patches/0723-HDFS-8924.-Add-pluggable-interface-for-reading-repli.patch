@@ -1,7 +1,7 @@
 From 214564e92104d64feb491d3e1c04fed0c832cbfa Mon Sep 17 00:00:00 2001
 From: Lei Xu <lei@cloudera.com>
 Date: Fri, 21 Aug 2015 17:02:00 -0700
-Subject: [PATCH 723/924] HDFS-8924. Add pluggable interface for reading
+Subject: [PATCH 0723/2639] HDFS-8924. Add pluggable interface for reading
  replicas in DFSClient. (Colin Patrick McCabe via
  Lei Xu)
 

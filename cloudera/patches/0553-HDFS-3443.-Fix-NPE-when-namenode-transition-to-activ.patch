@@ -1,9 +1,10 @@
 From 159b1beddd63f6caabca7eb14c56a11444fc9fda Mon Sep 17 00:00:00 2001
 From: Tsz-Wo Nicholas Sze <szetszwo@hortonworks.com>
 Date: Wed, 21 Jan 2015 11:32:32 -0800
-Subject: [PATCH 553/924] HDFS-3443. Fix NPE when namenode transition to
- active during startup by adding checkNNStartup() in
- NameNodeRpcServer.  Contributed by Vinayakumar B
+Subject: [PATCH 0553/2639] HDFS-3443. Fix NPE when namenode transition to
+ active during startup by adding checkNNStartup()
+ in NameNodeRpcServer.  Contributed by Vinayakumar
+ B
 
 Conflicts:
 	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/NameNodeRpcServer.java

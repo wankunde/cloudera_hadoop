@@ -1,9 +1,9 @@
 From 852600eecc126ce1a34a7805782d358385e3d8c9 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@cloudera.com>
 Date: Wed, 17 Dec 2014 15:56:06 +0530
-Subject: [PATCH 511/924] MR1: CLOUDERA-BUILD.
- mapreduce.client.genericoptionsparser.used set but
- not checked (CDH-9740)
+Subject: [PATCH 0511/2639] MR1: CLOUDERA-BUILD.
+ mapreduce.client.genericoptionsparser.used set
+ but not checked (CDH-9740)
 
 ---
  .../mapred/org/apache/hadoop/mapred/JobClient.java |    2 +-

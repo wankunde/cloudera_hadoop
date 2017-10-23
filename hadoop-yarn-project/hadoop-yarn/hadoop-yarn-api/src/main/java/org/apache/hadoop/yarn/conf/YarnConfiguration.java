@@ -144,6 +144,16 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "client.thread-count";
   public static final int DEFAULT_RM_CLIENT_THREAD_COUNT = 50;
 
+  /** Number of threads used to launch/cleanup AM.*/
+  public static final String RM_AMLAUNCHER_THREAD_COUNT =
+      RM_PREFIX + "amlauncher.thread-count";
+  public static final int DEFAULT_RM_AMLAUNCHER_THREAD_COUNT = 50;
+
+  /** Retry times to connect with NM.*/
+  public static final String RM_NODEMANAGER_CONNECT_RETIRES =
+      RM_PREFIX + "nodemanager-connect-retries";
+  public static final int DEFAULT_RM_NODEMANAGER_CONNECT_RETIRES = 10;
+
   /** The Kerberos principal for the resource manager.*/
   public static final String RM_PRINCIPAL =
     RM_PREFIX + "principal";
@@ -357,22 +367,39 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE =
       10;
 
+  /**
+   * The {@code AMLauncher.createAMContainerLaunchContext()} method will log the
+   * command being executed to the RM log if this property is true. Commands
+   * may contain sensitive information, such as application or service
+   * passwords, making logging the commands a security risk. In cases where
+   * the cluster may be running applications with such commands, this property
+   * should be set to false. Commands are only logged at the debug level.
+   */
+  public static final String RM_AMLAUNCHER_LOG_COMMAND =
+      RM_PREFIX + "amlauncher.log.command";
+  public static final boolean DEFAULT_RM_AMLAUNCHER_LOG_COMMAND = false;
+
   //Delegation token related keys
-  public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
+  public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY =
     RM_PREFIX + "delegation.key.update-interval";
-  public static final long    DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT = 
+  public static final long    DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT =
     24*60*60*1000; // 1 day
-  public static final String  DELEGATION_TOKEN_RENEW_INTERVAL_KEY = 
+  public static final String  DELEGATION_TOKEN_RENEW_INTERVAL_KEY =
     RM_PREFIX + "delegation.token.renew-interval";
-  public static final long    DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT = 
+  public static final long    DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT =
     24*60*60*1000;  // 1 day
-  public static final String  DELEGATION_TOKEN_MAX_LIFETIME_KEY = 
+  public static final String  DELEGATION_TOKEN_MAX_LIFETIME_KEY =
      RM_PREFIX + "delegation.token.max-lifetime";
-  public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT = 
+  public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
     7*24*60*60*1000; // 7 days
   
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
+
+  public static final String YARN_FAIL_FAST = YARN_PREFIX + "fail-fast";
+  public static final boolean DEFAULT_YARN_FAIL_FAST = false;
+
+  public static final String RM_FAIL_FAST = RM_PREFIX + "fail-fast";
 
   @Private
   public static final String RM_WORK_PRESERVING_RECOVERY_ENABLED = RM_PREFIX
@@ -436,6 +463,8 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_CONFIGURATION_PROVIDER_CLASS =
       "org.apache.hadoop.yarn.LocalConfigurationProvider";
 
+  public static final String YARN_AUTHORIZATION_PROVIDER = YARN_PREFIX
+      + "authorization-provider";
   private static final List<String> RM_SERVICES_ADDRESS_CONF_KEYS_HTTP =
       Collections.unmodifiableList(Arrays.asList(
           RM_ADDRESS,
@@ -680,6 +709,18 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LOG_DIRS = NM_PREFIX + "log-dirs";
   public static final String DEFAULT_NM_LOG_DIRS = "/tmp/logs";
 
+  /** The number of threads to handle log aggregation in node manager. */
+  public static final String NM_LOG_AGGREGATION_THREAD_POOL_SIZE =
+      NM_PREFIX + "logaggregation.threadpool-size-max";
+  public static final int DEFAULT_NM_LOG_AGGREGATION_THREAD_POOL_SIZE = 100;
+
+  /** Default permissions for container logs. */
+  public static final String NM_DEFAULT_CONTAINER_EXECUTOR_PREFIX =
+      NM_PREFIX + "default-container-executor.";
+  public static final String NM_DEFAULT_CONTAINER_EXECUTOR_LOG_DIRS_PERMISSIONS =
+      NM_DEFAULT_CONTAINER_EXECUTOR_PREFIX + "log-dirs.permissions";
+  public static final String NM_DEFAULT_CONTAINER_EXECUTOR_LOG_DIRS_PERMISSIONS_DEFAULT = "710";
+
   public static final String NM_RESOURCEMANAGER_MINIMUM_VERSION =
       NM_PREFIX + "resourcemanager.minimum.version";
   public static final String DEFAULT_NM_RESOURCEMANAGER_MINIMUM_VERSION = "NONE";
@@ -891,7 +932,7 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_WEBAPP_HTTPS_PORT = 8044;
   public static final String DEFAULT_NM_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
       + DEFAULT_NM_WEBAPP_HTTPS_PORT; 
-  
+
   /** How often to monitor containers.*/
   public final static String NM_CONTAINER_MON_INTERVAL_MS =
     NM_PREFIX + "container-monitor.interval-ms";
@@ -921,7 +962,15 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "container-metrics.period-ms";
   @Private
   public static final int DEFAULT_NM_CONTAINER_METRICS_PERIOD_MS = -1;
-  
+
+  /** The delay time ms to unregister container metrics after completion. */
+  @Private
+  public static final String NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS =
+      NM_PREFIX + "container-metrics.unregister-delay-ms";
+  @Private
+  public static final int DEFAULT_NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS =
+      10000;
+
   /** Prefix for all node manager disk health checker configs. */
   private static final String NM_DISK_HEALTH_CHECK_PREFIX =
       "yarn.nodemanager.disk-health-checker.";
@@ -1005,6 +1054,13 @@ public class YarnConfiguration extends Configuration {
   /** The arguments to pass to the health check script.*/
   public static final String NM_HEALTH_CHECK_SCRIPT_OPTS = 
     NM_PREFIX + "health-checker.script.opts";
+
+  /** The JVM options used on forking ContainerLocalizer process
+      by container executor. */
+  public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY =
+      NM_PREFIX + "container-localizer.java.opts";
+  public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
+      "-Xmx256m";
 
   /** The Docker image name(For DockerContainerExecutor).*/
   public static final String NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME =
@@ -1147,6 +1203,13 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_RECOVERY_ENABLED = false;
 
   public static final String NM_RECOVERY_DIR = NM_RECOVERY_PREFIX + "dir";
+
+  /** The time in seconds between full compactions of the NM state database.
+   *  Setting the interval to zero disables the full compaction cycles.
+   */
+  public static final String NM_RECOVERY_COMPACTION_INTERVAL_SECS =
+      NM_RECOVERY_PREFIX + "compaction-interval-secs";
+  public static final int DEFAULT_NM_RECOVERY_COMPACTION_INTERVAL_SECS = 3600;
 
   ////////////////////////////////
   // Web Proxy Configs
@@ -1561,7 +1624,7 @@ public class YarnConfiguration extends Configuration {
   public static final String CLIENT_NM_CONNECT_MAX_WAIT_MS =
       YARN_PREFIX + "client.nodemanager-connect.max-wait-ms";
   public static final long DEFAULT_CLIENT_NM_CONNECT_MAX_WAIT_MS =
-      15 * 60 * 1000;
+      3 * 60 * 1000;
 
   /** Time interval between each attempt to connect to NM */
   public static final String CLIENT_NM_CONNECT_RETRY_INTERVAL_MS =
@@ -1572,7 +1635,27 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_HTTP_POLICY_KEY = YARN_PREFIX + "http.policy";
   public static final String YARN_HTTP_POLICY_DEFAULT = HttpConfig.Policy.HTTP_ONLY
       .name();
-  
+
+
+  /**
+   * Max time to wait for NM to connection to RM.
+   * When not set, proxy will fall back to use value of
+   * RESOURCEMANAGER_CONNECT_MAX_WAIT_MS.
+   */
+  public static final String NM_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =
+      YARN_PREFIX + "nodemanager.resourcemanager.connect.max-wait.ms";
+
+  /**
+   * Time interval between each NM attempt to connection to RM.
+   * When not set, proxy will fall back to use value of
+   * RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS.
+   */
+  public static final String NM_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS =
+      YARN_PREFIX + "nodemanager.resourcemanager.connect.retry-interval.ms";
+
+  /**
+   * Node-labels configurations
+   */
   public static final String NODE_LABELS_PREFIX = YARN_PREFIX + "node-labels.";
 
   /**
@@ -1581,7 +1664,7 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String RM_NODE_LABELS_MANAGER_CLASS = NODE_LABELS_PREFIX
       + "manager-class";
-  
+
   /** URI for NodeLabelManager */
   public static final String FS_NODE_LABELS_STORE_ROOT_DIR = NODE_LABELS_PREFIX
       + "fs-store.root-dir";
@@ -1597,6 +1680,11 @@ public class YarnConfiguration extends Configuration {
   public static final String AM_BLACKLISTING_DISABLE_THRESHOLD =
       YARN_PREFIX + "am.blacklisting.disable-failure-threshold";
   public static final float DEFAULT_AM_BLACKLISTING_DISABLE_THRESHOLD = 0.8f;
+
+  public static final String APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC =
+          YARN_PREFIX + "app.attempt.diagnostics.limit.kc";
+
+  public static final int DEFAULT_APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC = 64;
 
 
   public YarnConfiguration() {
@@ -1642,7 +1730,7 @@ public class YarnConfiguration extends Configuration {
   public InetSocketAddress updateConnectAddr(String name,
                                              InetSocketAddress addr) {
     String prefix = name;
-    if (HAUtil.isHAEnabled(this)) {
+    if (HAUtil.isHAEnabled(this) && getServiceAddressConfKeys(this).contains(name)) {
       prefix = HAUtil.addSuffix(prefix, HAUtil.getRMHAId(this));
     }
     return super.updateConnectAddr(prefix, addr);
@@ -1676,6 +1764,12 @@ public class YarnConfiguration extends Configuration {
     return HttpConfig.Policy.HTTPS_ONLY == HttpConfig.Policy.fromString(conf
         .get(YARN_HTTP_POLICY_KEY,
             YARN_HTTP_POLICY_DEFAULT));
+  }
+
+  public static boolean shouldRMFailFast(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.RM_FAIL_FAST,
+        conf.getBoolean(YarnConfiguration.YARN_FAIL_FAST,
+            YarnConfiguration.DEFAULT_YARN_FAIL_FAST));
   }
 
   @Private

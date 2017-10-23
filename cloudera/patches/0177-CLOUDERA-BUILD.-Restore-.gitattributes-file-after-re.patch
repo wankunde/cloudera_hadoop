@@ -1,7 +1,7 @@
 From 18e6b2b9854a9965c6c931d338abfd9bdf926170 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <andrew.wang@cloudera.com>
 Date: Thu, 16 Jan 2014 16:36:32 -0800
-Subject: [PATCH 177/924] CLOUDERA-BUILD. Restore .gitattributes file after
+Subject: [PATCH 0177/2639] CLOUDERA-BUILD. Restore .gitattributes file after
  rebase.
 
 (cherry picked from commit 07222bf2967bb09b112407e651d1c16c457615e2)

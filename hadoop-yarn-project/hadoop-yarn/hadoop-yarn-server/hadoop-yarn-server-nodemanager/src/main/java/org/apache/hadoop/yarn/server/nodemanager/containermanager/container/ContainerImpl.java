@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStartMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStopMonitoringEvent;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
@@ -117,14 +118,15 @@ public class ContainerImpl implements Container {
       RecoveredContainerStatus.REQUESTED;
   // whether container was marked as killed after recovery
   private boolean recoveredAsKilled = false;
+  private Context context;
 
   public ContainerImpl(Configuration conf, Dispatcher dispatcher,
-      NMStateStoreService stateStore, ContainerLaunchContext launchContext,
-      Credentials creds, NodeManagerMetrics metrics,
-      ContainerTokenIdentifier containerTokenIdentifier) {
+      ContainerLaunchContext launchContext, Credentials creds,
+      NodeManagerMetrics metrics,
+      ContainerTokenIdentifier containerTokenIdentifier, Context context) {
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
-    this.stateStore = stateStore;
+    this.stateStore = context.getNMStateStore();
     this.launchContext = launchContext;
     this.containerTokenIdentifier = containerTokenIdentifier;
     this.containerId = containerTokenIdentifier.getContainerID();
@@ -136,19 +138,20 @@ public class ContainerImpl implements Container {
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     this.readLock = readWriteLock.readLock();
     this.writeLock = readWriteLock.writeLock();
+    this.context = context;
 
     stateMachine = stateMachineFactory.make(this);
   }
 
   // constructor for a recovered container
   public ContainerImpl(Configuration conf, Dispatcher dispatcher,
-      NMStateStoreService stateStore, ContainerLaunchContext launchContext,
-      Credentials creds, NodeManagerMetrics metrics,
+      ContainerLaunchContext launchContext, Credentials creds,
+      NodeManagerMetrics metrics,
       ContainerTokenIdentifier containerTokenIdentifier,
       RecoveredContainerStatus recoveredStatus, int exitCode,
-      String diagnostics, boolean wasKilled) {
-    this(conf, dispatcher, stateStore, launchContext, creds, metrics,
-        containerTokenIdentifier);
+      String diagnostics, boolean wasKilled, Context context) {
+    this(conf, dispatcher, launchContext, creds, metrics,
+        containerTokenIdentifier, context);
     this.recoveredStatus = recoveredStatus;
     this.exitCode = exitCode;
     this.recoveredAsKilled = wasKilled;
@@ -314,6 +317,7 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
         ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
         EnumSet.of(ContainerEventType.KILL_CONTAINER,
+            ContainerEventType.RESOURCE_FAILED,
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
             ContainerEventType.CONTAINER_EXITED_WITH_FAILURE))
 
@@ -921,11 +925,12 @@ public class ContainerImpl implements Container {
       container.sendFinishedEvents();
       //if the current state is NEW it means the CONTAINER_INIT was never 
       // sent for the event, thus no need to send the CONTAINER_STOP
-      if (container.getCurrentState() 
+      if (container.getCurrentState()
           != org.apache.hadoop.yarn.api.records.ContainerState.NEW) {
         container.dispatcher.getEventHandler().handle(new AuxServicesEvent
             (AuxServicesEventType.CONTAINER_STOP, container));
       }
+      container.context.getNodeStatusUpdater().sendOutofBandHeartBeat();
     }
   }
 
@@ -975,7 +980,12 @@ public class ContainerImpl implements Container {
       ContainerDoneTransition {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
-      container.metrics.endRunningContainer();
+      if (container.wasLaunched) {
+        container.metrics.endRunningContainer();
+      } else {
+        LOG.warn("Container exited with success despite being killed and not" +
+            "actually running");
+      }
       container.metrics.completedContainer();
       NMAuditLogger.logSuccess(container.user,
           AuditConstants.FINISH_SUCCESS_CONTAINER, "ContainerImpl",
@@ -1053,13 +1063,6 @@ public class ContainerImpl implements Container {
       ContainerDiagnosticsUpdateEvent updateEvent =
           (ContainerDiagnosticsUpdateEvent) event;
       container.addDiagnostics(updateEvent.getDiagnosticsUpdate(), "\n");
-      try {
-        container.stateStore.storeContainerDiagnostics(container.containerId,
-            container.diagnostics);
-      } catch (IOException e) {
-        LOG.warn("Unable to update state store diagnostics for "
-            + container.containerId, e);
-      }
     }
   }
 
@@ -1080,7 +1083,7 @@ public class ContainerImpl implements Container {
         LOG.warn("Can't handle this event at current state: Current: ["
             + oldState + "], eventType: [" + event.getType() + "]", e);
       }
-      if (oldState != newState) {
+      if (newState != null && oldState != newState) {
         LOG.info("Container " + containerID + " transitioned from "
             + oldState
             + " to " + newState);

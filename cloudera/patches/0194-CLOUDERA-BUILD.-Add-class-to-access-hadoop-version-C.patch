@@ -1,7 +1,7 @@
 From 4b7b765f14835c3de88ec948ee6bcc6f358c153f Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Mon, 12 Jan 2015 18:10:09 -0800
-Subject: [PATCH 194/924] CLOUDERA-BUILD. Add class to access hadoop version
+Subject: [PATCH 0194/2639] CLOUDERA-BUILD. Add class to access hadoop version
  (CDH-22186)
 
 (cherry picked from commit 047f70df7a7b511738fb4f8b07ca4b434d5f7694)

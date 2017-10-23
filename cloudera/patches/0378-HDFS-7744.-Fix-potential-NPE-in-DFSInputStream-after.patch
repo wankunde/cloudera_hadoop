@@ -1,8 +1,9 @@
 From 0a1f94703ca5ffa2f55ab59fe89b67f07f7ae5e3 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 9 Feb 2015 20:16:41 -0800
-Subject: [PATCH 378/924] HDFS-7744. Fix potential NPE in DFSInputStream after
- setDropBehind or setReadahead is called (cmccabe)
+Subject: [PATCH 0378/2639] HDFS-7744. Fix potential NPE in DFSInputStream
+ after setDropBehind or setReadahead is called
+ (cmccabe)
 
 (cherry picked from commit a9dc5cd7069f721e8c55794b877026ba02537167)
 (cherry picked from commit 1465393d14b6d41c81d9913929d3f4a549cd3293)

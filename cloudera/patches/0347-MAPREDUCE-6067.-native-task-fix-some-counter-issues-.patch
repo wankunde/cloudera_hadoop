@@ -1,8 +1,8 @@
 From 022fa17d9a67b52bc3bb41a3635eedecf9692785 Mon Sep 17 00:00:00 2001
 From: Binglin Chang <bchang@apache.org>
 Date: Fri, 5 Sep 2014 14:20:39 +0800
-Subject: [PATCH 347/924] MAPREDUCE-6067. native-task: fix some counter issues
- (Binglin Chang)
+Subject: [PATCH 0347/2639] MAPREDUCE-6067. native-task: fix some counter
+ issues (Binglin Chang)
 
 (cherry picked from commit 00322161b5d4d54770c2f0823e036537edecf5bf)
 (cherry picked from commit f5b86ef833af4f79b7a391808d1e1e414dad4ab2)

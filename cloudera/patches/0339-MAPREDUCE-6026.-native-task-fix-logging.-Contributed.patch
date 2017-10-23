@@ -1,7 +1,7 @@
 From c5166afe9acc37ad34cb94c6bfe686a4e65e6e00 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 14 Aug 2014 04:53:36 +0000
-Subject: [PATCH 339/924] MAPREDUCE-6026. native-task: fix logging.
+Subject: [PATCH 0339/2639] MAPREDUCE-6026. native-task: fix logging.
  Contributed by Manu Zhang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1617878 13f79535-47bb-0310-9956-ffa450edef68

@@ -34,6 +34,7 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
@@ -146,6 +147,9 @@ class BlockSender implements java.io.Closeable {
   /** The reference to the volume where the block is located */
   private FsVolumeReference volumeRef;
 
+  /** The replica of the block that is being read. */
+  private final Replica replica;
+
   // Cache-management related fields
   private final long readaheadLength;
 
@@ -227,15 +231,24 @@ class BlockSender implements java.io.Closeable {
         Preconditions.checkArgument(sendChecksum,
             "If verifying checksum, currently must also send it.");
       }
-      
-      final Replica replica;
+
+      // if there is a append write happening right after the BlockSender
+      // is constructed, the last partial checksum maybe overwritten by the
+      // append, the BlockSender need to use the partial checksum before
+      // the append write.
+      ChunkChecksum chunkChecksum = null;
       final long replicaVisibleLength;
       synchronized(datanode.data) { 
         replica = getReplica(block, datanode);
         replicaVisibleLength = replica.getVisibleLength();
+        if (replica instanceof FinalizedReplica) {
+          // Load last checksum in case the replica is being written
+          // concurrently
+          final FinalizedReplica frep = (FinalizedReplica) replica;
+          chunkChecksum = frep.getLastChecksumAndDataLen();
+        }
       }
       // if there is a write in progress
-      ChunkChecksum chunkChecksum = null;
       if (replica instanceof ReplicaBeingWritten) {
         final ReplicaBeingWritten rbw = (ReplicaBeingWritten)replica;
         waitForMinLength(rbw, startOffset + length);
@@ -281,6 +294,7 @@ class BlockSender implements java.io.Closeable {
         LengthInputStream metaIn = null;
         boolean keepMetaInOpen = false;
         try {
+          DataNodeFaultInjector.get().throwTooManyOpenFiles();
           metaIn = datanode.data.getMetaDataInputStream(block);
           if (!corruptChecksumOk || metaIn != null) {
             if (metaIn == null) {
@@ -291,11 +305,15 @@ class BlockSender implements java.io.Closeable {
 
             // The meta file will contain only the header if the NULL checksum
             // type was used, or if the replica was written to transient storage.
+            // Also, when only header portion of a data packet was transferred
+            // and then pipeline breaks, the meta file can contain only the
+            // header and 0 byte in the block data file.
             // Checksum verification is not performed for replicas on transient
             // storage.  The header is important for determining the checksum
             // type later when lazy persistence copies the block to non-transient
             // storage and computes the checksum.
-            if (metaIn.getLength() > BlockMetadataHeader.getHeaderSize()) {
+            if (!replica.isOnTransientStorage() &&
+                metaIn.getLength() >= BlockMetadataHeader.getHeaderSize()) {
               checksumIn = new DataInputStream(new BufferedInputStream(
                   metaIn, HdfsConstants.IO_FILE_BUFFER_SIZE));
   
@@ -305,6 +323,16 @@ class BlockSender implements java.io.Closeable {
           } else {
             LOG.warn("Could not find metadata file for " + block);
           }
+        } catch (FileNotFoundException e) {
+          if ((e.getMessage() != null) && !(e.getMessage()
+              .contains("Too many open files"))) {
+            // The replica is on its volume map but not on disk
+            datanode
+                .notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
+            datanode.data.invalidate(block.getBlockPoolId(),
+                new Block[] {block.getLocalBlock()});
+          }
+          throw e;
         } finally {
           if (!keepMetaInOpen) {
             IOUtils.closeStream(metaIn);
@@ -475,7 +503,7 @@ class BlockSender implements java.io.Closeable {
               bytesOnDisk));
     }
   }
-  
+
   /**
    * Converts an IOExcpetion (not subclasses) to SocketException.
    * This is typically done to indicate to upper layers that the error 
@@ -549,7 +577,6 @@ class BlockSender implements java.io.Closeable {
       if (lastDataPacket && lastChunkChecksum != null) {
         int start = checksumOff + checksumDataLen - checksumSize;
         byte[] updatedChecksum = lastChunkChecksum.getChecksum();
-        
         if (updatedChecksum != null) {
           System.arraycopy(updatedChecksum, 0, buf, start, checksumSize);
         }
@@ -606,10 +633,10 @@ class BlockSender implements java.io.Closeable {
         String ioem = e.getMessage();
         if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
           LOG.error("BlockSender.sendChunks() exception: ", e);
-        }
-        datanode.getBlockScanner().markSuspectBlock(
+          datanode.getBlockScanner().markSuspectBlock(
               volumeRef.getVolume().getStorageID(),
               block);
+        }
       }
       throw ioeToSocketException(e);
     }
@@ -675,8 +702,12 @@ class BlockSender implements java.io.Closeable {
       checksum.update(buf, dOff, dLen);
       if (!checksum.compare(buf, cOff)) {
         long failedPos = offset + datalen - dLeft;
-        throw new ChecksumException("Checksum failed at " + failedPos,
-            failedPos);
+        StringBuilder replicaInfoString = new StringBuilder();
+        if (replica != null) {
+          replicaInfoString.append(" for replica: " + replica.toString());
+        }
+        throw new ChecksumException("Checksum failed at " + failedPos
+            + replicaInfoString, failedPos);
       }
       dLeft -= dLen;
       dOff += dLen;

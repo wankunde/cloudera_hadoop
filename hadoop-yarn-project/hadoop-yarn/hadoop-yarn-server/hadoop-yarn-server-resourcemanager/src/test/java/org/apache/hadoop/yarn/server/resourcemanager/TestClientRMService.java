@@ -28,6 +28,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
@@ -144,6 +146,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -152,6 +155,8 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestClientRMService {
 
@@ -237,6 +242,7 @@ public class TestClientRMService {
 
     // Now make the node unhealthy.
     node.nodeHeartbeat(false);
+    rm.NMwaitForState(node.getNodeId(), NodeState.UNHEALTHY);
 
     // Call again
     nodeReports = client.getClusterNodes(request).getNodeReports();
@@ -273,7 +279,7 @@ public class TestClientRMService {
       Assert.assertTrue(report.getNodeLabels() != null
           && report.getNodeLabels().isEmpty());
     }
-    
+
     rpc.stopProxy(client, conf);
     rm.close();
   }
@@ -443,6 +449,7 @@ public class TestClientRMService {
     ConcurrentHashMap<ApplicationId, RMApp> apps = getRMApps(rmContext,
         yarnScheduler);
     when(rmContext.getRMApps()).thenReturn(apps);
+    when(rmContext.getYarnConfiguration()).thenReturn(new Configuration());
     RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler, null,
         mock(ApplicationACLsManager.class), new Configuration());
     when(rmContext.getDispatcher().getEventHandler()).thenReturn(
@@ -605,9 +612,10 @@ public class TestClientRMService {
             checkTokenRenewal(owner, other);
             return null;
           } catch (YarnException ex) {
-            Assert.assertTrue(ex.getMessage().contains(owner.getUserName() +
-                " tries to renew a token with renewer " +
-                other.getUserName()));
+            Assert.assertTrue(ex.getMessage().contains(
+                owner.getUserName() + " tries to renew a token"));
+            Assert.assertTrue(ex.getMessage().contains(
+                "with non-matching renewer " + other.getUserName()));
             throw ex;
           }
         }
@@ -1191,9 +1199,9 @@ public class TestClientRMService {
         spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
             queueName, asContext, yarnScheduler, null,
             System.currentTimeMillis(), "YARN", null,
-            BuilderUtils.newResourceRequest(
+            Collections.singletonList(BuilderUtils.newResourceRequest(
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                Resource.newInstance(1024, 1), 1)){
+                Resource.newInstance(1024, 1), 1))){
                   @Override
                   public ApplicationReport createAndGetApplicationReport(
                       String clientUserName, boolean allowAccess) {
@@ -1257,6 +1265,17 @@ public class TestClientRMService {
         Arrays.asList(getApplicationAttemptId(103)));
     ApplicationAttemptId attemptId = getApplicationAttemptId(1);
     when(yarnScheduler.getAppResourceUsageReport(attemptId)).thenReturn(null);
+
+    ResourceCalculator rs = mock(ResourceCalculator.class);
+    when(yarnScheduler.getResourceCalculator()).thenReturn(rs);
+    when(rs.normalize((Resource) any(), (Resource) any(), (Resource) any(), (Resource) any()))
+        .thenAnswer(new Answer<Resource>() {
+          @Override
+          public Resource answer(InvocationOnMock invocationOnMock)
+              throws Throwable {
+            return (Resource) invocationOnMock.getArguments()[0];
+          }
+        });
     return yarnScheduler;
   }
 
@@ -1406,5 +1425,50 @@ public class TestClientRMService {
     
     rpc.stopProxy(client, conf);
     rm.close();
+  }
+
+  private void createExcludeFile(String filename) throws IOException {
+    File file = new File(filename);
+    if (file.exists()) {
+      file.delete();
+    }
+
+    FileOutputStream out = new FileOutputStream(file);
+    out.write("decommisssionedHost".getBytes());
+    out.close();
+  }
+
+  @Test
+  public void testRMStartWithDecommissionedNode() throws Exception {
+    String excludeFile = "excludeFile";
+    createExcludeFile(excludeFile);
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+        excludeFile);
+    MockRM rm = new MockRM(conf) {
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(this.rmContext, scheduler,
+            this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
+            this.getRMContext().getRMDelegationTokenSecretManager());
+      };
+    };
+    rm.start();
+
+    YarnRPC rpc = YarnRPC.create(conf);
+    InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
+    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    ApplicationClientProtocol client =
+        (ApplicationClientProtocol) rpc
+            .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
+
+    // Make call
+    GetClusterNodesRequest request =
+        GetClusterNodesRequest.newInstance(EnumSet.allOf(NodeState.class));
+    List<NodeReport> nodeReports = client.getClusterNodes(request).getNodeReports();
+    Assert.assertEquals(1, nodeReports.size());
+
+    rm.stop();
+    rpc.stopProxy(client, conf);
+    new File(excludeFile).delete();
   }
 }

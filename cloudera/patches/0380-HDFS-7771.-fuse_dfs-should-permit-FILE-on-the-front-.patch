@@ -1,8 +1,8 @@
 From 39eb4f1da51876492b2dd51cb12991a93942ac66 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 11 Feb 2015 12:14:23 -0800
-Subject: [PATCH 380/924] HDFS-7771. fuse_dfs should permit FILE: on the front
- of KRB5CCNAME (cmccabe)
+Subject: [PATCH 0380/2639] HDFS-7771. fuse_dfs should permit FILE: on the
+ front of KRB5CCNAME (cmccabe)
 
 (cherry picked from commit 50625e660ac0f76e7fe46d55df3d15cbbf058753)
 (cherry picked from commit 2ca76df21a3dceef27714744b333bf39c381ca3e)

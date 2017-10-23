@@ -1,9 +1,9 @@
 From 4c0badca90834cd2243cd0f84c14b3ecbb812a5c Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 3 Apr 2015 14:19:46 -0700
-Subject: [PATCH 524/924] HDFS-7996. After swapping a volume, BlockReceiver
- reports ReplicaNotFoundException (Lei (Eddy) Xu via
- Colin P. McCabe)
+Subject: [PATCH 0524/2639] HDFS-7996. After swapping a volume, BlockReceiver
+ reports ReplicaNotFoundException (Lei (Eddy) Xu
+ via Colin P. McCabe)
 
 (cherry picked from commit 023133cef9a7ca05364cefbcead57c921589eda7)
 

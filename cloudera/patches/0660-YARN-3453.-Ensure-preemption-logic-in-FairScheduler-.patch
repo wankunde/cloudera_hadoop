@@ -1,9 +1,10 @@
 From f70d2fea859bc056c0464aa9d281b30129b21940 Mon Sep 17 00:00:00 2001
 From: Arun Suresh <asuresh@apache.org>
 Date: Tue, 14 Jul 2015 00:23:55 -0700
-Subject: [PATCH 660/924] YARN-3453. Ensure preemption logic in FairScheduler
- uses DominantResourceCalculator in DRF queues to
- prevent unnecessary thrashing. (asuresh)
+Subject: [PATCH 0660/2639] YARN-3453. Ensure preemption logic in
+ FairScheduler uses DominantResourceCalculator in
+ DRF queues to prevent unnecessary thrashing.
+ (asuresh)
 
 (cherry picked from commit ac94ba3e185115b83351e35c610c2b8ff91b1ebc)
 ---

@@ -1,7 +1,7 @@
 From 2635c894e75ad9ada2ddef3ed300fbe364779a12 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Sun, 8 Feb 2015 22:48:10 -0800
-Subject: [PATCH 377/924] YARN-2990. FairScheduler's delay-scheduling always
+Subject: [PATCH 0377/2639] YARN-2990. FairScheduler's delay-scheduling always
  waits for node-local and rack-local delays, even
  for off-rack-only requests. (kasha)
 

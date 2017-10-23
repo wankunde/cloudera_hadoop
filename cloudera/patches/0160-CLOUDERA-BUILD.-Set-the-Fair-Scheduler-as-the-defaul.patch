@@ -1,7 +1,7 @@
 From 23ce4babb4f728fdff7c99fcf2f2a218f076371e Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Fri, 21 Jun 2013 16:35:24 -0700
-Subject: [PATCH 160/924] CLOUDERA-BUILD. Set the Fair Scheduler as the
+Subject: [PATCH 0160/2639] CLOUDERA-BUILD. Set the Fair Scheduler as the
  default scheduler.
 
 (cherry picked from commit 2608afcdbb6efa3bbf496c2b70a7e2ccde4dd0ba)

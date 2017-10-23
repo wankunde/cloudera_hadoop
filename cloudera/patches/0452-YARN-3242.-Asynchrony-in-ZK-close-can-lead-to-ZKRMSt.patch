@@ -1,7 +1,7 @@
 From 404b30ad6e10ca1d9f263341acb18ceeb45eb5e9 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 4 Mar 2015 19:47:02 -0800
-Subject: [PATCH 452/924] YARN-3242. Asynchrony in ZK-close can lead to
+Subject: [PATCH 0452/2639] YARN-3242. Asynchrony in ZK-close can lead to
  ZKRMStateStore watcher receiving events for old
  client. (Zhihai Xu via kasha)
 

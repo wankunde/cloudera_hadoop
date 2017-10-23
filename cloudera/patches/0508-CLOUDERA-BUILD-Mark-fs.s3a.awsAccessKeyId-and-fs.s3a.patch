@@ -1,7 +1,7 @@
 From 3cda1e367e7294e18c4feefb1c76cb483e3bfdbb Mon Sep 17 00:00:00 2001
 From: Lei Xu <lei@cloudera.com>
 Date: Mon, 16 Mar 2015 10:49:37 -0700
-Subject: [PATCH 508/924] CLOUDERA-BUILD: Mark fs.s3a.awsAccessKeyId and
+Subject: [PATCH 0508/2639] CLOUDERA-BUILD: Mark fs.s3a.awsAccessKeyId and
  fs.s3a.awsSecretAccessKey as deprecated keys and
  make them alias of fs.s3a.access.key and
  fs.s3a.secret.key

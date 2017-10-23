@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.fs;
 
+import java.util.Arrays;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.JceAesCtrCryptoCodec;
 import org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec;
+import org.apache.hadoop.util.StringUtils;
 
 /** 
  * This class contains constants for configuration keys used
@@ -230,6 +233,16 @@ public class CommonConfigurationKeysPublic {
     "ipc.server.tcpnodelay";
   /** Default value for IPC_SERVER_TCPNODELAY_KEY */
   public static final boolean IPC_SERVER_TCPNODELAY_DEFAULT = true;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  IPC_SERVER_MAX_CONNECTIONS_KEY =
+    "ipc.server.max.connections";
+  /** Default value for IPC_SERVER_MAX_CONNECTIONS_KEY */
+  public static final int     IPC_SERVER_MAX_CONNECTIONS_DEFAULT = 0;
+
+  /** Logs if a RPC is really slow compared to rest of RPCs. */
+  public static final String IPC_SERVER_LOG_SLOW_RPC =
+                                                "ipc.server.log.slow.rpc";
+  public static final boolean IPC_SERVER_LOG_SLOW_RPC_DEFAULT = false;
 
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY =
@@ -264,6 +277,19 @@ public class CommonConfigurationKeysPublic {
   public static final long HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS_DEFAULT =
     5000;
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD =
+      "hadoop.security.groups.cache.background.reload";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a>. */
+  public static final boolean
+      HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_DEFAULT = false;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a>. */
+  public static final String
+      HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_THREADS =
+          "hadoop.security.groups.cache.background.reload.threads";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a>. */
+  public static final int
+      HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_THREADS_DEFAULT = 3;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a>.*/
   public static final String  HADOOP_SECURITY_AUTHENTICATION =
     "hadoop.security.authentication";
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
@@ -278,6 +304,21 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_SECURITY_AUTH_TO_LOCAL =
     "hadoop.security.auth_to_local";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS =
+      "hadoop.security.sensitive-config-keys";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS_DEFAULT =
+      StringUtils.join(",", Arrays.asList(
+          "secret$",
+          "password$",
+          "ssl.keystore.pass$",
+          "fs.s3.*[Ss]ecret.?[Kk]ey",
+          "fs.s3a.*.server-side-encryption.key",
+          "fs.azure\\.account.key.*",
+          "credential$",
+          "oauth.*token$",
+          HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS));
 
   @Deprecated
   /** Only used by HttpServer. */
@@ -286,6 +327,12 @@ public class CommonConfigurationKeysPublic {
   /** Only used by HttpServer. */
   public static final boolean HADOOP_SSL_ENABLED_DEFAULT = false;
 
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN =
+      "hadoop.kerberos.min.seconds.before.relogin";
+  /** Default value for HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN */
+  public static final int HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT =
+      60;
 
   // HTTP policies to be used in configuration
   // Use HttpPolicy.name() instead
@@ -325,6 +372,12 @@ public class CommonConfigurationKeysPublic {
   /** Class to override Impersonation provider */
   public static final String  HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS =
     "hadoop.security.impersonation.provider.class";
+
+  // After backport HDFS-10489, we should replace 
+  //   "dfs.encryption.key.provider.uri" with "hadoop.security.key.provider.path"
+  // here
+  public static final String HADOOP_SECURITY_KEY_PROVIDER_PATH =
+    "dfs.encryption.key.provider.uri";
 
   //  <!--- KMSClientProvider configurations —>
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
@@ -374,5 +427,37 @@ public class CommonConfigurationKeysPublic {
   // CLOUDERA-BUILD: enable the shell warnings by default.
   public static final boolean HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_DEFAULT =
       true;
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_HTTP_LOGS_ENABLED =
+      "hadoop.http.logs.enabled";
+  /** Defalt value for HADOOP_HTTP_LOGS_ENABLED */
+  public static final boolean HADOOP_HTTP_LOGS_ENABLED_DEFAULT = true;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH =
+      "hadoop.security.credential.provider.path";
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_CREDENTIAL_CLEAR_TEXT_FALLBACK =
+      "hadoop.security.credential.clear-text-fallback";
+  public static final boolean
+      HADOOP_SECURITY_CREDENTIAL_CLEAR_TEXT_FALLBACK_DEFAULT = true;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  HADOOP_SECURITY_CREDENTIAL_PASSWORD_FILE_KEY =
+      "hadoop.security.credstore.java-keystore-provider.password-file";
 }
 

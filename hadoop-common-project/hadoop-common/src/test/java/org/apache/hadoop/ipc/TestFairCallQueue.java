@@ -18,17 +18,14 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import junit.framework.TestCase;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.BlockingQueue;
@@ -64,7 +61,7 @@ public class TestFairCallQueue extends TestCase {
     Configuration conf = new Configuration();
     conf.setInt("ns." + IPC_CALLQUEUE_PRIORITY_LEVELS_KEY, 2);
 
-    fcq = new FairCallQueue<Schedulable>(5, "ns", conf);
+    fcq = new FairCallQueue<Schedulable>(10, "ns", conf);
   }
 
   //
@@ -399,5 +396,21 @@ public class TestFairCallQueue extends TestCase {
     // Take from q1 even though mux said q0, since q0 empty
     assertEquals(call, fcq.take());
     assertEquals(0, fcq.size());
+  }
+
+  public void testFairCallQueueMXBean() throws Exception {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName mxbeanName = new ObjectName(
+        "Hadoop:service=ns,name=FairCallQueue");
+
+    Schedulable call = mockCall("c");
+    fcq.put(call);
+    int[] queueSizes = (int[]) mbs.getAttribute(mxbeanName, "QueueSizes");
+    assertEquals(1, queueSizes[0]);
+    assertEquals(0, queueSizes[1]);
+    fcq.take();
+    queueSizes = (int[]) mbs.getAttribute(mxbeanName, "QueueSizes");
+    assertEquals(0, queueSizes[0]);
+    assertEquals(0, queueSizes[1]);
   }
 }

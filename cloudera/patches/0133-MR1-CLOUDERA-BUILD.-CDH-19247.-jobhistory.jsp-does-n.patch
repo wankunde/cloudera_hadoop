@@ -1,9 +1,9 @@
 From 8c3953b3b95281a1096a915df6d90eb56ad628d7 Mon Sep 17 00:00:00 2001
 From: Ray Chiang <rchiang@cloudera.com>
 Date: Thu, 22 May 2014 13:12:41 -0700
-Subject: [PATCH 133/924] MR1: CLOUDERA-BUILD. CDH-19247. jobhistory.jsp does
- not show correct histroy after JT restart.  Fix
- provided by Wilfred Spiegelenburg.
+Subject: [PATCH 0133/2639] MR1: CLOUDERA-BUILD. CDH-19247. jobhistory.jsp
+ does not show correct histroy after JT restart. 
+ Fix provided by Wilfred Spiegelenburg.
 
 (cherry picked from commit 0d6c51fdaa72845861fa75ae7a61fbf4794b7822)
 (cherry picked from commit 2adc80e82c4ded19d8098f13700faa748d0091e9)

@@ -1,7 +1,7 @@
 From 7313a447041f628db98ef4454087beddb391a7e3 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Fri, 13 Sep 2013 11:48:22 -0700
-Subject: [PATCH 082/924] MR1: CLOUDERA-BUILD. CDH MR1 equivalent of
+Subject: [PATCH 0082/2639] MR1: CLOUDERA-BUILD. CDH MR1 equivalent of
  MAPREDUCE-5379 (cherry picked from commit
  9f092c04cfc3290b31dab5126d93dd3255a3fbee)
 

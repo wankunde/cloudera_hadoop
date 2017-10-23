@@ -1,7 +1,7 @@
 From cd9619a35721d9ec72101d618befc7c38d27ae84 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 11 Aug 2015 23:25:33 -0700
-Subject: [PATCH 713/924] HDFS-8887. Expose storage type and storage ID in
+Subject: [PATCH 0713/2639] HDFS-8887. Expose storage type and storage ID in
  BlockLocation.
 
 Note that we are missing a major refactor, HDFS-7806, which means

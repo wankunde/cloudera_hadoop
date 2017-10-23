@@ -1,7 +1,7 @@
 From b6091a840ce40d7b853e7648ab175b4e28bfdefd Mon Sep 17 00:00:00 2001
 From: Ray Chiang <rchiang@cloudera.com>
 Date: Mon, 27 Jul 2015 13:32:32 -0700
-Subject: [PATCH 686/924] CDH-29726. CLOUDERA-BUILD. Partial backport that
+Subject: [PATCH 0686/2639] CDH-29726. CLOUDERA-BUILD. Partial backport that
  pulls unit test fix, but not ATS-dependent tests,
  from MAPREDUCE-6304.
 

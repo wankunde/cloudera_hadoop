@@ -1,9 +1,9 @@
 From f8e7c1d73fb1db9df012c79dc42830e24ddae368 Mon Sep 17 00:00:00 2001
 From: Devaraj K <devaraj@apache.org>
 Date: Wed, 1 Jul 2015 11:11:26 +0530
-Subject: [PATCH 678/924] YARN-3823. Fix mismatch in default values for
- yarn.scheduler.maximum-allocation-vcores property.
- Contributed by Ray Chiang.
+Subject: [PATCH 0678/2639] YARN-3823. Fix mismatch in default values for
+ yarn.scheduler.maximum-allocation-vcores
+ property. Contributed by Ray Chiang.
 
 (cherry picked from commit 7405c59799ed1b8ad1a7c6f1b18fabf49d0b92b2)
 ---

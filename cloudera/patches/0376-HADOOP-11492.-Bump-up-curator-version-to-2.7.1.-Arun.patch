@@ -1,7 +1,7 @@
 From 06b635d3859a1b5cb49af1f65dcd10e4e55b16cb Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 4 Feb 2015 13:05:11 -0800
-Subject: [PATCH 376/924] HADOOP-11492. Bump up curator version to 2.7.1.
+Subject: [PATCH 0376/2639] HADOOP-11492. Bump up curator version to 2.7.1.
  (Arun Suresh and Karthik Kambatla via kasha)
  (cherry picked from commit
  55235d28c3641ff5f1c05c53dd7271cafc131926)

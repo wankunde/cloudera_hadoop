@@ -1,10 +1,10 @@
 From 0d965b6d42d1a6271e9c165ab5241821677bfe12 Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Thu, 16 Apr 2015 19:33:15 -0700
-Subject: [PATCH 544/924] YARN-3021. YARN's delegation-token handling
- disallows certain trust setups to operate properly
- over DistCp. Contributed by Yongjun Zhang (cherry
- picked from commit
+Subject: [PATCH 0544/2639] YARN-3021. YARN's delegation-token handling
+ disallows certain trust setups to operate
+ properly over DistCp. Contributed by Yongjun
+ Zhang (cherry picked from commit
  bb6dde68f19be1885a9e7f7949316a03825b6f3e)
 
 (cherry picked from commit 42cf8e05543964e8ec9b00cfdbf2cff06d72d3e5)

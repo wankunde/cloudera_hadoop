@@ -1,7 +1,7 @@
 From bb169d7779f6ca87ad365552f3fd4319f38e3047 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 15 Dec 2014 16:16:02 -0800
-Subject: [PATCH 295/924] HADOOP-11410. Make the rpath of libhadoop.so
+Subject: [PATCH 0295/2639] HADOOP-11410. Make the rpath of libhadoop.so
  configurable (cmccabe) (cherry picked from commit
  fb20797b6237054f3d16ff94a665cbad4cbe3293)
 

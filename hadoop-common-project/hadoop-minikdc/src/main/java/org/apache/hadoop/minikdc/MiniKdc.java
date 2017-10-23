@@ -40,6 +40,7 @@ import org.apache.directory.server.kerberos.kdc.KdcServer;
 import org.apache.directory.server.kerberos.shared.crypto.encryption.KerberosKeyFactory;
 import org.apache.directory.server.kerberos.shared.keytab.Keytab;
 import org.apache.directory.server.kerberos.shared.keytab.KeytabEntry;
+import org.apache.directory.server.protocol.shared.transport.AbstractTransport;
 import org.apache.directory.server.protocol.shared.transport.TcpTransport;
 import org.apache.directory.server.protocol.shared.transport.UdpTransport;
 import org.apache.directory.server.xdbm.Index;
@@ -52,6 +53,8 @@ import org.apache.directory.api.ldap.model.ldif.LdifEntry;
 import org.apache.directory.api.ldap.model.ldif.LdifReader;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.schema.registries.SchemaLoader;
+import org.apache.mina.transport.socket.SocketAcceptor;
+import org.apache.mina.transport.socket.SocketSessionConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,10 +63,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Method;
-import java.net.InetAddress;
-import java.net.ServerSocket;
+import java.net.InetSocketAddress;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -79,9 +82,9 @@ import java.util.UUID;
 /**
  * Mini KDC based on Apache Directory Server that can be embedded in testcases
  * or used from command line as a standalone KDC.
- * <p/>
+ * <p>
  * <b>From within testcases:</b>
- * <p/>
+ * <p>
  * MiniKdc sets 2 System properties when started and un-sets them when stopped:
  * <ul>
  *   <li>java.security.krb5.conf: set to the MiniKDC real/host/port</li>
@@ -92,7 +95,7 @@ import java.util.UUID;
  * For example, running testcases in parallel that start a KDC each. To
  * accomplish this a single MiniKdc should be used for all testcases running
  * in parallel.
- * <p/>
+ * <p>
  * MiniKdc default configuration values are:
  * <ul>
  *   <li>org.name=EXAMPLE (used to create the REALM)</li>
@@ -106,7 +109,6 @@ import java.util.UUID;
  *   <li>debug=false</li>
  * </ul>
  * The generated krb5.conf forces TCP connections.
- * <p/>
  */
 public class MiniKdc {
 
@@ -218,7 +220,7 @@ public class MiniKdc {
 
   /**
    * Convenience method that returns MiniKdc default configuration.
-   * <p/>
+   * <p>
    * The returned configuration is a copy, it can be customized before using
    * it to create a MiniKdc.
    * @return a MiniKdc default configuration.
@@ -264,12 +266,6 @@ public class MiniKdc {
     LOG.info("---------------------------------------------------------------");
     this.conf = conf;
     port = Integer.parseInt(conf.getProperty(KDC_PORT));
-    if (port == 0) {
-      ServerSocket ss = new ServerSocket(0, 1, InetAddress.getByName
-              (conf.getProperty(KDC_BIND_ADDRESS)));
-      port = ss.getLocalPort();
-      ss.close();
-    }
     String orgName= conf.getProperty(ORG_NAME);
     String orgDomain = conf.getProperty(ORG_DOMAIN);
     realm = orgName.toUpperCase(Locale.ENGLISH) + "."
@@ -389,6 +385,32 @@ public class MiniKdc {
     ds.getAdminSession().add(entry);
   }
 
+  /**
+   * Convenience method that returns a resource as inputstream from the
+   * classpath.
+   * <p>
+   * It first attempts to use the Thread's context classloader and if not
+   * set it uses the class' classloader.
+   *
+   * @param resourceName resource to retrieve.
+   *
+   * @throws IOException thrown if resource cannot be loaded
+   * @return inputstream with the resource.
+   */
+  public static InputStream getResourceAsStream(String resourceName)
+      throws IOException {
+    ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    if (cl == null) {
+      cl = MiniKdc.class.getClassLoader();
+    }
+    InputStream is = cl.getResourceAsStream(resourceName);
+    if (is == null) {
+      throw new IOException("Can not read resource file '" +
+          resourceName + "'");
+    }
+    return is;
+  }
+
   private void initKDCServer() throws Exception {
     String orgName= conf.getProperty(ORG_NAME);
     String orgDomain = conf.getProperty(ORG_DOMAIN);
@@ -400,8 +422,7 @@ public class MiniKdc {
     map.put("3", orgDomain.toUpperCase(Locale.ENGLISH));
     map.put("4", bindAddress);
 
-    ClassLoader cl = Thread.currentThread().getContextClassLoader();
-    InputStream is1 = cl.getResourceAsStream("minikdc.ldiff");
+    InputStream is1 = getResourceAsStream("minikdc.ldiff");
 
     SchemaManager schemaManager = ds.getSchemaManager();
     LdifReader reader = null;
@@ -424,13 +445,23 @@ public class MiniKdc {
 
     // transport
     String transport = conf.getProperty(TRANSPORT);
+    AbstractTransport absTransport;
     if (transport.trim().equals("TCP")) {
-      kdc.addTransports(new TcpTransport(bindAddress, port, 3, 50));
+      TcpTransport tcpTransport = new TcpTransport(bindAddress, port, 3, 50);
+      // set the receive/send buffer size to 64 KB to prevent packet
+      // fragmentation
+      SocketAcceptor acceptor = tcpTransport.getAcceptor();
+      SocketSessionConfig sessionConfig = acceptor.getSessionConfig();
+      final int bufferSize = 64 * 1024;
+      sessionConfig.setReceiveBufferSize(bufferSize);
+      sessionConfig.setSendBufferSize(bufferSize);
+      absTransport = tcpTransport;
     } else if (transport.trim().equals("UDP")) {
-      kdc.addTransports(new UdpTransport(port));
+      absTransport = new UdpTransport(port);
     } else {
       throw new IllegalArgumentException("Invalid transport: " + transport);
     }
+    kdc.addTransports(absTransport);
     kdc.setServiceName(conf.getProperty(INSTANCE));
     kdc.getConfig().setMaximumRenewableLifetime(
             Long.parseLong(conf.getProperty(MAX_RENEWABLE_LIFETIME)));
@@ -439,9 +470,15 @@ public class MiniKdc {
 
     kdc.getConfig().setPaEncTimestampRequired(false);
     kdc.start();
+    // if using ephemeral port, update port number for binding
+    if (port == 0) {
+      InetSocketAddress addr =
+          (InetSocketAddress)absTransport.getAcceptor().getLocalAddress();
+      port = addr.getPort();
+    }
 
     StringBuilder sb = new StringBuilder();
-    InputStream is2 = cl.getResourceAsStream("minikdc-krb5.conf");
+    InputStream is2 = getResourceAsStream("minikdc-krb5.conf");
 
     BufferedReader r = null;
 
@@ -484,7 +521,6 @@ public class MiniKdc {
 
   /**
    * Stops the MiniKdc
-   * @throws Exception
    */
   public synchronized void stop() {
     if (kdc != null) {

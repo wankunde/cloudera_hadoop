@@ -96,7 +96,10 @@ public class FifoPolicy extends SchedulingPolicy {
         earliest = schedulable;
       }
     }
-    earliest.setFairShare(Resources.clone(totalResources));
+
+    if (earliest != null) {
+      earliest.setFairShare(Resources.clone(totalResources));
+    }
   }
 
   @Override
@@ -111,11 +114,6 @@ public class FifoPolicy extends SchedulingPolicy {
     throw new UnsupportedOperationException(
         "FifoPolicy doesn't support checkIfUsageOverFairshare operation, " +
             "as FifoPolicy only works for FSLeafQueue.");
-  }
-
-  @Override
-  public boolean checkIfAMResourceUsageOverLimit(Resource usage, Resource maxAMResource) {
-    return usage.getMemory() > maxAMResource.getMemory();
   }
 
   @Override

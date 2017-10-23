@@ -1,9 +1,9 @@
 From f4b99105069a6930cef5c6c947fba759973c7d93 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Tue, 31 Dec 2013 13:08:26 -0800
-Subject: [PATCH 118/924] MR1: Backport MAPREDUCE-5702. Remove spurious
- closing HTML tags from TaskLogServlet. (rkanter via
- kasha)
+Subject: [PATCH 0118/2639] MR1: Backport MAPREDUCE-5702. Remove spurious
+ closing HTML tags from TaskLogServlet. (rkanter
+ via kasha)
 
 (cherry picked from commit ee68b5ba9bddac3a89c4163a328051e3542d407b)
 (cherry picked from commit 8a38e725db090cab73ffe951dd3ae5d7cc7095ed)

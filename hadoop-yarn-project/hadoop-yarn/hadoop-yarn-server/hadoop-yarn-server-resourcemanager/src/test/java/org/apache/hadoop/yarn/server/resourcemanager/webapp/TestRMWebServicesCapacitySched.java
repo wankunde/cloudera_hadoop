@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.StringReader;
 
@@ -30,13 +31,10 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -102,10 +100,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
 		    ResourceScheduler.class);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      bind(RMContext.class).toInstance(rm.getRMContext());
-      bind(ApplicationACLsManager.class).toInstance(
-          rm.getApplicationACLsManager());
-      bind(QueueACLsManager.class).toInstance(rm.getQueueACLsManager());
       serve("/*").with(GuiceContainer.class);
     }
   });
@@ -577,6 +571,15 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
         user.getInt("numActiveApplications");
         user.getInt("numPendingApplications");
         checkResourcesUsed(user);
+      }
+
+      // Verify 'queues' field is omitted from CapacitySchedulerLeafQueueInfo.
+      try {
+        b1.getJSONObject("queues");
+        fail("CapacitySchedulerQueueInfo should omit field 'queues'" +
+             "if child queue is empty.");
+      } catch (JSONException je) {
+        assertEquals("JSONObject[\"queues\"] not found.", je.getMessage());
       }
     } finally {
       rm.stop();

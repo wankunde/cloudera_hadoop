@@ -1,10 +1,10 @@
 From 31ce55c33d87149843a0e1e2becebebfc0bda725 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Wed, 25 Mar 2015 11:34:59 -0700
-Subject: [PATCH 517/924] CLOUDERA-BUILD. Revert "MAPREDUCE-5875. Make Counter
- limits consistent across JobClient, MRAppMaster,
- and YarnChild. (Gera Shegalov via kasha)"
- (CDH-26346)
+Subject: [PATCH 0517/2639] CLOUDERA-BUILD. Revert "MAPREDUCE-5875. Make
+ Counter limits consistent across JobClient,
+ MRAppMaster, and YarnChild. (Gera Shegalov via
+ kasha)" (CDH-26346)
 
 This reverts commit 2b2b6c14c0dce31ed8b21e2720b58e0a6dd7102b.
 ---

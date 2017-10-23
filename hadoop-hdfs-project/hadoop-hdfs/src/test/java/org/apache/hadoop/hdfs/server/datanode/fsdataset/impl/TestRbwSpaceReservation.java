@@ -27,26 +27,42 @@ import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.HdfsBlockLocation;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.*;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.log4j.Level;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
+import java.lang.management.ManagementFactory;
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 /**
  * Ensure that the DN reserves disk space equivalent to a full block for
@@ -64,13 +80,17 @@ public class TestRbwSpaceReservation {
   private Configuration conf;
   private DistributedFileSystem fs = null;
   private DFSClient client = null;
+  FsVolumeReference singletonVolumeRef = null;
   FsVolumeImpl singletonVolume = null;
-
+  private DataNodeFaultInjector old = null;
   private static Random rand = new Random();
 
-  private void initConfig(int blockSize) {
+  @Before
+  public void before() {
     conf = new HdfsConfiguration();
+  }
 
+  private void initConfig(int blockSize) {
     // Refresh disk usage information frequently.
     conf.setInt(FS_DU_INTERVAL_KEY, DU_REFRESH_INTERVAL_MSEC);
     conf.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
@@ -104,23 +124,22 @@ public class TestRbwSpaceReservation {
     cluster.waitActive();
 
     if (perVolumeCapacity >= 0) {
-      for (DataNode dn : cluster.getDataNodes()) {
-        for (FsVolumeSpi volume : dn.getFSDataset().getVolumes()) {
-          ((FsVolumeImpl) volume).setCapacityForTesting(perVolumeCapacity);
-        }
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          cluster.getDataNodes().get(0).getFSDataset().getFsVolumeReferences()) {
+        singletonVolumeRef = volumes.get(0).obtainReference();
       }
-    }
-
-    if (numDatanodes == 1) {
-      List<? extends FsVolumeSpi> volumes =
-          cluster.getDataNodes().get(0).getFSDataset().getVolumes();
-      assertThat(volumes.size(), is(1));
-      singletonVolume = ((FsVolumeImpl) volumes.get(0));
+      singletonVolume = ((FsVolumeImpl) singletonVolumeRef.getVolume());
+      singletonVolume.setCapacityForTesting(perVolumeCapacity);
     }
   }
 
   @After
   public void shutdownCluster() throws IOException {
+    if (singletonVolumeRef != null) {
+      singletonVolumeRef.close();
+      singletonVolumeRef = null;
+    }
+
     if (client != null) {
       client.close();
       client = null;
@@ -266,13 +285,79 @@ public class TestRbwSpaceReservation {
     // Ensure all space reserved for the replica was released on each
     // DataNode.
     for (DataNode dn : cluster.getDataNodes()) {
-      final FsVolumeImpl volume = (FsVolumeImpl) dn.getFSDataset().getVolumes().get(0);
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          return (volume.getReservedForRbw() == 0);
-        }
-      }, 500, Integer.MAX_VALUE); // Wait until the test times out.
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          dn.getFSDataset().getFsVolumeReferences()) {
+        final FsVolumeImpl volume = (FsVolumeImpl) volumes.get(0);
+        GenericTestUtils.waitFor(new Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
+            return (volume.getReservedForRbw() == 0);
+          }
+        }, 500, Integer.MAX_VALUE); // Wait until the test times out.
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test(timeout = 30000)
+  public void testRBWFileCreationError() throws Exception {
+
+    final short replication = 1;
+    startCluster(BLOCK_SIZE, replication, -1);
+
+    final FsVolumeImpl fsVolumeImpl = (FsVolumeImpl) cluster.getDataNodes()
+        .get(0).getFSDataset().getFsVolumeReferences().get(0);
+    final String methodName = GenericTestUtils.getMethodName();
+    final Path file = new Path("/" + methodName + ".01.dat");
+
+    // Mock BlockPoolSlice so that RBW file creation gives IOExcception
+    BlockPoolSlice blockPoolSlice = Mockito.mock(BlockPoolSlice.class);
+    Mockito.when(blockPoolSlice.createRbwFile((Block) Mockito.any()))
+        .thenThrow(new IOException("Synthetic IO Exception Throgh MOCK"));
+
+    Field field = FsVolumeImpl.class.getDeclaredField("bpSlices");
+    field.setAccessible(true);
+    Map<String, BlockPoolSlice> bpSlices = (Map<String, BlockPoolSlice>) field
+        .get(fsVolumeImpl);
+    bpSlices.put(fsVolumeImpl.getBlockPoolList()[0], blockPoolSlice);
+
+    try {
+      // Write 1 byte to the file
+      FSDataOutputStream os = fs.create(file, replication);
+      os.write(new byte[1]);
+      os.hsync();
+      os.close();
+      fail("Expecting IOException file creation failure");
+    } catch (IOException e) {
+      // Exception can be ignored (expected)
+    }
+
+    // Ensure RBW space reserved is released
+    assertTrue("Expected ZERO but got " + fsVolumeImpl.getReservedForRbw(),
+        fsVolumeImpl.getReservedForRbw() == 0);
+  }
+
+  @Test(timeout = 30000)
+  public void testRBWInJMXBean() throws Exception {
+
+    final short replication = 1;
+    startCluster(BLOCK_SIZE, replication, -1);
+
+    final String methodName = GenericTestUtils.getMethodName();
+    final Path file = new Path("/" + methodName + ".01.dat");
+
+    try (FSDataOutputStream os = fs.create(file, replication)) {
+      // Write 1 byte to the file
+      os.write(new byte[1]);
+      os.hsync();
+
+      final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      final ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=DataNode,name=DataNodeInfo");
+      final String volumeInfo = (String) mbs.getAttribute(mxbeanName,
+          "VolumeInfo");
+
+      assertTrue(volumeInfo.contains("reservedSpaceForRBW"));
     }
   }
 
@@ -372,5 +457,166 @@ public class TestRbwSpaceReservation {
     public int getNumFailures() {
       return numFailures;
     }
+  }
+
+  @Test(timeout = 30000)
+  public void testReservedSpaceForAppend() throws Exception {
+    final short replication = 3;
+    startCluster(BLOCK_SIZE, replication, -1);
+    final String methodName = GenericTestUtils.getMethodName();
+    final Path file = new Path("/" + methodName + ".01.dat");
+
+    // Write 1 byte to the file and kill the writer.
+    FSDataOutputStream os = fs.create(file, replication);
+    os.write(new byte[1024]);
+    os.close();
+
+    final Path file2 = new Path("/" + methodName + ".02.dat");
+
+    // Write 1 byte to the file and keep it open.
+    FSDataOutputStream os2 = fs.create(file2, replication);
+    os2.write(new byte[1]);
+    os2.hflush();
+    int expectedFile2Reserved = BLOCK_SIZE - 1;
+    checkReservedSpace(expectedFile2Reserved);
+
+    // append one byte and verify reservedspace before and after closing
+    os = fs.append(file);
+    os.write(new byte[1]);
+    os.hflush();
+    int expectedFile1Reserved = BLOCK_SIZE - 1025;
+    checkReservedSpace(expectedFile2Reserved + expectedFile1Reserved);
+    os.close();
+    checkReservedSpace(expectedFile2Reserved);
+
+    // append one byte and verify reservedspace before and after abort
+    os = fs.append(file);
+    os.write(new byte[1]);
+    os.hflush();
+    expectedFile1Reserved--;
+    checkReservedSpace(expectedFile2Reserved + expectedFile1Reserved);
+    DFSTestUtil.abortStream(((DFSOutputStream) os.getWrappedStream()));
+    checkReservedSpace(expectedFile2Reserved);
+  }
+
+  @Test(timeout = 30000)
+  public void testReservedSpaceForPipelineRecovery()
+      throws Exception {
+    final short replication = 3;
+    startCluster(BLOCK_SIZE, replication, -1);
+
+    final String methodName = GenericTestUtils.getMethodName();
+    final Path file = new Path("/" + methodName + ".01.dat");
+
+    old = DataNodeFaultInjector.get();
+    // Fault injector to fail connection to mirror first time.
+    DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+      private int tries = 0;
+
+      @Override
+      public void failMirrorConnection() throws IOException {
+        if (tries++ == 0) {
+          throw new IOException("Failing Mirror for space reservation");
+        }
+      }
+    });
+    // Write 1 byte to the file and kill the writer.
+    FSDataOutputStream os = fs.create(file, replication);
+    os.write(new byte[1]);
+    os.close();
+    // Ensure all space reserved for the replica was released on each
+    // DataNode.
+    cluster.triggerBlockReports();
+    for (final DataNode dn : cluster.getDataNodes()) {
+      for (FsVolumeSpi fsVolume : dn.getFSDataset().getFsVolumeReferences()) {
+        {
+          final FsVolumeImpl volume = (FsVolumeImpl) fsVolume;
+          GenericTestUtils.waitFor(new Supplier<Boolean>() {
+            @Override public Boolean get() {
+              LOG.info("dn " + dn.getDisplayName() + " space : " + volume
+                  .getReservedForRbw());
+              return (volume.getReservedForRbw() == 0);
+            }
+          }, 100, Integer.MAX_VALUE); // Wait until the test times out.
+        }
+      }
+    }
+  }
+
+  private void checkReservedSpace(final long expectedReserved)
+      throws TimeoutException, InterruptedException, IOException {
+    for (final DataNode dn : cluster.getDataNodes()) {
+      for (FsVolumeSpi fsVolume : dn.getFSDataset().getFsVolumeReferences()) {
+        final FsVolumeImpl volume = (FsVolumeImpl) fsVolume;
+        GenericTestUtils.waitFor(new Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
+            LOG.info(
+                "dn " + dn.getDisplayName() + " space : " + volume
+                    .getReservedForRbw() + ", Expected ReservedSpace :"
+                    + expectedReserved);
+            return (volume.getReservedForRbw() == expectedReserved);
+          }
+        }, 100, 3000);
+      }
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testReservedSpaceForLeaseRecovery() throws Exception {
+    final short replication = 3;
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 2);
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_RETRY_INTERVAL_KEY,
+        1000);
+    startCluster(BLOCK_SIZE, replication, -1);
+
+    final String methodName = GenericTestUtils.getMethodName();
+    final Path file = new Path("/" + methodName + ".01.dat");
+    // Write to the file and kill the writer.
+    FSDataOutputStream os = fs.create(file, replication);
+    os.write(new byte[8192]);
+    os.hflush();
+    os.close();
+    /*
+     * Reset the pipeline for the append in such a way that, datanode which is
+     * down is one of the mirror, not the first datanode.
+     */
+    HdfsBlockLocation blockLocation = (HdfsBlockLocation) fs.getClient()
+        .getBlockLocations(file.toString(), 0, BLOCK_SIZE)[0];
+    LocatedBlock lastBlock = blockLocation.getLocatedBlock();
+    // stop 3rd node.
+    cluster.stopDataNode(lastBlock.getLocations()[2].getName());
+    try {
+      os = fs.append(file);
+      DFSTestUtil.setPipeline((DFSOutputStream) os.getWrappedStream(),
+          lastBlock);
+      os.writeBytes("hi");
+      os.hsync();
+    } catch (IOException e) {
+      // Append will fail due to not able to replace datanodes in 3 nodes
+      // cluster.
+      LOG.info("", e);
+    }
+    DFSTestUtil.abortStream((DFSOutputStream) os.getWrappedStream());
+    /*
+     * There is a chance that stopped DN could be chosen as primary for
+     * recovery. If so, then recovery will not happen in time. So mark stopped
+     * node as dead to exclude that node.
+     */
+    cluster.setDataNodeDead(lastBlock.getLocations()[2]);
+    fs.recoverLease(file);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          return fs.isFileClosed(file);
+        } catch (IOException e) {
+          return false;
+        }
+      }
+    }, 500, 30000);
+    checkReservedSpace(0);
   }
 }

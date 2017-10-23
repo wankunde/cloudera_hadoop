@@ -1,8 +1,8 @@
 From c4105eaf313ab9f91d0975e4db509a11a8f81c9a Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 1 Jul 2015 17:57:11 -0700
-Subject: [PATCH 650/924] HADOOP-12171. Shorten overly-long htrace span names
- for server (cmccabe)
+Subject: [PATCH 0650/2639] HADOOP-12171. Shorten overly-long htrace span
+ names for server (cmccabe)
 
 (cherry picked from commit a78d5074fb3da4779a6b5fd9947e60b9d755ee14)
 (cherry picked from commit 490bef08567d6083c079b6583af707e1c76eeca7)

@@ -1,9 +1,9 @@
 From e36a3f28174b5684b49565e84298cbe9d32b451e Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 10 Mar 2015 18:20:25 -0700
-Subject: [PATCH 466/924] HDFS-7830. DataNode does not release the volume lock
- when adding a volume fails. (Lei Xu via Colin P.
- McCabe) (cherry picked from commit
+Subject: [PATCH 0466/2639] HDFS-7830. DataNode does not release the volume
+ lock when adding a volume fails. (Lei Xu via
+ Colin P. McCabe) (cherry picked from commit
  eefca23e8c5e474de1e25bf2ec8a5b266bbe8cfe) (cherry
  picked from commit
  5c1036d598051cf6af595740f1ab82092b0b6554)

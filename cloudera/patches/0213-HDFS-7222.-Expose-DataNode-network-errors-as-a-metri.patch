@@ -1,7 +1,7 @@
 From 1577b0432eb7fed715bac1fe4fc869a17b4d678e Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Thu, 23 Oct 2014 12:53:01 -0700
-Subject: [PATCH 213/924] HDFS-7222. Expose DataNode network errors as a
+Subject: [PATCH 0213/2639] HDFS-7222. Expose DataNode network errors as a
  metric. (Charles Lamb via wang)
 
 (cherry picked from commit 86cad007d7d6366b293bb9a073814889081c8662)

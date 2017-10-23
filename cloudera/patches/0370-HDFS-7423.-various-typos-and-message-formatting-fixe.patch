@@ -1,7 +1,7 @@
 From 6551cb9388681db0db4d3f1a2f602e2c773371a3 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Thu, 29 Jan 2015 04:20:14 +0800
-Subject: [PATCH 370/924] HDFS-7423. various typos and message formatting
+Subject: [PATCH 0370/2639] HDFS-7423. various typos and message formatting
  fixes in nfs daemon and doc. (Charles Lamb via
  yliu)
 

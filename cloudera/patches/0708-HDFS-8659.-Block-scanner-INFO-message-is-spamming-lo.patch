@@ -1,7 +1,7 @@
 From f903d95783e941bba22171c48ed9ef4c8d30b5eb Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Mon, 29 Jun 2015 14:35:39 -0700
-Subject: [PATCH 708/924] HDFS-8659. Block scanner INFO message is spamming
+Subject: [PATCH 0708/2639] HDFS-8659. Block scanner INFO message is spamming
  logs. Contributed by Yongjun Zhang.
 
 (cherry picked from commit 43a1288fff5e323895fde66b9e3eb31a7412fcc2)

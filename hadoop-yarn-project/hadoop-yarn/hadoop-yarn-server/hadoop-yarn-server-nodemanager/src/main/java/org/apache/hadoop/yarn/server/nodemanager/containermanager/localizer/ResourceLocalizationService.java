@@ -826,7 +826,8 @@ public class ResourceLocalizationService extends CompositeService
                     + ContainerLocalizer.FILECACHE,
                   ContainerLocalizer.getEstimatedSize(resource), true);
             Path publicDirDestPath =
-                publicRsrc.getPathForLocalization(key, publicRootPath);
+                publicRsrc.getPathForLocalization(key, publicRootPath,
+                    delService);
             if (!publicDirDestPath.getParent().equals(publicRootPath)) {
               DiskChecker.checkDir(new File(publicDirDestPath.toUri().getPath()));
             }
@@ -1007,7 +1008,10 @@ public class ResourceLocalizationService extends CompositeService
         try {
           req = new LocalResourceRequest(rsrc);
         } catch (URISyntaxException e) {
-          // TODO fail? Already translated several times...
+          LOG.error(
+              "Got exception in parsing URL of LocalResource:"
+                  + rsrc.getResource(), e);
+          continue;
         }
         LocalizerResourceRequestEvent assoc = scheduled.get(req);
         if (assoc == null) {
@@ -1081,7 +1085,9 @@ public class ResourceLocalizationService extends CompositeService
           LOG.error("Inorrect path for PRIVATE localization."
               + next.getResource().getFile(), e);
         } catch (URISyntaxException e) {
-            //TODO fail? Already translated several times...
+          LOG.error(
+              "Got exception in parsing URL of LocalResource:"
+                  + next.getResource(), e);
         }
       }
 
@@ -1108,7 +1114,7 @@ public class ResourceLocalizationService extends CompositeService
           dirsHandler.getLocalPathForWrite(cacheDirectory,
             ContainerLocalizer.getEstimatedSize(rsrc), false);
       return tracker.getPathForLocalization(new LocalResourceRequest(rsrc),
-          dirPath);
+          dirPath, delService);
     }
 
     @Override
@@ -1154,8 +1160,21 @@ public class ResourceLocalizationService extends CompositeService
           dispatcher.getEventHandler().handle(new ContainerResourceFailedEvent(
               cId, null, exception.getMessage()));
         }
+        List<Path> paths = new ArrayList<Path>();
         for (LocalizerResourceRequestEvent event : scheduled.values()) {
+          // This means some resources were in downloading state. Schedule
+          // deletion task for localization dir and tmp dir used for downloading
+          Path locRsrcPath = event.getResource().getLocalPath();
+          if (locRsrcPath != null) {
+            Path locRsrcDirPath = locRsrcPath.getParent();
+            paths.add(locRsrcDirPath);
+            paths.add(new Path(locRsrcDirPath + "_tmp"));
+          }
           event.getResource().unlock();
+        }
+        if (!paths.isEmpty()) {
+          delService.delete(context.getUser(),
+              null, paths.toArray(new Path[paths.size()]));
         }
         delService.delete(null, nmPrivateCTokensPath, new Path[] {});
       }
@@ -1304,7 +1323,7 @@ public class ResourceLocalizationService extends CompositeService
   }
 
   private void cleanUpLocalDirs(FileContext lfs, DeletionService del) {
-    for (String localDir : dirsHandler.getLocalDirs()) {
+    for (String localDir : dirsHandler.getLocalDirsForCleanup()) {
       cleanUpLocalDir(lfs, del, localDir);
     }
   }

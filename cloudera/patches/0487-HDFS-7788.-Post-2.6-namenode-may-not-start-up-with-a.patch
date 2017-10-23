@@ -1,7 +1,7 @@
 From 633539b644b7a5d7eee7d8639ee7b7b24f6fec15 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Fri, 20 Feb 2015 09:09:56 -0600
-Subject: [PATCH 487/924] HDFS-7788. Post-2.6 namenode may not start up with
+Subject: [PATCH 0487/2639] HDFS-7788. Post-2.6 namenode may not start up with
  an image containing inodes created with an old
  release. Contributed by Rushabh Shah.
 

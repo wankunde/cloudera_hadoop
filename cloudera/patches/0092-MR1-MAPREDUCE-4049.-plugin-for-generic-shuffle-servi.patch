@@ -1,7 +1,7 @@
 From e2a28b9db13620076e37dcf50e8e99f44a1158bf Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Tue, 23 Jul 2013 17:07:57 -0700
-Subject: [PATCH 092/924] MR1: MAPREDUCE-4049. plugin for generic shuffle
+Subject: [PATCH 0092/2639] MR1: MAPREDUCE-4049. plugin for generic shuffle
  service. (avnerb via tucu)
 
   Reason: CDH-13249, backporting TT side of plugglable shuffle.

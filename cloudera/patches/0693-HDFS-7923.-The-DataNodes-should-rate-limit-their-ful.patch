@@ -1,7 +1,7 @@
 From 74ca624b67fc3b430cbfec6046cc15a1286e3907 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 12 Jun 2015 11:17:51 -0700
-Subject: [PATCH 693/924] HDFS-7923. The DataNodes should rate-limit their
+Subject: [PATCH 0693/2639] HDFS-7923. The DataNodes should rate-limit their
  full block reports by asking the NN on heartbeat
  messages (cmccabe)
 
@@ -1525,7 +1525,7 @@ index c76471a..081f52f 100644
        // Check that the missing storage was pruned.
        assertThat(dnDescriptor.getStorageInfos().length, is(expectedStoragesAfterTest));
 diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
-index 3aa9a7b..6e39c53 100644
+index 3aa9a7b7..6e39c53 100644
 --- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
 +++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
 @@ -28,6 +28,7 @@

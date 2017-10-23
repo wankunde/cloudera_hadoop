@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.List;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -29,10 +26,10 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -40,8 +37,10 @@ import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.List;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -49,7 +48,7 @@ import com.google.common.base.Preconditions;
  * directory inodes.
  */
 @InterfaceAudience.Private
-public abstract class INode implements INodeAttributes, Diff.Element<byte[]>, 
+public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
     AuthorizationProvider.INodeAuthorizationInfo {
   public static final Log LOG = LogFactory.getLog(INode.class);
 
@@ -73,9 +72,17 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   /** Get the {@link PermissionStatus} */
   abstract PermissionStatus getPermissionStatus(int snapshotId);
 
+  /** Get the Fsimage-stored {@link PermissionStatus} */
+  abstract PermissionStatus getFsimagePermissionStatus(int snapshotId);
+
   /** The same as getPermissionStatus(null). */
   final PermissionStatus getPermissionStatus() {
     return getPermissionStatus(Snapshot.CURRENT_STATE_ID);
+  }
+
+  /** The same as getFsimagePermissionStatus(null). */
+  final PermissionStatus getFsimagePermissionStatus() {
+    return getFsimagePermissionStatus(Snapshot.CURRENT_STATE_ID);
   }
 
   /**
@@ -88,10 +95,26 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   @Override
   public abstract String getUserName(int snapshotId);
 
+  /**
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
+   * @return stored user name
+   */
+  @Override
+  public abstract String getFsimageUserName(int snapshotId);
+
   /** The same as getUserName(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final String getUserName() {
     return getUserName(Snapshot.CURRENT_STATE_ID);
+  }
+
+  /** The same as getFsimageUserName(Snapshot.CURRENT_STATE_ID). */
+  @Override
+  public final String getFsimageUserName() {
+    return getFsimageUserName(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Set user */
@@ -103,6 +126,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
     setUser(user);
     return this;
   }
+
   /**
    * @param snapshotId
    *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
@@ -113,10 +137,26 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   @Override
   public abstract String getGroupName(int snapshotId);
 
+  /**
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
+   * @return stored group name
+   */
+  @Override
+  public abstract String getFsimageGroupName(int snapshotId);
+
   /** The same as getGroupName(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final String getGroupName() {
     return getGroupName(Snapshot.CURRENT_STATE_ID);
+  }
+
+  /** The same as getFsimageGroupName(Snapshot.CURRENT_STATE_ID). */
+  @Override
+  public final String getFsimageGroupName() {
+    return getFsimageGroupName(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Set group */
@@ -138,11 +178,27 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    */
   @Override
   public abstract FsPermission getFsPermission(int snapshotId);
-  
+
+  /**
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
+   * @return stored permission.
+   */
+  @Override
+  public abstract FsPermission getFsimageFsPermission(int snapshotId);
+
   /** The same as getFsPermission(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final FsPermission getFsPermission() {
     return getFsPermission(Snapshot.CURRENT_STATE_ID);
+  }
+
+  /** The same as getFsPermission(Snapshot.CURRENT_STATE_ID). */
+  @Override
+  public final FsPermission getFsimageFsPermission() {
+    return getFsimageFsPermission(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Set the {@link FsPermission} of this {@link INode} */
@@ -159,8 +215,16 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   public abstract AclFeature getAclFeature(int snapshotId);
 
   @Override
+  public abstract AclFeature getFsimageAclFeature(int snapshotId);
+
+  @Override
   public final AclFeature getAclFeature() {
     return getAclFeature(Snapshot.CURRENT_STATE_ID);
+  }
+
+  @Override
+  public final AclFeature getFsimageAclFeature() {
+    return getFsimageAclFeature(Snapshot.CURRENT_STATE_ID);
   }
 
   abstract void addAclFeature(AclFeature aclFeature);
@@ -390,9 +454,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    * 2.4 To clean {@link INodeDirectory} with snapshot: delete the corresponding 
    * snapshot in its diff list. Recursively clean its children.
    * </pre>
-   * 
+   *
    * @param snapshotId
-   *          The id of the snapshot to delete. 
+   *          The id of the snapshot to delete.
    *          {@link Snapshot#CURRENT_STATE_ID} means to delete the current
    *          file/directory.
    * @param priorSnapshotId
@@ -403,13 +467,15 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    *          blocks collected from the descents for further block
    *          deletion/update will be added to the given map.
    * @param removedINodes
-   *          INodes collected from the descents for further cleaning up of 
+   *          INodes collected from the descents for further cleaning up of
    *          inodeMap
+   * @param removedUCFiles
+   *          INodes whose leases need to be released
    * @return quota usage delta when deleting a snapshot
    */
   public abstract Quota.Counts cleanSubtree(final int snapshotId,
       int priorSnapshotId, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes);
+      List<INode> removedINodes, List<Long> removedUCFiles);
   
   /**
    * Destroy self and clear everything! If the INode is a file, this method
@@ -417,51 +483,63 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    * directory, the method goes down the subtree and collects blocks from the
    * descents, and clears its parent/children references as well. The method
    * also clears the diff list if the INode contains snapshot diff list.
-   * 
    * @param collectedBlocks
    *          blocks collected from the descents for further block
    *          deletion/update will be added to this map.
    * @param removedINodes
    *          INodes collected from the descents for further cleaning up of
    *          inodeMap
+   * @param removedUCFiles
+   *          INodes whose leases need to be released
    */
   public abstract void destroyAndCollectBlocks(
-      BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes);
+      BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
+      List<Long> removedUCFiles);
 
   /** Compute {@link ContentSummary}. Blocking call */
   public final ContentSummary computeContentSummary() {
-    return computeAndConvertContentSummary(
+    return computeAndConvertContentSummary(Snapshot.CURRENT_STATE_ID,
         new ContentSummaryComputationContext());
   }
 
   /**
    * Compute {@link ContentSummary}. 
    */
-  public final ContentSummary computeAndConvertContentSummary(
+  public final ContentSummary computeAndConvertContentSummary(int snapshotId,
       ContentSummaryComputationContext summary) {
-    Content.Counts counts = computeContentSummary(summary).getCounts();
+    computeContentSummary(snapshotId, summary);
+    final Content.Counts counts = summary.getCounts();
+    final Content.Counts snapshotCounts = summary.getSnapshotCounts();
     final Quota.Counts q = getQuotaCounts();
     return new ContentSummary(counts.get(Content.LENGTH),
         counts.get(Content.FILE) + counts.get(Content.SYMLINK),
         counts.get(Content.DIRECTORY), q.get(Quota.NAMESPACE),
-        counts.get(Content.DISKSPACE), q.get(Quota.DISKSPACE));
+        counts.get(Content.DISKSPACE), q.get(Quota.DISKSPACE),
+        snapshotCounts.get(Content.LENGTH), snapshotCounts.get(Content.FILE),
+        snapshotCounts.get(Content.DIRECTORY),
+        snapshotCounts.get(Content.DISKSPACE));
   }
 
   /**
    * Count subtree content summary with a {@link Content.Counts}.
    *
+   * @param snapshotId Specify the time range for the calculation. If this
+   *                   parameter equals to {@link Snapshot#CURRENT_STATE_ID},
+   *                   the result covers both the current states and all the
+   *                   snapshots. Otherwise the result only covers all the
+   *                   files/directories contained in the specific snapshot.
    * @param summary the context object holding counts for the subtree.
    * @return The same objects as summary.
    */
   public abstract ContentSummaryComputationContext computeContentSummary(
-      ContentSummaryComputationContext summary);
+      int snapshotId, ContentSummaryComputationContext summary);
 
-  
+
   /**
    * Check and add namespace/diskspace consumed to itself and the ancestors.
    * @throws QuotaExceededException if quote is violated.
    */
-  public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify) 
+  public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify)
       throws QuotaExceededException {
     addSpaceConsumed2Parent(nsDelta, dsDelta, verify);
   }
@@ -470,7 +548,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    * Check and add namespace/diskspace consumed to itself and the ancestors.
    * @throws QuotaExceededException if quote is violated.
    */
-  void addSpaceConsumed2Parent(long nsDelta, long dsDelta, boolean verify) 
+  void addSpaceConsumed2Parent(long nsDelta, long dsDelta, boolean verify)
       throws QuotaExceededException {
     if (parent != null) {
       parent.addSpaceConsumed(nsDelta, dsDelta, verify);
@@ -484,12 +562,12 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   public Quota.Counts getQuotaCounts() {
     return Quota.Counts.newInstance(-1, -1);
   }
-  
+
   public final boolean isQuotaSet() {
     final Quota.Counts q = getQuotaCounts();
     return q.get(Quota.NAMESPACE) >= 0 || q.get(Quota.DISKSPACE) >= 0;
   }
-  
+
   /**
    * Count subtree {@link Quota#NAMESPACE} and {@link Quota#DISKSPACE} usages.
    */
@@ -517,7 +595,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    * creation time of the snapshot associated with the {@link WithName} node.
    * We do not count in the size of the diff list.  
    * <pre>
-   * 
+   *
    * @param counts The subtree counts for returning.
    * @param useCache Whether to use cached quota usage. Note that 
    *                 {@link WithName} node never uses cache for its subtree.
@@ -534,7 +612,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
       boolean useCache) {
     return computeQuotaUsage(counts, useCache, Snapshot.CURRENT_STATE_ID);
   }
-  
+
   /**
    * @return null if the local name is null; otherwise, return the local name.
    */
@@ -556,7 +634,25 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   @Override
   public String getFullPathName() {
     // Get the full path name of this inode.
-    return FSDirectory.getFullPathName(this);
+    if (isRoot()) {
+      return Path.SEPARATOR;
+    }
+    // compute size of needed bytes for the path
+    int idx = 0;
+    for (INode inode = this; inode != null; inode = inode.getParent()) {
+      // add component + delimiter (if not tail component)
+      idx += inode.getLocalNameBytes().length + (inode != this ? 1 : 0);
+    }
+    byte[] path = new byte[idx];
+    for (INode inode = this; inode != null; inode = inode.getParent()) {
+      if (inode != this) {
+        path[--idx] = Path.SEPARATOR_CHAR;
+      }
+      byte[] name = inode.getLocalNameBytes();
+      idx -= name.length;
+      System.arraycopy(name, 0, path, idx, name.length);
+    }
+    return DFSUtil.bytes2String(path);
   }
   
   @Override
@@ -672,8 +768,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   /**
    * Set last access time of inode.
    */
-  public final INode setAccessTime(long accessTime, int latestSnapshotId) {
-    recordModification(latestSnapshotId);
+  public final INode setAccessTime(long accessTime, int latestSnapshotId,
+      boolean skipCaptureAccessTimeOnlyChangeInSnapshot) {
+    if (!skipCaptureAccessTimeOnlyChangeInSnapshot) {
+      recordModification(latestSnapshotId);
+    }
     setAccessTime(accessTime);
     return this;
   }
@@ -700,18 +799,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    */
   @VisibleForTesting
   public static byte[][] getPathComponents(String path) {
-    return getPathComponents(getPathNames(path));
-  }
-
-  /** Convert strings to byte arrays for path components. */
-  static byte[][] getPathComponents(String[] strings) {
-    if (strings.length == 0) {
-      return new byte[][]{null};
-    }
-    byte[][] bytes = new byte[strings.length][];
-    for (int i = 0; i < strings.length; i++)
-      bytes[i] = DFSUtil.string2Bytes(strings[i]);
-    return bytes;
+    checkAbsolutePath(path);
+    return DFSUtil.getPathComponents(path);
   }
 
   /**
@@ -720,10 +809,24 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    * @return array of path components.
    */
   public static String[] getPathNames(String path) {
-    if (path == null || !path.startsWith(Path.SEPARATOR)) {
-      throw new AssertionError("Absolute path required");
-    }
+    checkAbsolutePath(path);
     return StringUtils.split(path, Path.SEPARATOR_CHAR);
+  }
+
+  /**
+   * Verifies if the path informed is a valid absolute path.
+   * @param path the absolute path to validate.
+   * @return true if the path is valid.
+   */
+  static boolean isValidAbsolutePath(final String path){
+    return path != null && path.startsWith(Path.SEPARATOR);
+  }
+
+  private static void checkAbsolutePath(final String path) {
+    if (!isValidAbsolutePath(path)) {
+      throw new AssertionError("Absolute path required, but got '"
+          + path + "'");
+    }
   }
 
   @Override
@@ -783,7 +886,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
     out.print(getParentString());
     out.print(", " + getPermissionStatus(snapshotId));
   }
-  
+
   /**
    * Information used for updating the blocksMap when deleting files.
    */
@@ -791,30 +894,34 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
     /**
      * The list of blocks that need to be removed from blocksMap
      */
-    private final List<Block> toDeleteList;
-    
+    private final List<BlockInfo> toDeleteList;
+
     public BlocksMapUpdateInfo() {
-      toDeleteList = new ChunkedArrayList<Block>();
+      toDeleteList = new ChunkedArrayList<BlockInfo>();
     }
     
     /**
      * @return The list of blocks that need to be removed from blocksMap
      */
-    public List<Block> getToDeleteList() {
+    public List<BlockInfo> getToDeleteList() {
       return toDeleteList;
     }
-    
+
     /**
      * Add a to-be-deleted block into the
      * {@link BlocksMapUpdateInfo#toDeleteList}
      * @param toDelete the to-be-deleted block
      */
-    public void addDeleteBlock(Block toDelete) {
-      if (toDelete != null) {
-        toDeleteList.add(toDelete);
-      }
+    public void addDeleteBlock(BlockInfo toDelete) {
+      assert toDelete != null : "toDelete is null";
+      toDeleteList.add(toDelete);
     }
-    
+
+    public void removeDeleteBlock(BlockInfo block) {
+      assert block != null : "block is null";
+      toDeleteList.remove(block);
+    }
+
     /**
      * Clear {@link BlocksMapUpdateInfo#toDeleteList}
      */

@@ -1,7 +1,7 @@
 From 0283df4266a1fd350a634e8852ed83a9b435bd0e Mon Sep 17 00:00:00 2001
 From: Xuan <xgong@apache.org>
 Date: Mon, 27 Jul 2015 23:45:58 -0700
-Subject: [PATCH 703/924] YARN-3982. container-executor parsing of
+Subject: [PATCH 0703/2639] YARN-3982. container-executor parsing of
  container-executor.cfg broken in trunk and
  branch-2. Contributed by Varun Vasudev
 

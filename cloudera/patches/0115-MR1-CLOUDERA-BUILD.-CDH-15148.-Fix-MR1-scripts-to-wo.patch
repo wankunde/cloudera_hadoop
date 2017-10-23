@@ -1,7 +1,7 @@
 From 5734c6e584aa0ecadf2cc726104afaa4f27e9ebb Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Tue, 5 Nov 2013 16:45:17 +0530
-Subject: [PATCH 115/924] MR1: CLOUDERA-BUILD. CDH-15148. Fix MR1 scripts to
+Subject: [PATCH 0115/2639] MR1: CLOUDERA-BUILD. CDH-15148. Fix MR1 scripts to
  work in a consolidated tarball.
 
 (cherry picked from commit 455d2fa9f2a44b2c178d4a51c8466566abeba90b)

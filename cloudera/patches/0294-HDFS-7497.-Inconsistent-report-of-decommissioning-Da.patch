@@ -1,7 +1,7 @@
 From 4c29e078eabe367ac50e9aabea4e688710c2d746 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Thu, 11 Dec 2014 18:12:47 -0800
-Subject: [PATCH 294/924] HDFS-7497. Inconsistent report of decommissioning
+Subject: [PATCH 0294/2639] HDFS-7497. Inconsistent report of decommissioning
  DataNodes between dfsadmin and NameNode webui.
  Contributed by Yongjun Zhang.
 

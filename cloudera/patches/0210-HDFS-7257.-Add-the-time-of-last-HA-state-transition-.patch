@@ -1,8 +1,9 @@
 From 4bdac4a1e989ad07d0418279b5bc6f4e207aa39a Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Thu, 23 Oct 2014 16:52:58 -0700
-Subject: [PATCH 210/924] HDFS-7257. Add the time of last HA state transition
- to NN's /jmx page. Contributed by Charles Lamb.
+Subject: [PATCH 0210/2639] HDFS-7257. Add the time of last HA state
+ transition to NN's /jmx page. Contributed by
+ Charles Lamb.
 
 (cherry picked from commit 92ad210699633d22ff199a0408b6506934b72ca9)
 

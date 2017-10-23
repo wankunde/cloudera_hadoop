@@ -1,7 +1,7 @@
 From 4805d1ea44bcb828e0e2533b87fce1f24c920fb0 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Mon, 26 Jan 2015 13:31:27 -0800
-Subject: [PATCH 176/924] MR1: CLOUDERA-BUILD. Update poms for 5.4.0 -
+Subject: [PATCH 0176/2639] MR1: CLOUDERA-BUILD. Update poms for 5.4.0 -
  version: 2.6.0-cdh5.4.0-SNAPSHOT
 
 ---

@@ -1,9 +1,9 @@
 From 50b7a42ab85d9fbdcd6655108ca4562c8e26500b Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Fri, 6 Feb 2015 20:39:01 +0000
-Subject: [PATCH 485/924] YARN-3089. LinuxContainerExecutor does not handle
- file arguments to deleteAsUser. Contributed by Eric
- Payne (cherry picked from commit
+Subject: [PATCH 0485/2639] YARN-3089. LinuxContainerExecutor does not handle
+ file arguments to deleteAsUser. Contributed by
+ Eric Payne (cherry picked from commit
  4c484320b430950ce195cfad433a97099e117bad)
 
 (cherry picked from commit 83449a4e4d1e3d03ac782d36af8bee596f64fabe)

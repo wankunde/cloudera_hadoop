@@ -1,8 +1,8 @@
 From 1fa68925f9e3fed148927f115c5a3a5ae83b54c4 Mon Sep 17 00:00:00 2001
 From: Ray Chiang <rchiang@cloudera.com>
 Date: Fri, 3 Apr 2015 15:28:57 -0700
-Subject: [PATCH 566/924] MAPREDUCE-5465.  Container killed before hprof dumps
- profile.out.  Patch version.
+Subject: [PATCH 0566/2639] MAPREDUCE-5465.  Container killed before hprof
+ dumps profile.out.  Patch version.
 
 ---
  .../hadoop/mapred/LocalContainerLauncher.java      |   12 +-

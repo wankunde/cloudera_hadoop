@@ -1,7 +1,7 @@
-From d6b6763e0c893b5d76f4ccd233610c8904041974 Mon Sep 17 00:00:00 2001
+From 5591476b59fb03a3589609d501864f298b2b59e1 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Wed, 18 Mar 2015 16:19:46 -0700
-Subject: [PATCH 752/924] HDFS-7945. The WebHdfs system on DN does not honor
+Subject: [PATCH 0752/2639] HDFS-7945. The WebHdfs system on DN does not honor
  the length parameter. Contributed by Haohui Mai.
 
 (cherry picked from commit 8c40e88d5de51a273f6ae5cd11c40f44248bbfcd)

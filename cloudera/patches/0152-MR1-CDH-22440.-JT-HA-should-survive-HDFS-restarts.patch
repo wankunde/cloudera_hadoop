@@ -1,7 +1,7 @@
 From 13cfd8e7391c384b72832cd970225ebcac493246 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Mon, 27 Oct 2014 14:24:16 -0700
-Subject: [PATCH 152/924] MR1: CDH-22440. JT HA should survive HDFS restarts
+Subject: [PATCH 0152/2639] MR1: CDH-22440. JT HA should survive HDFS restarts
 
 (cherry picked from commit e4170054ec7389d3a04a85e5a13650f3ed473952)
 ---

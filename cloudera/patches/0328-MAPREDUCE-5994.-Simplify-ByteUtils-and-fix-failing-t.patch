@@ -1,7 +1,7 @@
 From b6137567f361d9b660609c2b95ff9f772e35c9c1 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 24 Jul 2014 06:14:27 +0000
-Subject: [PATCH 328/924] MAPREDUCE-5994. Simplify ByteUtils and fix failing
+Subject: [PATCH 0328/2639] MAPREDUCE-5994. Simplify ByteUtils and fix failing
  test. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1613003 13f79535-47bb-0310-9956-ffa450edef68

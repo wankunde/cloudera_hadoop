@@ -1,7 +1,7 @@
 From 57f1ff462ace336a3057a27afb07890986f99522 Mon Sep 17 00:00:00 2001
 From: Naren Koneru <naren@cloudera.com>
 Date: Fri, 21 Feb 2014 15:39:36 -0800
-Subject: [PATCH 178/924] CLOUDERA-BUILD Disable virtual memory check for
+Subject: [PATCH 0178/2639] CLOUDERA-BUILD Disable virtual memory check for
  containers. Please look at CDH-17484 for more
  details.
 

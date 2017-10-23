@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.mapreduce.tools;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +39,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TIPStatus;
@@ -43,6 +50,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.TaskReport;
@@ -89,7 +97,9 @@ public class CLI extends Configured implements Tool {
     String submitJobFile = null;
     String jobid = null;
     String taskid = null;
-    String historyFile = null;
+    String historyFileOrJobId = null;
+    String historyOutFile = null;
+    String historyOutFormat = HistoryViewer.HUMAN_FORMAT;
     String counterGroupName = null;
     String counterName = null;
     JobPriority jp = null;
@@ -97,6 +107,7 @@ public class CLI extends Configured implements Tool {
     String taskState = null;
     int fromEvent = 0;
     int nEvents = 0;
+    String configOutFile = null;
     boolean getStatus = false;
     boolean getCounter = false;
     boolean killJob = false;
@@ -112,6 +123,7 @@ public class CLI extends Configured implements Tool {
     boolean failTask = false;
     boolean setJobPriority = false;
     boolean logs = false;
+    boolean downloadConfig = false;
 
     if ("-submit".equals(cmd)) {
       if (argv.length != 2) {
@@ -166,16 +178,51 @@ public class CLI extends Configured implements Tool {
       nEvents = Integer.parseInt(argv[3]);
       listEvents = true;
     } else if ("-history".equals(cmd)) {
-      if (argv.length != 2 && !(argv.length == 3 && "all".equals(argv[1]))) {
-         displayUsage(cmd);
-         return exitCode;
-      }
       viewHistory = true;
-      if (argv.length == 3 && "all".equals(argv[1])) {
+      if (argv.length < 2 || argv.length > 7) {
+        displayUsage(cmd);
+        return exitCode;
+      }
+
+      // Some arguments are optional while others are not, and some require
+      // second arguments.  Due to this, the indexing can vary depending on
+      // what's specified and what's left out, as summarized in the below table:
+      // [all] <jobHistoryFile|jobId> [-outfile <file>] [-format <human|json>]
+      //   1                  2            3       4         5         6
+      //   1                  2            3       4
+      //   1                  2                              3         4
+      //   1                  2
+      //                      1            2       3         4         5
+      //                      1            2       3
+      //                      1                              2         3
+      //                      1
+
+      // "all" is optional, but comes first if specified
+      int index = 1;
+      if ("all".equals(argv[index])) {
+        index++;
         viewAllHistory = true;
-        historyFile = argv[2];
-      } else {
-        historyFile = argv[1];
+        if (argv.length == 2) {
+          displayUsage(cmd);
+          return exitCode;
+        }
+      }
+      // Get the job history file or job id argument
+      historyFileOrJobId = argv[index++];
+      // "-outfile" is optional, but if specified requires a second argument
+      if (argv.length > index + 1 && "-outfile".equals(argv[index])) {
+        index++;
+        historyOutFile = argv[index++];
+      }
+      // "-format" is optional, but if specified required a second argument
+      if (argv.length > index + 1 && "-format".equals(argv[index])) {
+        index++;
+        historyOutFormat = argv[index++];
+      }
+      // Check for any extra arguments that don't belong here
+      if (argv.length > index) {
+        displayUsage(cmd);
+        return exitCode;
       }
     } else if ("-list".equals(cmd)) {
       if (argv.length != 1 && !(argv.length == 2 && "all".equals(argv[1]))) {
@@ -245,6 +292,14 @@ public class CLI extends Configured implements Tool {
         displayUsage(cmd);
         return exitCode;
       }
+    } else if ("-config".equals(cmd)) {
+      downloadConfig = true;
+      if (argv.length != 3) {
+        displayUsage(cmd);
+        return exitCode;
+      }
+      jobid = argv[1];
+      configOutFile = argv[2];
     } else {
       displayUsage(cmd);
       return exitCode;
@@ -261,7 +316,7 @@ public class CLI extends Configured implements Tool {
         System.out.println("Created job " + job.getJobID());
         exitCode = 0;
       } else if (getStatus) {
-        Job job = cluster.getJob(JobID.forName(jobid));
+        Job job = getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -276,7 +331,7 @@ public class CLI extends Configured implements Tool {
           exitCode = 0;
         }
       } else if (getCounter) {
-        Job job = cluster.getJob(JobID.forName(jobid));
+        Job job = getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -292,7 +347,7 @@ public class CLI extends Configured implements Tool {
           }
         }
       } else if (killJob) {
-        Job job = cluster.getJob(JobID.forName(jobid));
+        Job job = getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -301,7 +356,7 @@ public class CLI extends Configured implements Tool {
           exitCode = 0;
         }
       } else if (setJobPriority) {
-        Job job = cluster.getJob(JobID.forName(jobid));
+        Job job = getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -310,10 +365,30 @@ public class CLI extends Configured implements Tool {
           exitCode = 0;
         } 
       } else if (viewHistory) {
-        viewHistory(historyFile, viewAllHistory);
-        exitCode = 0;
+        // If it ends with .jhist, assume it's a jhist file; otherwise, assume
+        // it's a Job ID
+        if (historyFileOrJobId.endsWith(".jhist")) {
+          viewHistory(historyFileOrJobId, viewAllHistory, historyOutFile,
+              historyOutFormat);
+          exitCode = 0;
+        } else {
+          Job job = getJob(JobID.forName(historyFileOrJobId));
+          if (job == null) {
+            System.out.println("Could not find job " + jobid);
+          } else {
+            String historyUrl = job.getHistoryUrl();
+            if (historyUrl == null || historyUrl.isEmpty()) {
+              System.out.println("History file for job " + historyFileOrJobId +
+                  " is currently unavailable.");
+            } else {
+              viewHistory(historyUrl, viewAllHistory, historyOutFile,
+                  historyOutFormat);
+              exitCode = 0;
+            }
+          }
+        }
       } else if (listEvents) {
-        listEvents(cluster.getJob(JobID.forName(jobid)), fromEvent, nEvents);
+        listEvents(getJob(JobID.forName(jobid)), fromEvent, nEvents);
         exitCode = 0;
       } else if (listJobs) {
         listJobs(cluster);
@@ -328,11 +403,11 @@ public class CLI extends Configured implements Tool {
         listBlacklistedTrackers(cluster);
         exitCode = 0;
       } else if (displayTasks) {
-        displayTasks(cluster.getJob(JobID.forName(jobid)), taskType, taskState);
+        displayTasks(getJob(JobID.forName(jobid)), taskType, taskState);
         exitCode = 0;
       } else if(killTask) {
         TaskAttemptID taskID = TaskAttemptID.forName(taskid);
-        Job job = cluster.getJob(taskID.getJobID());
+        Job job = getJob(taskID.getJobID());
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else if (job.killTask(taskID, false)) {
@@ -344,7 +419,7 @@ public class CLI extends Configured implements Tool {
         }
       } else if(failTask) {
         TaskAttemptID taskID = TaskAttemptID.forName(taskid);
-        Job job = cluster.getJob(taskID.getJobID());
+        Job job = getJob(taskID.getJobID());
         if (job == null) {
             System.out.println("Could not find job " + jobid);
         } else if(job.killTask(taskID, true)) {
@@ -369,6 +444,22 @@ public class CLI extends Configured implements Tool {
             throw e;
           } 
           System.out.println(e.getMessage());
+        }
+      } else if (downloadConfig) {
+        Job job = getJob(JobID.forName(jobid));
+        if (job == null) {
+          System.out.println("Could not find job " + jobid);
+        } else {
+          String jobFile = job.getJobFile();
+          if (jobFile == null || jobFile.isEmpty()) {
+            System.out.println("Config file for job " + jobFile +
+                " could not be found.");
+          } else {
+            Path configPath = new Path(jobFile);
+            FileSystem fs = FileSystem.get(getConf());
+            fs.copyToLocalFile(configPath, new Path(configOutFile));
+            exitCode = 0;
+          }
         }
       }
     } catch (RemoteException re) {
@@ -419,7 +510,8 @@ public class CLI extends Configured implements Tool {
       System.err.println(prefix + "[" + cmd + 
         " <job-id> <from-event-#> <#-of-events>]. Event #s start from 1.");
     } else if ("-history".equals(cmd)) {
-      System.err.println(prefix + "[" + cmd + " <jobHistoryFile>]");
+      System.err.println(prefix + "[" + cmd + " [all] <jobHistoryFile|jobId> " +
+          "[-outfile <file>] [-format <human|json>]]");
     } else if ("-list".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " [all]]");
     } else if ("-kill-task".equals(cmd) || "-fail-task".equals(cmd)) {
@@ -440,7 +532,9 @@ public class CLI extends Configured implements Tool {
     } else if ("-logs".equals(cmd)) {
       System.err.println(prefix + "[" + cmd +
           " <job-id> <task-attempt-id>]. " +
-          " <task-attempt-id> is optional to get task attempt logs.");      
+          " <task-attempt-id> is optional to get task attempt logs.");
+    } else if ("-config".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " <job-id> <file>]");
     } else {
       System.err.printf(prefix + "<command> <args>%n");
       System.err.printf("\t[-submit <job-file>]%n");
@@ -450,7 +544,8 @@ public class CLI extends Configured implements Tool {
       System.err.printf("\t[-set-priority <job-id> <priority>]. " +
         "Valid values for priorities are: " + jobPriorityValues + "%n");
       System.err.printf("\t[-events <job-id> <from-event-#> <#-of-events>]%n");
-      System.err.printf("\t[-history <jobHistoryFile>]%n");
+      System.err.printf("\t[-history [all] <jobHistoryFile|jobId> " +
+          "[-outfile <file>] [-format <human|json>]]%n");
       System.err.printf("\t[-list [all]]%n");
       System.err.printf("\t[-list-active-trackers]%n");
       System.err.printf("\t[-list-blacklisted-trackers]%n");
@@ -460,16 +555,22 @@ public class CLI extends Configured implements Tool {
         "Valid values for <task-state> are " + taskStates);
       System.err.printf("\t[-kill-task <task-attempt-id>]%n");
       System.err.printf("\t[-fail-task <task-attempt-id>]%n");
-      System.err.printf("\t[-logs <job-id> <task-attempt-id>]%n%n");
+      System.err.printf("\t[-logs <job-id> <task-attempt-id>]%n");
+      System.err.printf("\t[-config <job-id> <file>%n%n");
       ToolRunner.printGenericCommandUsage(System.out);
     }
   }
     
-  private void viewHistory(String historyFile, boolean all) 
-    throws IOException {
+  private void viewHistory(String historyFile, boolean all,
+      String historyOutFile, String format) throws IOException {
     HistoryViewer historyViewer = new HistoryViewer(historyFile,
-                                        getConf(), all);
-    historyViewer.print();
+        getConf(), all, format);
+    PrintStream ps = System.out;
+    if (historyOutFile != null) {
+      ps = new PrintStream(new BufferedOutputStream(new FileOutputStream(
+          new File(historyOutFile))), true, "UTF-8");
+    }
+    historyViewer.print(ps);
   }
 
   protected long getCounter(Counters counters, String counterGroupName,
@@ -498,6 +599,29 @@ public class CLI extends Configured implements Tool {
 
   protected static String getTaskLogURL(TaskAttemptID taskId, String baseUrl) {
     return (baseUrl + "/tasklog?plaintext=true&attemptid=" + taskId); 
+  }
+
+  @VisibleForTesting
+  Job getJob(JobID jobid) throws IOException, InterruptedException {
+
+    int maxRetry = getConf().getInt(MRJobConfig.MR_CLIENT_JOB_MAX_RETRIES,
+        MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
+    long retryInterval = getConf()
+        .getLong(MRJobConfig.MR_CLIENT_JOB_RETRY_INTERVAL,
+            MRJobConfig.DEFAULT_MR_CLIENT_JOB_RETRY_INTERVAL);
+    Job job = cluster.getJob(jobid);
+
+    for (int i = 0; i < maxRetry; ++i) {
+      if (job != null) {
+        return job;
+      }
+      LOG.info("Could not obtain job info after " + String.valueOf(i + 1)
+          + " attempt(s). Sleeping for " + String.valueOf(retryInterval / 1000)
+          + " seconds and retrying.");
+      Thread.sleep(retryInterval);
+      job = cluster.getJob(jobid);
+    }
+    return job;
   }
   
 

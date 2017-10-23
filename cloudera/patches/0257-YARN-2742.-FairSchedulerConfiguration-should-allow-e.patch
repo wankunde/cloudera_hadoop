@@ -1,7 +1,7 @@
 From 41f382301c38006cf5697b64e63908567428fc4a Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 29 Oct 2014 10:24:57 -0700
-Subject: [PATCH 257/924] YARN-2742. FairSchedulerConfiguration should allow
+Subject: [PATCH 0257/2639] YARN-2742. FairSchedulerConfiguration should allow
  extra spaces between value and unit. (Wei Yan via
  kasha) (cherry picked from commit
  782971ae7a0247bcf5920e10b434b7e0954dd868)

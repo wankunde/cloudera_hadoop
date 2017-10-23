@@ -1,7 +1,7 @@
 From eff4fa3916754193f0512d5990e0669d1ba173aa Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Tue, 13 Aug 2013 10:54:46 -0700
-Subject: [PATCH 099/924] MR1: MAPREDUCE-5198. Fix a race condition during
+Subject: [PATCH 0099/2639] MR1: MAPREDUCE-5198. Fix a race condition during
  TaskTracker re-init which was causing failures
  since task directories were being cleaned up in
  multiple threads. Contributed by Arpit Gupta

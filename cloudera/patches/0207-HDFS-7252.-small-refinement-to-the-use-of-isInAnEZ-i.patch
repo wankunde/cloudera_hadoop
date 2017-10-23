@@ -1,9 +1,9 @@
 From bf53838bb9e005751381e7a693031a701c74a37b Mon Sep 17 00:00:00 2001
 From: Vinayakumar B <vinayakumarb@apache.org>
 Date: Fri, 17 Oct 2014 18:03:44 +0530
-Subject: [PATCH 207/924] HDFS-7252. small refinement to the use of isInAnEZ
- in FSNamesystem. (Yi Liu via vinayakumarb) (cherry
- picked from
+Subject: [PATCH 0207/2639] HDFS-7252. small refinement to the use of isInAnEZ
+ in FSNamesystem. (Yi Liu via vinayakumarb)
+ (cherry picked from
  368743140dd076ecd5af309c1ed83c5ae2d59fc8)
 
 (cherry picked from commit 2c29e799335ef01ee634a21ab7c8cc9dc7e187ed)

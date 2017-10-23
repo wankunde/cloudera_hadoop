@@ -613,7 +613,8 @@ public class TestSaveNamespace {
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
     try {
-      cluster.getNamesystem().leaseManager.addLease("me", "/non-existent");      
+      cluster.getNamesystem().leaseManager.addLease("me",
+          INodeId.ROOT_INODE_ID + 1);
       fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       cluster.getNameNodeRpc().saveNamespace();
       fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
@@ -621,6 +622,47 @@ public class TestSaveNamespace {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testSkipSnapshotSection() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
+        .numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    OutputStream out = null;
+    try {
+      String path = "/skipSnapshot";
+      out = fs.create(new Path(path));
+      out.close();
+
+      // add a bogus filediff
+      FSDirectory dir = cluster.getNamesystem().getFSDirectory();
+      INodeFile file = dir.getINode(path).asFile();
+      file.addSnapshotFeature(null).getDiffs()
+          .saveSelf2Snapshot(-1, file, null);
+
+      // make sure it has a diff
+      assertTrue("Snapshot fileDiff is missing.",
+          file.getFileWithSnapshotFeature().getDiffs() != null);
+
+      // saveNamespace
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      // restart namenode
+      cluster.restartNameNode(true);
+      dir = cluster.getNamesystem().getFSDirectory();
+      file = dir.getINode(path).asFile();
+
+      // there should be no snapshot feature for the inode, when there is
+      // no snapshot.
+      assertTrue("There should be no snapshot feature for this INode.",
+          file.getFileWithSnapshotFeature() == null);
+    } finally {
+      cluster.shutdown();
     }
   }
 

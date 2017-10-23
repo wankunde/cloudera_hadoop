@@ -254,6 +254,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     if (namedCallbacks.containsKey(name)) {
       namedCallbacks.remove(name);
     }
+    DefaultMetricsSystem.removeSourceName(name);
   }
 
   synchronized
@@ -387,7 +388,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
    * Requests an immediate publish of all metrics from sources to sinks.
    */
   @Override
-  public void publishMetricsNow() {
+  public synchronized void publishMetricsNow() {
     if (sinks.size() > 0) {
       publishMetrics(sampleMetrics(), true);
     }    
@@ -397,7 +398,8 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
    * Sample all the sources for a snapshot of metrics/tags
    * @return  the metrics buffer containing the snapshot
    */
-  synchronized MetricsBuffer sampleMetrics() {
+  @VisibleForTesting
+  public synchronized MetricsBuffer sampleMetrics() {
     collector.clear();
     MetricsBufferBuilder bufferBuilder = new MetricsBufferBuilder();
 

@@ -1,7 +1,7 @@
 From d434a93e7b1ef7a771ee356ea0a45d0cae6bca5b Mon Sep 17 00:00:00 2001
 From: Dave Wang <dsw@cloudera.com>
 Date: Tue, 23 Sep 2014 22:11:22 -0700
-Subject: [PATCH 201/924] CDH-21785 CLOUDERA.BUILD Add hadoop-aws dependency
+Subject: [PATCH 0201/2639] CDH-21785 CLOUDERA.BUILD Add hadoop-aws dependency
  to hadoop-client
 
 (cherry picked from commit 2a5a3d6afe7a03fdbbd13b1d80a17d91cdcd6dbd)

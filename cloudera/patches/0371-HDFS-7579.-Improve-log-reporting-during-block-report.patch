@@ -1,8 +1,8 @@
 From e1b938a4a007bf4fbb21b11af28ec2514393c440 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Thu, 8 Jan 2015 15:12:56 -0800
-Subject: [PATCH 371/924] HDFS-7579. Improve log reporting during block report
- rpc failure. Contributed by Charles Lamb.
+Subject: [PATCH 0371/2639] HDFS-7579. Improve log reporting during block
+ report rpc failure. Contributed by Charles Lamb.
 
 (cherry picked from commit 7e2d9a32426d04b5f08c2835f61882b053612a20)
 (cherry picked from commit f0acb7c2a284db61640efee15a1648c6c26d24f5)

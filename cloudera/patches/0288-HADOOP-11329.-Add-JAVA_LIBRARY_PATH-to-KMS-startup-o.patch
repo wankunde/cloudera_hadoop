@@ -1,7 +1,7 @@
 From 9ce8b1e3df8032530083d6bcecac048bbc413272 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Mon, 8 Dec 2014 13:44:44 -0800
-Subject: [PATCH 288/924] HADOOP-11329. Add JAVA_LIBRARY_PATH to KMS startup
+Subject: [PATCH 0288/2639] HADOOP-11329. Add JAVA_LIBRARY_PATH to KMS startup
  options. Contributed by Arun Suresh.
 
 (cherry picked from commit ddffcd8fac8af0ff78e63cca583af5c77a062891)

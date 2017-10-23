@@ -1,7 +1,7 @@
 From ed9026cff9d5d63b83968705d1e5e001a66b184d Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Wed, 3 Dec 2014 12:00:14 -0800
-Subject: [PATCH 280/924] HADOOP-11342. KMS key ACL should ignore ALL
+Subject: [PATCH 0280/2639] HADOOP-11342. KMS key ACL should ignore ALL
  operation for default key ACL and whitelist key
  ACL. Contributed by Dian Fu.
 

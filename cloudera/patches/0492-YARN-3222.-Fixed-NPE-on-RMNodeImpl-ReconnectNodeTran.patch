@@ -1,7 +1,7 @@
 From d3e78d25119a3cd43963c82669ade662a2d12fdd Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Tue, 3 Mar 2015 16:25:57 -0800
-Subject: [PATCH 492/924] YARN-3222. Fixed NPE on
+Subject: [PATCH 0492/2639] YARN-3222. Fixed NPE on
  RMNodeImpl#ReconnectNodeTransition when a node is
  reconnected with a different port. Contributed by
  Rohith Sharmaks (cherry picked from commit

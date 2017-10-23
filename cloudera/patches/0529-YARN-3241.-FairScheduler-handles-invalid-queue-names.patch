@@ -1,8 +1,8 @@
 From cc2a5da2a13f9198b35a947c503ad395cb3c51a5 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Mon, 23 Mar 2015 13:22:03 -0700
-Subject: [PATCH 529/924] YARN-3241. FairScheduler handles invalid queue names
- inconsistently. (Zhihai Xu via kasha)
+Subject: [PATCH 0529/2639] YARN-3241. FairScheduler handles invalid queue
+ names inconsistently. (Zhihai Xu via kasha)
 
 (cherry picked from commit 2bc097cd14692e6ceb06bff959f28531534eb307)
 

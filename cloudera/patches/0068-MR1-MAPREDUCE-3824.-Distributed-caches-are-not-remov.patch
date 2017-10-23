@@ -1,7 +1,7 @@
 From 10ae1851884dfb4bb82810c7fab135ce39622edf Mon Sep 17 00:00:00 2001
 From: "Matthew J. Foley" <mattf@apache.org>
 Date: Sun, 19 Feb 2012 23:41:18 +0000
-Subject: [PATCH 068/924] MR1: MAPREDUCE-3824. Distributed caches are not
+Subject: [PATCH 0068/2639] MR1: MAPREDUCE-3824. Distributed caches are not
  removed properly. Contributed by Thomas Graves.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1291093 13f79535-47bb-0310-9956-ffa450edef68
@@ -225,7 +225,7 @@ index 591defe..ad683ee 100644
     * @param sizes the array of sizes that were computed
     * @throws IOException
 diff --git a/hadoop-mapreduce1-project/src/test/org/apache/hadoop/filecache/TestTrackerDistributedCacheManager.java b/hadoop-mapreduce1-project/src/test/org/apache/hadoop/filecache/TestTrackerDistributedCacheManager.java
-index d8d7bbe..d7e8f0b 100644
+index d8d7bbe4..d7e8f0b 100644
 --- a/hadoop-mapreduce1-project/src/test/org/apache/hadoop/filecache/TestTrackerDistributedCacheManager.java
 +++ b/hadoop-mapreduce1-project/src/test/org/apache/hadoop/filecache/TestTrackerDistributedCacheManager.java
 @@ -79,6 +79,10 @@

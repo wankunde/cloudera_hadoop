@@ -22,13 +22,19 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.CacheFlag;
+import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSInotifyEventInputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -37,6 +43,9 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 
@@ -54,6 +63,8 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 public class HdfsAdmin {
   
   private DistributedFileSystem dfs;
+  private static final FsPermission TRASH_PERMISSION = new FsPermission(
+      FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
   
   /**
    * Create a new HdfsAdmin client.
@@ -231,6 +242,17 @@ public class HdfsAdmin {
   }
 
   /**
+   * Get KeyProvider if present.
+   *
+   * @return the key provider if encryption is enabled on HDFS.
+   *         Otherwise, it returns null.
+   * @throws IOException on RPC exception to the NN.
+   */
+  public KeyProvider getKeyProvider() throws IOException {
+    return dfs.getClient().getKeyProvider();
+  }
+
+  /**
    * Create an encryption zone rooted at an empty existing directory, using the
    * specified encryption key. An encryption zone has an associated encryption
    * key used when reading and writing files within the zone.
@@ -242,9 +264,51 @@ public class HdfsAdmin {
    * @throws AccessControlException if the caller does not have access to path
    * @throws FileNotFoundException  if the path does not exist
    */
+  @Deprecated
   public void createEncryptionZone(Path path, String keyName)
-    throws IOException, AccessControlException, FileNotFoundException {
+      throws IOException, AccessControlException, FileNotFoundException {
     dfs.createEncryptionZone(path, keyName);
+  }
+
+  /**
+   * Create an encryption zone rooted at an empty existing directory, using the
+   * specified encryption key. An encryption zone has an associated encryption
+   * key used when reading and writing files within the zone.
+   *
+   * Additional options, such as provisioning the trash directory, can be
+   * specified using {@link CreateEncryptionZoneFlag} flags.
+   *
+   * @param path    The path of the root of the encryption zone. Must refer to
+   *                an empty, existing directory.
+   * @param keyName Name of key available at the KeyProvider.
+   * @param flags   flags for this operation.
+   * @throws IOException            if there was a general IO exception
+   * @throws AccessControlException if the caller does not have access to path
+   * @throws FileNotFoundException  if the path does not exist
+   * @throws HadoopIllegalArgumentException if the flags are invalid
+   */
+  public void createEncryptionZone(Path path, String keyName,
+      EnumSet<CreateEncryptionZoneFlag> flags)
+      throws IOException, AccessControlException, FileNotFoundException,
+      HadoopIllegalArgumentException{
+    dfs.createEncryptionZone(path, keyName);
+    if (flags.contains(CreateEncryptionZoneFlag.PROVISION_TRASH)) {
+      if (flags.contains(CreateEncryptionZoneFlag.NO_TRASH)) {
+        throw new HadoopIllegalArgumentException(
+            "can not have both PROVISION_TRASH and NO_TRASH flags");
+      }
+      this.provisionEZTrash(path);
+    }
+  }
+
+  /**
+   * Provision a trash directory for a given encryption zone.
+
+   * @param path the root of the encryption zone
+   * @throws IOException if the trash directory can not be created.
+   */
+  public void provisionEncryptionZoneTrash(Path path) throws IOException {
+    this.provisionEZTrash(path);
   }
 
   /**
@@ -275,6 +339,46 @@ public class HdfsAdmin {
   public RemoteIterator<EncryptionZone> listEncryptionZones()
       throws IOException {
     return dfs.listEncryptionZones();
+  }
+
+  /**
+   * Performs re-encryption action for a given encryption zone.
+   *
+   * @param zone the root of the encryption zone
+   * @param action the re-encrypt action
+   * @throws IOException If any error occurs when handling re-encrypt action.
+   */
+  public void reencryptEncryptionZone(final Path zone,
+      final ReencryptAction action) throws IOException {
+    dfs.reencryptEncryptionZone(zone, action);
+  }
+
+  /**
+   * Returns a RemoteIterator which can be used to list all re-encryption
+   * information. For large numbers of re-encryptions, the iterator will fetch
+   * the list in a number of small batches.
+   * <p>
+   * Since the list is fetched in batches, it does not represent a
+   * consistent snapshot of the entire list of encryption zones.
+   * <p>
+   * This method can only be called by HDFS superusers.
+   */
+  public RemoteIterator<ZoneReencryptionStatus> listReencryptionStatus()
+      throws IOException {
+    return dfs.listReencryptionStatus();
+  }
+
+  /**
+   * Returns the FileEncryptionInfo on the HdfsFileStatus for the given path.
+   * The return value can be null if the path points to a directory, or a file
+   * that is not in an encryption zone.
+   *
+   * @throws FileNotFoundException if the path does not exist.
+   * @throws AccessControlException if no execute permission on parent path.
+   */
+  public FileEncryptionInfo getFileEncryptionInfo(final Path path)
+      throws IOException {
+    return dfs.getFileEncryptionInfo(path);
   }
 
   /**
@@ -335,5 +439,57 @@ public class HdfsAdmin {
   public void setStoragePolicy(final Path src, final String policyName)
       throws IOException {
     dfs.setStoragePolicy(src, policyName);
+  }
+
+  private void provisionEZTrash(Path path) throws IOException {
+    // make sure the path is an EZ
+    EncryptionZone ez = dfs.getEZForPath(path);
+    if (ez == null) {
+      throw new IllegalArgumentException(path + " is not an encryption zone.");
+    }
+
+    String ezPath = ez.getPath();
+    if (!path.toString().equals(ezPath)) {
+      throw new IllegalArgumentException(path + " is not the root of an " +
+          "encryption zone. Do you mean " + ez.getPath() + "?");
+    }
+
+    // check if the trash directory exists
+
+    Path trashPath = new Path(ez.getPath(), FileSystem.TRASH_PREFIX);
+
+    if (dfs.exists(trashPath)) {
+      String errMessage = "Will not provision new trash directory for " +
+          "encryption zone " + ez.getPath() + ". Path already exists.";
+      FileStatus trashFileStatus = dfs.getFileStatus(trashPath);
+      if (!trashFileStatus.isDirectory()) {
+        errMessage += "\r\n" +
+            "Warning: " + trashPath.toString() + " is not a directory";
+      }
+      if (!trashFileStatus.getPermission().equals(TRASH_PERMISSION)) {
+        errMessage += "\r\n" +
+            "Warning: the permission of " +
+            trashPath.toString() + " is not " + TRASH_PERMISSION;
+      }
+      throw new IOException(errMessage);
+    }
+
+    // Update the permission bits
+    dfs.mkdir(trashPath, TRASH_PERMISSION);
+    dfs.setPermission(trashPath, TRASH_PERMISSION);
+  }
+
+  /**
+   * Returns a RemoteIterator which can be used to list all open files
+   * currently managed by the NameNode. For large numbers of open files,
+   * iterator will fetch the list in batches of configured size.
+   * <p/>
+   * Since the list is fetched in batches, it does not represent a
+   * consistent snapshot of the all open files.
+   * <p/>
+   * This method can only be called by HDFS superusers.
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
+    return dfs.listOpenFiles();
   }
 }

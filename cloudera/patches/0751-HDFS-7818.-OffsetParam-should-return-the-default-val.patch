@@ -1,7 +1,7 @@
-From fc826a6162009b3e78200b064552e0ce4dd8f003 Mon Sep 17 00:00:00 2001
+From 51acf4e545669000ce713501816fed674f927cfd Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Fri, 6 Mar 2015 14:26:23 -0800
-Subject: [PATCH 751/924] HDFS-7818. OffsetParam should return the default
+Subject: [PATCH 0751/2639] HDFS-7818. OffsetParam should return the default
  value instead of throwing NPE when the value is
  unspecified. Contributed by Eric Payne.
 

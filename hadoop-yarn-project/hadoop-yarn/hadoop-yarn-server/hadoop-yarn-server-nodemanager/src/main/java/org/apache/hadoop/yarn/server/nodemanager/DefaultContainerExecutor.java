@@ -25,6 +25,7 @@ import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
@@ -66,6 +67,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   private static final int WIN_MAX_PATH = 260;
 
   protected final FileContext lfs;
+
+  private String logDirPermissions = null;
 
   public DefaultContainerExecutor() {
     try {
@@ -267,7 +270,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       return new ShellCommandExecutor(
           command,
           wordDir,
-          environment); 
+          environment,
+          0L,
+          false);
   }
 
   protected LocalWrapperScriptBuilder getLocalWrapperScriptBuilder(
@@ -463,8 +468,12 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     for (Path baseDir : baseDirs) {
       Path del = subDir == null ? baseDir : new Path(baseDir, subDir);
       LOG.info("Deleting path : " + del);
-      if (!lfs.delete(del, true)) {
-        LOG.warn("delete returned false for path: [" + del + "]");
+      try {
+        if (!lfs.delete(del, true)) {
+          LOG.warn("delete returned false for path: [" + del + "]");
+        }
+      } catch (FileNotFoundException e) {
+        continue;
       }
     }
   }
@@ -481,9 +490,6 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   /** Permissions for user app dir.
    * $local.dir/usercache/$user/appcache/$appId */
   static final short APPDIR_PERM = (short)0710;
-  /** Permissions for user log dir.
-   * $logdir/$user/$appId */
-  static final short LOGDIR_PERM = (short)0710;
 
   private long getDiskFreeSpace(Path base) throws IOException {
     return lfs.getFsStatus(base).getRemaining();
@@ -674,7 +680,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       throws IOException {
 
     boolean appLogDirStatus = false;
-    FsPermission appLogDirPerms = new FsPermission(LOGDIR_PERM);
+    FsPermission appLogDirPerms = new
+        FsPermission(getLogDirPermissions());
     for (String rootLogDir : logDirs) {
       // create $log.dir/$appid
       Path appLogDir = new Path(rootLogDir, appId);
@@ -699,7 +706,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       List<String> logDirs, String user) throws IOException {
 
     boolean containerLogDirStatus = false;
-    FsPermission containerLogDirPerms = new FsPermission(LOGDIR_PERM);
+    FsPermission containerLogDirPerms = new
+        FsPermission(getLogDirPermissions());
     for (String rootLogDir : logDirs) {
       // create $log.dir/$appid/$containerid
       Path appLogDir = new Path(rootLogDir, appId);
@@ -719,6 +727,27 @@ public class DefaultContainerExecutor extends ContainerExecutor {
               + "in any of the configured local directories for container "
               + containerId);
     }
+  }
+
+  /**
+   * Return default container log directory permissions.
+   */
+  @VisibleForTesting
+  public String getLogDirPermissions() {
+    if (this.logDirPermissions==null) {
+      this.logDirPermissions = getConf().get(
+          YarnConfiguration.NM_DEFAULT_CONTAINER_EXECUTOR_LOG_DIRS_PERMISSIONS,
+          YarnConfiguration.NM_DEFAULT_CONTAINER_EXECUTOR_LOG_DIRS_PERMISSIONS_DEFAULT);
+    }
+    return this.logDirPermissions;
+  }
+
+  /**
+   * Clear the internal variable for repeatable testing.
+   */
+  @VisibleForTesting
+  public void clearLogDirPermissions() {
+    this.logDirPermissions = null;
   }
 
   /**

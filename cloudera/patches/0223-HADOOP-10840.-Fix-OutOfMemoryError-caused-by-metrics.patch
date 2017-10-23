@@ -1,9 +1,9 @@
 From 1f674b480ecff9c835c2ed5410bd13720f3cc216 Mon Sep 17 00:00:00 2001
 From: Chris Nauroth <cnauroth@apache.org>
 Date: Thu, 17 Jul 2014 05:04:53 +0000
-Subject: [PATCH 223/924] HADOOP-10840. Fix OutOfMemoryError caused by metrics
- system in Azure File System. Contributed by Shanyu
- Zhao.
+Subject: [PATCH 0223/2639] HADOOP-10840. Fix OutOfMemoryError caused by
+ metrics system in Azure File System. Contributed
+ by Shanyu Zhao.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1611247 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0b05c9f78f6c2954d762f810c3889f10c6be61f4)

@@ -1,7 +1,7 @@
 From 446c6d83c8be091a4753eb91e4c5ee9378bbc1e4 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Mon, 24 Aug 2015 14:55:10 -0700
-Subject: [PATCH 725/924] Add post-commit-hook
+Subject: [PATCH 0725/2639] Add post-commit-hook
 
 Change-Id: Ieae1d02223a708142feba939da70b0b355669e80
 ---

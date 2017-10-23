@@ -18,8 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -48,7 +46,17 @@ public class FairSchedulerConfiguration extends Configuration {
   public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES =
     YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-vcores";
   public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES = 1;
-  
+
+  /** Threshold for container size for making a container reservation as a
+   * multiple of increment allocation. Only container sizes above this are
+   * allowed to reserve a node */
+  public static final String
+      RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE =
+      YarnConfiguration.YARN_PREFIX +
+          "scheduler.reservation-threshold.increment-multiple";
+  public static final float
+      DEFAULT_RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE = 2f;
+
   private static final String CONF_PREFIX =  "yarn.scheduler.fair.";
 
   public static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
@@ -105,11 +113,23 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final String PREEMPTION_THRESHOLD =
       CONF_PREFIX + "preemption.cluster-utilization-threshold";
   protected static final float DEFAULT_PREEMPTION_THRESHOLD = 0.8f;
-  
-  protected static final String PREEMPTION_INTERVAL = CONF_PREFIX + "preemptionInterval";
-  protected static final int DEFAULT_PREEMPTION_INTERVAL = 5000;
+
   protected static final String WAIT_TIME_BEFORE_KILL = CONF_PREFIX + "waitTimeBeforeKill";
   protected static final int DEFAULT_WAIT_TIME_BEFORE_KILL = 15000;
+
+  /**
+   * Configurable delay (ms) before an app's starvation is considered after
+   * it is identified. This is to give the scheduler enough time to
+   * allocate containers post preemption. This delay is added to the
+   * {@link #WAIT_TIME_BEFORE_KILL} and enough heartbeats.
+   *
+   * This is intended to be a backdoor on production clusters, and hence
+   * intentionally not documented.
+   */
+  protected static final String WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS =
+      CONF_PREFIX + "waitTimeBeforeNextStarvationCheck";
+  protected static final long
+      DEFAULT_WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS = 10000;
 
   /** Whether to assign multiple containers in one check-in. */
   public static final String  ASSIGN_MULTIPLE = CONF_PREFIX + "assignmultiple";
@@ -120,6 +140,14 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final boolean DEFAULT_SIZE_BASED_WEIGHT = false;
 
   /** Maximum number of containers to assign on each check-in. */
+  public static final String DYNAMIC_MAX_ASSIGN =
+      CONF_PREFIX + "dynamic.max.assign";
+  private static final boolean DEFAULT_DYNAMIC_MAX_ASSIGN = true;
+
+  /**
+   * Specify exact number of containers to assign on each heartbeat, if dynamic
+   * max assign is turned off.
+   */
   protected static final String MAX_ASSIGN = CONF_PREFIX + "max.assign";
   protected static final int DEFAULT_MAX_ASSIGN = -1;
 
@@ -170,7 +198,13 @@ public class FairSchedulerConfiguration extends Configuration {
       DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES);
     return Resources.createResource(incrementMemory, incrementCores);
   }
-  
+
+  public float getReservationThresholdIncrementMultiple() {
+    return getFloat(
+      RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE,
+      DEFAULT_RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE);
+  }
+
   public float getLocalityThresholdNode() {
     return getFloat(LOCALITY_THRESHOLD_NODE, DEFAULT_LOCALITY_THRESHOLD_NODE);
   }
@@ -207,6 +241,10 @@ public class FairSchedulerConfiguration extends Configuration {
     return getBoolean(ASSIGN_MULTIPLE, DEFAULT_ASSIGN_MULTIPLE);
   }
 
+  public boolean isMaxAssignDynamic() {
+    return getBoolean(DYNAMIC_MAX_ASSIGN, DEFAULT_DYNAMIC_MAX_ASSIGN);
+  }
+
   public int getMaxAssign() {
     return getInt(MAX_ASSIGN, DEFAULT_MAX_ASSIGN);
   }
@@ -224,8 +262,9 @@ public class FairSchedulerConfiguration extends Configuration {
     		"/tmp/")).getAbsolutePath() + File.separator + "fairscheduler");
   }
   
-  public int getPreemptionInterval() {
-    return getInt(PREEMPTION_INTERVAL, DEFAULT_PREEMPTION_INTERVAL);
+  public long getWaitTimeBeforeNextStarvationCheck() {
+    return getLong(WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS,
+        DEFAULT_WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS);
   }
   
   public int getWaitTimeBeforeKill() {
@@ -268,7 +307,7 @@ public class FairSchedulerConfiguration extends Configuration {
   
   private static int findResource(String val, String units)
     throws AllocationConfigurationException {
-    Pattern pattern = Pattern.compile("(\\d+)\\s*" + units);
+    Pattern pattern = Pattern.compile("(\\d+)(\\.\\d*)?\\s*" + units);
     Matcher matcher = pattern.matcher(val);
     if (!matcher.find()) {
       throw new AllocationConfigurationException("Missing resource: " + units);

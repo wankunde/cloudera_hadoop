@@ -1,9 +1,9 @@
 From c3db4590756342a0921c959aca1a51144689701e Mon Sep 17 00:00:00 2001
 From: Allen Wittenauer <aw@apache.org>
 Date: Mon, 9 Feb 2015 13:58:50 -0800
-Subject: [PATCH 606/924] HDFS-7546. Document, and set an accepting default
- for dfs.namenode.kerberos.principal.pattern (Harsh
- J via aw)
+Subject: [PATCH 0606/2639] HDFS-7546. Document, and set an accepting default
+ for dfs.namenode.kerberos.principal.pattern
+ (Harsh J via aw)
 
 (cherry picked from commit 63613c79c1042ea3d7706ed6f7eccc8cf48ff6ea)
 

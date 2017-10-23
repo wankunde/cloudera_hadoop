@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.collect.ImmutableList;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,12 +32,15 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -46,9 +50,13 @@ import java.util.Map;
 import java.util.Set;
 
 public class TestAuthorizationProvider {
+	private static final Logger LOG =
+	    LoggerFactory.getLogger(TestAuthorizationProvider.class);
   private MiniDFSCluster miniDFS;
   private static final Set<String> CALLED = new HashSet<String>();
-  
+  private static final short HDFS_PERMISSION = 0777;
+  private static final short PROVIDER_PERMISSION = 0775;
+
   public static class MyAuthorizationProvider extends AuthorizationProvider {
     private AuthorizationProvider defaultProvider;
 
@@ -56,7 +64,9 @@ public class TestAuthorizationProvider {
     public void start() {
       CALLED.add("start");
       CALLED.add("isClientOp=" + isClientOp());
-      defaultProvider = new DefaultAuthorizationProvider();
+      if (defaultProvider == null) {
+        defaultProvider = new DefaultAuthorizationProvider();
+      }
       defaultProvider.start();
     }
 
@@ -64,8 +74,9 @@ public class TestAuthorizationProvider {
     public void stop() {
       CALLED.add("stop");
       CALLED.add("isClientOp=" + isClientOp());
-      defaultProvider.stop();
-      defaultProvider = null;
+      if (defaultProvider != null) {
+        defaultProvider.stop();
+      }
     }
 
     @Override
@@ -118,7 +129,7 @@ public class TestAuthorizationProvider {
           ignoreEmptyDir);
     }
 
-    private boolean useDefault(INodeAuthorizationInfo iNode) {
+    protected boolean useDefault(INodeAuthorizationInfo iNode) {
       return !iNode.getFullPathName().startsWith("/user/authz");
     }
 
@@ -126,9 +137,7 @@ public class TestAuthorizationProvider {
     public void setUser(INodeAuthorizationInfo node, String user) {
       CALLED.add("setUser");
       CALLED.add("isClientOp=" + isClientOp());
-      if (useDefault(node)) {
-        defaultProvider.setUser(node, user);
-      }
+      defaultProvider.setUser(node, user);
     }
 
     @Override
@@ -148,9 +157,7 @@ public class TestAuthorizationProvider {
     public void setGroup(INodeAuthorizationInfo node, String group) {
       CALLED.add("setGroup");
       CALLED.add("isClientOp=" + isClientOp());
-      if (useDefault(node)) {
-        defaultProvider.setGroup(node, group);
-      }
+      defaultProvider.setGroup(node, group);
     }
 
     @Override
@@ -171,9 +178,7 @@ public class TestAuthorizationProvider {
         FsPermission permission) {
       CALLED.add("setPermission");
       CALLED.add("isClientOp=" + isClientOp());
-      if (useDefault(node)) {
-        defaultProvider.setPermission(node, permission);
-      }
+      defaultProvider.setPermission(node, permission);
     }
 
     @Override
@@ -185,7 +190,7 @@ public class TestAuthorizationProvider {
       if (useDefault(node)) {
         permission = defaultProvider.getFsPermission(node, snapshotId);
       } else {
-        permission = new FsPermission((short)0770);
+        permission = new FsPermission(PROVIDER_PERMISSION);
       }
       return permission;
     }
@@ -201,7 +206,7 @@ public class TestAuthorizationProvider {
       } else {
         AclEntry acl = new AclEntry.Builder().setType(AclEntryType.GROUP).
             setPermission(FsAction.ALL).setName("xxx").build();
-        f = new AclFeature(ImmutableList.of(acl));
+        f = new AclFeature(AclEntryStatusFormat.toInt(ImmutableList.of(acl)));
       }
       return f;
     }
@@ -210,18 +215,14 @@ public class TestAuthorizationProvider {
     public void removeAclFeature(INodeAuthorizationInfo node) {
       CALLED.add("removeAclFeature");
       CALLED.add("isClientOp=" + isClientOp());
-      if (useDefault(node)) {
-        defaultProvider.removeAclFeature(node);
-      }
+      defaultProvider.removeAclFeature(node);
     }
 
     @Override
     public void addAclFeature(INodeAuthorizationInfo node, AclFeature f) {
       CALLED.add("addAclFeature");
       CALLED.add("isClientOp=" + isClientOp());
-      if (useDefault(node)) {
-        defaultProvider.addAclFeature(node, f);
-      }
+      defaultProvider.addAclFeature(node, f);
     }
   }
 
@@ -233,6 +234,9 @@ public class TestAuthorizationProvider {
     conf.set(DFSConfigKeys.DFS_NAMENODE_AUTHORIZATION_PROVIDER_KEY, 
         MyAuthorizationProvider.class.getName());
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    conf.set(
+        DFSConfigKeys.DFS_NAMENODE_AUTHORIZATION_PROVIDER_BYPASS_USERS_KEY,
+        " u2,, ,u3, ");
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
     miniDFS = new MiniDFSCluster.Builder(conf).build();
   }
@@ -335,6 +339,78 @@ public class TestAuthorizationProvider {
 
   }
 
+  private class AssertHelper {
+    private boolean bypass = true;
+    AssertHelper(boolean bp) {
+      bypass = bp;
+    }
+    public void doAssert(boolean x) {
+      if (bypass) {
+        Assert.assertFalse(x);
+      } else {
+        Assert.assertTrue(x);
+      }
+    }
+  }
+
+  private void testBypassProviderHelper(final String[] users,
+      final short expectedPermission, final boolean bypass) throws Exception {
+    final AssertHelper asserter = new AssertHelper(bypass);
+
+    Assert.assertTrue(CALLED.contains("start"));
+
+    FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+    final Path userPath = new Path("/user");
+    final Path authz = new Path("/user/authz");
+    final Path authzChild = new Path("/user/authz/child2");
+
+    fs.mkdirs(userPath);
+    fs.setPermission(userPath, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authz);
+    fs.setPermission(authz, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authzChild);
+    fs.setPermission(authzChild, new FsPermission(HDFS_PERMISSION));
+    for(String user : users) {
+      UserGroupInformation ugiBypass =
+          UserGroupInformation.createUserForTesting(user,
+              new String[]{"g1"});
+      ugiBypass.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+          Assert.assertEquals(expectedPermission,
+              fs.getFileStatus(authzChild).getPermission().toShort());
+          asserter.doAssert(CALLED.contains("checkPermission"));
+
+          CALLED.clear();
+          Assert.assertEquals(expectedPermission,
+              fs.listStatus(userPath)[0].getPermission().toShort());
+          asserter.doAssert(
+              CALLED.contains("checkPermission"));
+
+          CALLED.clear();
+          fs.getAclStatus(authzChild);
+          asserter.doAssert(CALLED.contains("checkPermission"));
+          return null;
+        }
+      });
+    }
+  }
+
+  @Test
+  public void testAuthzDelegationToProvider() throws Exception {
+    LOG.info("Test not bypassing provider");
+    String[] users = {"u1"};
+    testBypassProviderHelper(users, PROVIDER_PERMISSION, false);
+  }
+
+  @Test
+  public void testAuthzBypassingProvider() throws Exception {
+    LOG.info("Test bypassing provider");
+    String[] users = {"u2", "u3"};
+    testBypassProviderHelper(users, HDFS_PERMISSION, true);
+  }
+
   @Test
   public void testCustomProvider() throws Exception {
     FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
@@ -347,7 +423,36 @@ public class TestAuthorizationProvider {
     status = fs.getFileStatus(new Path("/user/authz"));
     Assert.assertEquals("foo", status.getOwner());
     Assert.assertEquals("bar", status.getGroup());
-    Assert.assertEquals(new FsPermission((short) 0770), status.getPermission());
+    Assert.assertEquals(new FsPermission(PROVIDER_PERMISSION),
+        status.getPermission());
+    
+    // The following code test that the username/groupname supplied by 
+    // the customized authorization provider does not get saved to fsimage
+    //
+    miniDFS.getNameNodeRpc(0).setSafeMode(SafeModeAction.SAFEMODE_ENTER, true);
+    miniDFS.getNameNodeRpc(0).saveNamespace();
+    miniDFS.getNameNodeRpc(0).setSafeMode(SafeModeAction.SAFEMODE_LEAVE, true);
+   
+    miniDFS.getConfiguration(0).set(
+        DFSConfigKeys.DFS_NAMENODE_AUTHORIZATION_PROVIDER_KEY,
+        DefaultAuthorizationProvider.class.getName());
+    miniDFS.restartNameNodes();
+    miniDFS.waitClusterUp();
+    fs = FileSystem.get(miniDFS.getConfiguration(0));
+    status = fs.getFileStatus(new Path("/user/authz"));
+    Assert.assertEquals(System.getProperty("user.name"), status.getOwner());
+    Assert.assertEquals("supergroup", status.getGroup());
+    
+    miniDFS.getConfiguration(0).set(
+        DFSConfigKeys.DFS_NAMENODE_AUTHORIZATION_PROVIDER_KEY,
+        MyAuthorizationProvider.class.getName());
+    miniDFS.restartNameNodes();
+    miniDFS.waitClusterUp();
+    fs = FileSystem.get(miniDFS.getConfiguration(0));
+    status = fs.getFileStatus(new Path("/user/authz"));
+    Assert.assertEquals("foo", status.getOwner());
+    Assert.assertEquals("bar", status.getGroup());
+    Assert.assertEquals(new FsPermission(PROVIDER_PERMISSION),
+        status.getPermission());
   }
-
 }

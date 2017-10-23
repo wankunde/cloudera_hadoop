@@ -1,7 +1,7 @@
 From f7fee425689e289fcdf1b150b59315bc6efe1839 Mon Sep 17 00:00:00 2001
 From: Arpit Agarwal <arp@apache.org>
 Date: Tue, 21 Apr 2015 10:58:05 -0700
-Subject: [PATCH 692/924] HDFS-8163. Using monotonicNow for block report
+Subject: [PATCH 0692/2639] HDFS-8163. Using monotonicNow for block report
  scheduling causes test failures on recently
  restarted systems. (Arpit Agarwal)
 

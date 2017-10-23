@@ -1,7 +1,7 @@
 From ff0fbbc9f4ab91fe6d260ea3a9b63adde5cb8bff Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Mon, 5 Aug 2013 22:47:40 -0700
-Subject: [PATCH 095/924] MR1: MAPREDUCE-5367. Local jobs all use same local
+Subject: [PATCH 0095/2639] MR1: MAPREDUCE-5367. Local jobs all use same local
  working directory (Sandy Ryza)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1510613 13f79535-47bb-0310-9956-ffa450edef68

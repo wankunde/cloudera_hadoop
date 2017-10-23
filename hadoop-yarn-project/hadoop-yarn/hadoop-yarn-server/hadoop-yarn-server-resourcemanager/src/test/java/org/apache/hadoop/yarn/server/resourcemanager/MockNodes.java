@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -51,8 +52,9 @@ public class MockNodes {
         if (j == (nodesPerRack - 1)) {
           // One unhealthy node per rack.
           list.add(nodeInfo(i, perNode, NodeState.UNHEALTHY));
+        } else {
+          list.add(newNodeInfo(i, perNode));
         }
-        list.add(newNodeInfo(i, perNode));
       }
     }
     return list;
@@ -176,12 +178,21 @@ public class MockNodes {
     }
 
     @Override
+    public List<ApplicationId> getRunningApps() {
+      return null;
+    }
+
+    @Override
     public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
     }
 
     @Override
     public NodeHeartbeatResponse getLastNodeHeartBeatResponse() {
       return null;
+    }
+
+    @Override
+    public void resetLastNodeHeartBeatResponse() {
     }
 
     @Override

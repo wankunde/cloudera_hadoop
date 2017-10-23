@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.text.DateFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @InterfaceAudience.Private
 public class Mover {
@@ -102,10 +103,12 @@ public class Mover {
   private final Dispatcher dispatcher;
   private final StorageMap storages;
   private final List<Path> targetPaths;
+  private final int retryMaxAttempts;
+  private final AtomicInteger retryCount;
 
   private final BlockStoragePolicy[] blockStoragePolicies;
 
-  Mover(NameNodeConnector nnc, Configuration conf) {
+  Mover(NameNodeConnector nnc, Configuration conf, AtomicInteger retryCount) {
     final long movedWinWidth = conf.getLong(
         DFSConfigKeys.DFS_MOVER_MOVEDWINWIDTH_KEY,
         DFSConfigKeys.DFS_MOVER_MOVEDWINWIDTH_DEFAULT);
@@ -115,10 +118,16 @@ public class Mover {
     final int maxConcurrentMovesPerNode = conf.getInt(
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
-
+    final int maxNoMoveInterval = conf.getInt(
+        DFSConfigKeys.DFS_MOVER_MAX_NO_MOVE_INTERVAL_KEY,
+        DFSConfigKeys.DFS_MOVER_MAX_NO_MOVE_INTERVAL_DEFAULT);
+    this.retryMaxAttempts = conf.getInt(
+        DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY,
+        DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_DEFAULT);
+    this.retryCount = retryCount;
     this.dispatcher = new Dispatcher(nnc, Collections.<String> emptySet(),
         Collections.<String> emptySet(), movedWinWidth, moverThreads, 0,
-        maxConcurrentMovesPerNode, conf);
+        maxConcurrentMovesPerNode, maxNoMoveInterval, conf);
     this.storages = new StorageMap();
     this.targetPaths = nnc.getTargetPaths();
     this.blockStoragePolicies = new BlockStoragePolicy[1 <<
@@ -250,14 +259,27 @@ public class Mover {
      * @return whether there is still remaining migration work for the next
      *         round
      */
-    private boolean processNamespace() {
+    private boolean processNamespace() throws IOException {
       getSnapshottableDirs();
       boolean hasRemaining = false;
       for (Path target : targetPaths) {
         hasRemaining |= processPath(target.toUri().getPath());
       }
       // wait for pending move to finish and retry the failed migration
-      hasRemaining |= Dispatcher.waitForMoveCompletion(storages.targets.values());
+      boolean hasFailed = Dispatcher.waitForMoveCompletion(storages.targets
+          .values());
+      if (hasFailed) {
+        if (retryCount.get() == retryMaxAttempts) {
+          throw new IOException("Failed to move some block's after "
+              + retryMaxAttempts + " retries.");
+        } else {
+          retryCount.incrementAndGet();
+        }
+      } else {
+        // Reset retry count if no failure.
+        retryCount.set(0);
+      }
+      hasRemaining |= hasFailed;
       return hasRemaining;
     }
 
@@ -430,7 +452,9 @@ public class Mover {
         List<StorageType> targetTypes, Matcher matcher) {
       final NetworkTopology cluster = dispatcher.getCluster(); 
       for (StorageType t : targetTypes) {
-        for(StorageGroup target : storages.getTargetStorages(t)) {
+        final List<StorageGroup> targets = storages.getTargetStorages(t);
+        Collections.shuffle(targets);
+        for (StorageGroup target : targets) {
           if (matcher.match(cluster, source.getDatanodeInfo(),
               target.getDatanodeInfo())) {
             final PendingMove pm = source.addPendingMove(db, target);
@@ -523,6 +547,7 @@ public class Mover {
             DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 2000 +
         conf.getLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY,
             DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000;
+    AtomicInteger retryCount = new AtomicInteger(0);
     LOG.info("namenodes = " + namenodes);
     
     List<NameNodeConnector> connectors = Collections.emptyList();
@@ -536,7 +561,7 @@ public class Mover {
         Iterator<NameNodeConnector> iter = connectors.iterator();
         while (iter.hasNext()) {
           NameNodeConnector nnc = iter.next();
-          final Mover m = new Mover(nnc, conf);
+          final Mover m = new Mover(nnc, conf, retryCount);
           final ExitStatus r = m.run();
 
           if (r == ExitStatus.SUCCESS) {
@@ -603,7 +628,7 @@ public class Mover {
       } else if (line.hasOption("p")) {
         paths = line.getOptionValues("p");
       }
-      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
       if (paths == null || paths.length == 0) {
         for (URI namenode : namenodes) {
           map.put(namenode, null);

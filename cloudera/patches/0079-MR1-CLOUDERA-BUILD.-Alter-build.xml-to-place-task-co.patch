@@ -1,9 +1,9 @@
 From a32830c0390caabcfb387e44d8b7ae2b60e86782 Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Wed, 21 Aug 2013 20:54:45 -0700
-Subject: [PATCH 079/924] MR1: CLOUDERA-BUILD. Alter build.xml to place task
- controller binaries in folder that matches up with
- System.getProperty("os.name")
+Subject: [PATCH 0079/2639] MR1: CLOUDERA-BUILD. Alter build.xml to place task
+ controller binaries in folder that matches up
+ with System.getProperty("os.name")
 
 Author: Sandy Ryza
 Ref: CDH-13735

@@ -1,9 +1,9 @@
 From fcaa96cd6587a48d17f13d74097a8df796cdeb18 Mon Sep 17 00:00:00 2001
 From: Christopher Douglas <cdouglas@apache.org>
 Date: Wed, 25 May 2011 02:23:20 +0000
-Subject: [PATCH 066/924] MR1: MAPREDUCE-2495. exit() the TaskTracker when the
- distributed cache cleanup thread dies. Contributed
- by Robert Joseph Evans
+Subject: [PATCH 0066/2639] MR1: MAPREDUCE-2495. exit() the TaskTracker when
+ the distributed cache cleanup thread dies.
+ Contributed by Robert Joseph Evans
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-0.20-security@1127362 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit fcc321599e9e068387d3401edd171c950b7be018)

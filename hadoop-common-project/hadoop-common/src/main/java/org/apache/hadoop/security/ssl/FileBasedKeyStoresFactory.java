@@ -66,6 +66,8 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     "ssl.{0}.truststore.password";
   public static final String SSL_TRUSTSTORE_TYPE_TPL_KEY =
     "ssl.{0}.truststore.type";
+  public static final String SSL_EXCLUDE_CIPHER_LIST =
+      "ssl.{0}.exclude.cipher.list";
 
   /**
    * Default format of the keystore files.
@@ -194,8 +196,10 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
           SSL_TRUSTSTORE_PASSWORD_TPL_KEY);
       String truststorePassword = getPassword(conf, passwordProperty, "");
       if (truststorePassword.isEmpty()) {
-        throw new GeneralSecurityException("The property '" + passwordProperty +
-            "' has not been set in the ssl configuration file.");
+        // An empty trust store password is legal; the trust store password
+        // is only required when writing to a trust store. Otherwise it's
+        // an optional integrity check.
+        truststorePassword = null;
       }
       long truststoreReloadInterval =
           conf.getLong(

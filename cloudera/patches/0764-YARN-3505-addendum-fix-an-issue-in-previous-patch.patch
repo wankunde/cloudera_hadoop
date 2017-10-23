@@ -1,14 +1,13 @@
-From 36939d03e71b5877f3a9da39db9b6d36ddec275e Mon Sep 17 00:00:00 2001
+From 453b12394c90df0d7dae87e3ccc4775437ce639e Mon Sep 17 00:00:00 2001
 From: Junping Du <junping_du@apache.org>
 Date: Fri, 15 May 2015 06:39:39 -0700
-Subject: [PATCH 764/924] YARN-3505 addendum: fix an issue in previous patch.
- (cherry picked from commit
+Subject: [PATCH 0764/2639] YARN-3505 addendum: fix an issue in previous
+ patch. (cherry picked from commit
  03a293aed6de101b0cae1a294f506903addcaa75)
 
 (cherry picked from commit cc671349bc1c56d597aedd244d939dc248353d8c)
 
 Change-Id: I8a246ff32621661df121ac4003ea1d62438a4976
-(cherry picked from commit 453b12394c90df0d7dae87e3ccc4775437ce639e)
 ---
  .../logaggregation/AppLogAggregatorImpl.java       |    2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

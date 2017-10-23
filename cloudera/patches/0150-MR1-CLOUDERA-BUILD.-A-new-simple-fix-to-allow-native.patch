@@ -1,7 +1,7 @@
 From adcea644f4158f7bd7c8a61b3af3ca795b8c42bc Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Wed, 17 Sep 2014 11:43:24 -0700
-Subject: [PATCH 150/924] MR1: CLOUDERA-BUILD. A new simple fix to allow
+Subject: [PATCH 0150/2639] MR1: CLOUDERA-BUILD. A new simple fix to allow
  native libs to build on Ubuntu 14.04 (CDH-20987)
 
 (cherry picked from commit 09bee171f7d7bb9c83bd214f5eece957eb07eee4)

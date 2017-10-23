@@ -1,8 +1,8 @@
 From de2c6389eb4529496b4398dce2cf70b6e5263dc3 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Thu, 24 Jan 2013 10:27:23 -0800
-Subject: [PATCH 013/924] MR1: CLOUDERA-BUILD. jt ha does not work in a secure
- cluster.
+Subject: [PATCH 0013/2639] MR1: CLOUDERA-BUILD. jt ha does not work in a
+ secure cluster.
 
   Reason: bug
   Author: Alejandro Abdelnur

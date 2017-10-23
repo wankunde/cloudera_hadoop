@@ -1,7 +1,7 @@
 From 9f3b73b71d7149216cc493af7ccf11829fc6b2f9 Mon Sep 17 00:00:00 2001
 From: Akira Ajisaka <aajisaka@apache.org>
 Date: Thu, 15 Jan 2015 20:54:44 +0900
-Subject: [PATCH 570/924] HADOOP-11483. HardLink.java should use the jdk7
+Subject: [PATCH 0570/2639] HADOOP-11483. HardLink.java should use the jdk7
  createLink method
 
 (cherry picked from commit db51548f706ccd2d0200745ab89e27610c6d10bc)

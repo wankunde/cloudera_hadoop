@@ -1,9 +1,10 @@
 From 3e956cf76832ab648795edab2cee36e3ecc00ce1 Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Sat, 28 Feb 2015 23:25:28 -0800
-Subject: [PATCH 440/924] HDFS-7611. deleteSnapshot and delete of a file can
- leave orphaned blocks in the blocksMap on NameNode
- restart. Contributed by Jing Zhao and Byron Wong.
+Subject: [PATCH 0440/2639] HDFS-7611. deleteSnapshot and delete of a file can
+ leave orphaned blocks in the blocksMap on
+ NameNode restart. Contributed by Jing Zhao and
+ Byron Wong.
 
 (cherry picked from commit d244574d03903b0514b0308da85d2f06c2384524)
 

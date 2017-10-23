@@ -1,7 +1,7 @@
 From da24ef568b79ebd1d803b994be19e392f80c3c92 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Wed, 24 Jun 2015 14:42:33 -0700
-Subject: [PATCH 611/924] HDFS-8646. Prune cached replicas from
+Subject: [PATCH 0611/2639] HDFS-8646. Prune cached replicas from
  DatanodeDescriptor state on replica invalidation.
 
 (cherry picked from commit afe9ea3c12e1f5a71922400eadb642960bc87ca1)

@@ -1,7 +1,7 @@
 From f77fdbbbec3387886c37df6bf86cac64d20a1c5b Mon Sep 17 00:00:00 2001
 From: Vinayakumar B <vinayakumarb@apache.org>
 Date: Wed, 4 Mar 2015 14:38:38 +0530
-Subject: [PATCH 557/924] HDFS-7869. Inconsistency in the return information
+Subject: [PATCH 0557/2639] HDFS-7869. Inconsistency in the return information
  while performing rolling upgrade ( Contributed by
  J.Andreina )
 

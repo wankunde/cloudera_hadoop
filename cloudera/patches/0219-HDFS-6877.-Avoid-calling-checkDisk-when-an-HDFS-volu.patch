@@ -1,9 +1,9 @@
 From 3a0eebc5d5e48db0bba038684122dd8813281bf7 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 22 Oct 2014 13:38:26 -0700
-Subject: [PATCH 219/924] HDFS-6877. Avoid calling checkDisk when an HDFS
- volume is removed during a write. (Lei Xu via Colin
- P. McCabe) (cherry picked from commit
+Subject: [PATCH 0219/2639] HDFS-6877. Avoid calling checkDisk when an HDFS
+ volume is removed during a write. (Lei Xu via
+ Colin P. McCabe) (cherry picked from commit
  7b0f9bb2583cd9b7274f1e31c173c1c6a7ce467b)
 
 Conflicts:

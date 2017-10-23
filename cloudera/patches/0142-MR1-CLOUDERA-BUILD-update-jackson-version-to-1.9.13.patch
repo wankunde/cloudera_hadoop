@@ -1,7 +1,7 @@
 From 12eeef18faa0e75bcd8341a626db211fd83b003a Mon Sep 17 00:00:00 2001
 From: Juan Yu <jyu@cloudera.com>
 Date: Tue, 2 Sep 2014 18:10:51 -0700
-Subject: [PATCH 142/924] MR1: CLOUDERA-BUILD, update jackson version to
+Subject: [PATCH 0142/2639] MR1: CLOUDERA-BUILD, update jackson version to
  1.9.13
 
 (cherry picked from commit da097ec56e0534454b907343fac9a060af49e25a)

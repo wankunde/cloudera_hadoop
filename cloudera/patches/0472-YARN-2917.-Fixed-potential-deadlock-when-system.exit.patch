@@ -1,9 +1,10 @@
 From 4496bec9166cd3b82f30608740c2f5cd04a083cf Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Thu, 11 Dec 2014 11:16:45 -0800
-Subject: [PATCH 472/924] YARN-2917. Fixed potential deadlock when system.exit
- is called in AsyncDispatcher. Contributed by Rohith
- Sharmaks (cherry picked from commit
+Subject: [PATCH 0472/2639] YARN-2917. Fixed potential deadlock when
+ system.exit is called in AsyncDispatcher.
+ Contributed by Rohith Sharmaks (cherry picked
+ from commit
  614b6afea450ebb897fbb2519c6f02e13b9bd12d) (cherry
  picked from commit
  41f0d20fcb4fec5b932b8947a44f93345205222c)

@@ -1,7 +1,7 @@
 From 29034088eacf368efda329fcd11b9c7c1dd06806 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Mon, 23 Mar 2015 14:07:05 -0700
-Subject: [PATCH 520/924] YARN-2868. FairScheduler: Metric for latency to
+Subject: [PATCH 0520/2639] YARN-2868. FairScheduler: Metric for latency to
  allocate first container for an application. (Ray
  Chiang via kasha)
 

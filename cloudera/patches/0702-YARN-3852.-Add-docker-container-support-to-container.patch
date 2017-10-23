@@ -1,7 +1,7 @@
 From c8fa5bdf902a9cc4edbde89c3c03d7beda107304 Mon Sep 17 00:00:00 2001
 From: Varun Vasudev <vvasudev@apache.org>
 Date: Mon, 27 Jul 2015 10:12:30 -0700
-Subject: [PATCH 702/924] YARN-3852. Add docker container support to
+Subject: [PATCH 0702/2639] YARN-3852. Add docker container support to
  container-executor. Contributed by Abin Shahab.
 
 (cherry picked from commit f36835ff9b878fa20fe58a30f9d1e8c47702d6d2)
@@ -662,7 +662,7 @@ index b530f15..57327f0 100644
 + */
 +int run_docker(const char *command_file);
 diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/main.c b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/main.c
-index 63fbfe4..ab45c7e 100644
+index 63fbfe40..ab45c7e 100644
 --- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/main.c
 +++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/main.c
 @@ -49,16 +49,19 @@ static void display_usage(FILE *stream) {

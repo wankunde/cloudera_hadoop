@@ -1,8 +1,8 @@
 From 572bfd28cfc34466254e811c020d1820de3d65b0 Mon Sep 17 00:00:00 2001
 From: Vinod Kumar Vavilapalli <vinodkv@apache.org>
 Date: Thu, 2 Apr 2015 16:53:59 -0700
-Subject: [PATCH 699/924] YARN-3365. Enhanced NodeManager to support using the
- 'tc' tool via container-executor for outbound
+Subject: [PATCH 0699/2639] YARN-3365. Enhanced NodeManager to support using
+ the 'tc' tool via container-executor for outbound
  network traffic control. Contributed by Sidharta
  Seethana.
 
@@ -206,7 +206,7 @@ index b1efd6a..43ef98d 100644
 + */
 +int traffic_control_read_stats(char *command_file);
 diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/main.c b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/main.c
-index 9b5e784..63fbfe4 100644
+index 9b5e784..63fbfe40 100644
 --- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/main.c
 +++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/main.c
 @@ -42,84 +42,71 @@

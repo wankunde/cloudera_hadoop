@@ -1,7 +1,7 @@
 From b8f199c000f031fadc52f6c972f4264d5174174e Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 19 Nov 2014 19:49:36 -0800
-Subject: [PATCH 251/924] YARN-2802. ClusterMetrics to include AM launch and
+Subject: [PATCH 0251/2639] YARN-2802. ClusterMetrics to include AM launch and
  register delays. (Zhihai Xu via kasha)
 
 (cherry picked from commit c90fb84aaa902e6676de65d0016dee3a5414eb95)

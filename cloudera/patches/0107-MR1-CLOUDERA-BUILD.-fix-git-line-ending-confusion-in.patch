@@ -1,7 +1,7 @@
 From 6595efe420b5ba86e38741b187c540b097b2dd18 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 15 Oct 2013 11:05:57 -0700
-Subject: [PATCH 107/924] MR1: CLOUDERA-BUILD.
+Subject: [PATCH 0107/2639] MR1: CLOUDERA-BUILD.
  fix-git-line-ending-confusion-in-mapreduce1-project
 
 (cherry picked from commit d23d5387b8f4de4c698c50a756bb200af6b56345)

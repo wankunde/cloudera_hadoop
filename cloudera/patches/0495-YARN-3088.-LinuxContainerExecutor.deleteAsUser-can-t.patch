@@ -1,7 +1,7 @@
 From c6a2b2d076609baa4e1de2752e1cb3c9516093dd Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Mon, 26 Jan 2015 15:40:21 +0000
-Subject: [PATCH 495/924] YARN-3088. LinuxContainerExecutor.deleteAsUser can
+Subject: [PATCH 0495/2639] YARN-3088. LinuxContainerExecutor.deleteAsUser can
  throw NPE if native executor returns an error.
  Contributed by Eric Payne (cherry picked from
  commit 902c6ea7e4d3b49e49d9ce51ae9d12694ecfcf89)

@@ -1,9 +1,9 @@
 From 6077d065cfe614b406c6a0df6843983d60b2f8a4 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 19 Dec 2014 11:13:04 -0800
-Subject: [PATCH 408/924] HDFS-7552. Change FsVolumeList toString() to fix
- TestDataNodeVolumeFailureToleration (Liang Xie via
- Colin P. McCabe) (cherry picked from commit
+Subject: [PATCH 0408/2639] HDFS-7552. Change FsVolumeList toString() to fix
+ TestDataNodeVolumeFailureToleration (Liang Xie
+ via Colin P. McCabe) (cherry picked from commit
  a4876c130f1627e59ef055e586640d1933fc49af)
 
 (cherry picked from commit 22f72c79462c424e47610470fd48e871887ac326)

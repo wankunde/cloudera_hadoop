@@ -1,7 +1,7 @@
 From ed235110181d8f685c22ef76586cbe56b4235f9d Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Mon, 1 Dec 2014 21:53:18 -0800
-Subject: [PATCH 276/924] HADOOP-11341. KMS support for whitelist key ACLs.
+Subject: [PATCH 0276/2639] HADOOP-11341. KMS support for whitelist key ACLs.
  Contributed by Arun Suresh.
 
 (cherry picked from commit 31b4d2daa14a7f6e8ee73fd3160e126d8db62ffb)

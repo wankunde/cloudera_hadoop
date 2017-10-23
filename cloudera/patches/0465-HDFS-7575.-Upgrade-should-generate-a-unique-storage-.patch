@@ -1,8 +1,9 @@
 From f1a2fce5b3c21e3335f99fe210edbb1f9c7bb29f Mon Sep 17 00:00:00 2001
 From: Arpit Agarwal <arp@apache.org>
 Date: Thu, 22 Jan 2015 14:08:20 -0800
-Subject: [PATCH 465/924] HDFS-7575. Upgrade should generate a unique storage
- ID for each volume. (Contributed by Arpit Agarwal)
+Subject: [PATCH 0465/2639] HDFS-7575. Upgrade should generate a unique
+ storage ID for each volume. (Contributed by Arpit
+ Agarwal)
 
 (cherry picked from commit d34074e237ee10b83aeb02294f595714d43e39e4)
 ---

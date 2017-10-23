@@ -1,8 +1,8 @@
-From 8c6eb99bc75aac6084467d1385852be34b1c805e Mon Sep 17 00:00:00 2001
+From de1767708ef0e337e4e84b0d848484a7112f6068 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Tue, 1 Sep 2015 16:25:11 +0800
-Subject: [PATCH 732/924] HADOOP-12367. Move TestFileUtil's test resources to
- resources folder. (wang via yliu)
+Subject: [PATCH 0732/2639] HADOOP-12367. Move TestFileUtil's test resources
+ to resources folder. (wang via yliu)
 
 (cherry picked from commit 2345627ad3f81c5854cc6021ea102d1f62633515)
 
@@ -20,7 +20,7 @@ Change-Id: Ic9fa6528b80cedb8ab78722c7d0a0332a95f7186
  create mode 100644 hadoop-common-project/hadoop-common/src/test/resources/test-untar.tgz
 
 diff --git a/hadoop-common-project/hadoop-common/pom.xml b/hadoop-common-project/hadoop-common/pom.xml
-index 9a84a51..e091a8d 100644
+index 1eb39c7..f00e8fa 100644
 --- a/hadoop-common-project/hadoop-common/pom.xml
 +++ b/hadoop-common-project/hadoop-common/pom.xml
 @@ -470,23 +470,6 @@

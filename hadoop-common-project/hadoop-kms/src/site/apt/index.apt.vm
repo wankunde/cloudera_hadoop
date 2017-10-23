@@ -82,9 +82,12 @@ Hadoop Key Management Server (KMS) - Documentation Sets ${project.version}
   of 30000 millisecond regardless the number of times the key is being access
   (to avoid stale keys to be considered current).
 
-  For the <<<getKeyVersion()>>> method, cached entries are kept with a default
-  inactivity timeout of 600000 milliseconds (10 mins). This time out is
-  configurable via the following property in the <<<etc/hadoop/kms-site.xml>>>
+  For the <<<getKeyVersion()>>> and <<<getMetadata()>>> methods, cached entries are kept with a default
+  inactivity timeout of 600000 milliseconds (10 mins).
+
+  The cache is invalidated when the key is deleted by <<<deleteKey()>>>, or when <<<invalidateCache()>>> is called.
+
+  This time out is configurable via the following property in the <<<etc/hadoop/kms-site.xml>>>
   configuration file:
 
 +---+
@@ -107,7 +110,7 @@ Hadoop Key Management Server (KMS) - Documentation Sets ${project.version}
 ** KMS Aggregated Audit logs
 
   Audit logs are aggregated for API accesses to the GET_KEY_VERSION,
-  GET_CURRENT_KEY, DECRYPT_EEK, GENERATE_EEK operations.
+  GET_CURRENT_KEY, DECRYPT_EEK, GENERATE_EEK, REENCRYPT_EEK operations.
 
   Entries are grouped by the (user,key,operation) combined key for a
   configurable aggregation interval after which the number of accesses to the
@@ -153,6 +156,8 @@ hadoop-${project.version} $ sbin/kms.sh start
   * KMS_ADMIN_PORT
 
   * KMS_MAX_THREADS
+
+  * KMS_MAX_HTTP_HEADER_SIZE
 
   * KMS_LOG
 
@@ -279,6 +284,20 @@ $ keytool -genkey -alias tomcat -keyalg RSA
 
   NOTE: You need to restart the KMS for the configuration changes to take
   effect.
+
+  Set environment variable `KMS_SSL_CLIENT_AUTH` to change client
+  authentication. The default is `false`. See `clientAuth` in
+  [Tomcat 6.0 SSL Support](https://tomcat.apache.org/tomcat-6.0-doc/config/http.html#SSL_Support).
+
+  Set environment variable `KMS_SSL_ENABLED_PROTOCOLS` to specify a list of
+  enabled SSL protocols. The default list includes `TLSv1`, `TLSv1.1`,
+  `TLSv1.2`, and `SSLv2Hello`. See `sslEnabledProtocols` in
+  [Tomcat 6.0 SSL Support](https://tomcat.apache.org/tomcat-6.0-doc/config/http.html#SSL_Support).
+
+  In order to support some old SSL clients, the default encryption ciphers
+  include a few relatively weaker ciphers. Set environment variable
+  `KMS_SSL_CIPHERS` to override. The value is a comma separated list of ciphers
+  documented in [Tomcat Wiki](https://wiki.apache.org/tomcat/Security/Ciphers).
 
 *** KMS Access Control
 
@@ -461,7 +480,7 @@ $ keytool -genkey -alias tomcat -keyalg RSA
 
     * MANAGEMENT - createKey, deleteKey, rolloverNewVersion
 
-    * GENERATE_EEK - generateEncryptedKey, warmUpEncryptedKeys
+    * GENERATE_EEK - generateEncryptedKey, reencryptEncryptedKey, reencryptEncryptedKeys, warmUpEncryptedKeys
 
     * DECRYPT_EEK - decryptEncryptedKey
 
@@ -796,6 +815,21 @@ Content-Type: application/json
 }
 +---+
 
+*** Invalidate Cache of a Key
+
+  <REQUEST:>
+
++---+
+POST http://HOST:PORT/kms/v1/key/<key-name>/_invalidatecache
++---+
+
+  <RESPONSE:>
+
++---+
+200 OK
++---+
+
+
 *** Delete Key
 
   <REQUEST:>
@@ -870,7 +904,7 @@ GET http://HOST:PORT/kms/v1/key/<key-name>/_eek?eek_op=generate&num_keys=<number
 Content-Type: application/json
 [
   {
-    "versionName"         : "encryptionVersionName",
+    "versionName"         : "<encryptionVersionName>",
     "iv"                  : "<iv>",          //base64
     "encryptedKeyVersion" : {
         "versionName"       : "EEK",
@@ -878,7 +912,7 @@ Content-Type: application/json
     }
   },
   {
-    "versionName"         : "encryptionVersionName",
+    "versionName"         : "<encryptionVersionName>",
     "iv"                  : "<iv>",          //base64
     "encryptedKeyVersion" : {
         "versionName"       : "EEK",
@@ -917,6 +951,106 @@ Content-Type: application/json
 }
 +---+
 
+*** Re-encrypt Encrypted Key With The Latest KeyVersion
+
+  This command takes a previously generated encrypted key, and re-encrypts it using the latest KeyVersion encryption key in the KeyProvider. If the latest KeyVersion is the same as the one used to generate the encrypted key, the same encrypted key is returned.
+
+  This is usually useful after a {{{./index.html#Rollover_Key}<<<Rollover>>>}} of an encryption key. Re-encrypting the encrypted key will allow it to be encrypted using the latest version of the encryption key, but still with the same key material and initialization vector.
+
+  <REQUEST:>
+
++---+
+POST http://HOST:PORT/kms/v1/keyversion/<version-name>/_eek?eek_op=reencrypt
+Content-Type: application/json
+
+{
+  "name"        : "<key-name>",
+  "iv"          : "<iv>",          //base64
+  "material"    : "<material>",    //base64
+}
+
++---+
+
+  <RESPONSE:>
+
++---+
+200 OK
+Content-Type: application/json
+
+{
+  "versionName"         : "<encryptionVersionName>",
+  "iv"                  : "<iv>",            //base64
+  "encryptedKeyVersion" : {
+    "versionName"       : "EEK",
+    "material"          : "<material>",    //base64
+  }
+}
++---+
+
+
+*** Batch Re-encrypt Encrypted Keys With The Latest KeyVersion
+
+  Batched version of the above re-encrypt Encrypted Key. This command takes a list of previously generated encrypted key, and re-encrypts them using the latest KeyVersion encryption key in the KeyProvider, and return the re-encrypted encrypted keys in the same sequence. For each encrypted key, if the latest KeyVersion is the same as the one used to generate the encrypted key, no action is taken and the same encrypted key is returned.
+
+  This is usually useful after a {{{./index.html#Rollover_Key}<<<Rollover>>>}} of an encryption key. Re-encrypting the encrypted key will allow it to be encrypted using the latest version of the encryption key, but still with the same key material and initialization vector.
+
+  All Encrypted keys for a batch request must be under the same encryption key name, but could be potentially under different versions of the encryption key.
+
+  <REQUEST:>
+
++---+
+POST http://HOST:PORT/kms/v1/key/<key-name>/_reencryptbatch
+Content-Type: application/json
+
+[
+  {
+    "versionName"         : "<encryptionVersionName>",
+    "iv"                  : "<iv>",            //base64
+    "encryptedKeyVersion" : {
+      "versionName"       : "EEK",
+      "material"          : "<material>",    //base64
+    }
+  },
+  {
+    "versionName"         : "<encryptionVersionName>",
+    "iv"                  : "<iv>",            //base64
+    "encryptedKeyVersion" : {
+      "versionName"       : "EEK",
+      "material"          : "<material>",    //base64
+    }
+  },
+  ...
+]
+
++---+
+
+  <RESPONSE:>
+
++---+
+200 OK
+Content-Type: application/json
+
+[
+  {
+    "versionName"         : "<encryptionVersionName>",
+    "iv"                  : "<iv>",            //base64
+    "encryptedKeyVersion" : {
+      "versionName"       : "EEK",
+      "material"          : "<material>",    //base64
+    }
+  },
+  {
+    "versionName"         : "<encryptionVersionName>",
+    "iv"                  : "<iv>",            //base64
+    "encryptedKeyVersion" : {
+      "versionName"       : "EEK",
+      "material"          : "<material>",    //base64
+      }
+  },
+  ...
+]
+
++---+
 
 *** Get Key Version
 

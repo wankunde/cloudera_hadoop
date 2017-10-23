@@ -1,7 +1,7 @@
 From 2acf8f2859477ad7a63228c449f2ce3b37ab40ba Mon Sep 17 00:00:00 2001
 From: "Aaron T. Myers" <atm@apache.org>
 Date: Tue, 27 Jan 2015 13:50:45 -0800
-Subject: [PATCH 320/924] HADOOP-10626. Limit Returning Attributes for LDAP
+Subject: [PATCH 0320/2639] HADOOP-10626. Limit Returning Attributes for LDAP
  search. Contributed by Jason Hubbard. (cherry
  picked from commit
  8709751e1ee9a2c5553823dcd715bd077052ad7f)

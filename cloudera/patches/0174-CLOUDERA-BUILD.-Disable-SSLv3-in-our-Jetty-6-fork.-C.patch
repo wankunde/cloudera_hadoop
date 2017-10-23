@@ -1,7 +1,7 @@
 From 36d2f3427658845b961e05d6ee8171cc97d38798 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Tue, 28 Oct 2014 17:34:01 -0700
-Subject: [PATCH 174/924] CLOUDERA-BUILD. Disable SSLv3 in our Jetty 6 fork.
+Subject: [PATCH 0174/2639] CLOUDERA-BUILD. Disable SSLv3 in our Jetty 6 fork.
  (CDH-22521 continued)
 
 (cherry picked from commit 65108c165674673053c35a31e1f89014397f03c0)

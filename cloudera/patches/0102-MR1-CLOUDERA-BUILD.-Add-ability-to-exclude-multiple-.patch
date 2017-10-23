@@ -1,8 +1,9 @@
 From 85e6f9e12ddef1e1ce6f7d147a6281d66ed7f915 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Wed, 2 Oct 2013 11:08:37 -0700
-Subject: [PATCH 102/924] MR1: CLOUDERA-BUILD. Add ability to exclude multiple
- MR1 tests from being executed (CDH-14677)
+Subject: [PATCH 0102/2639] MR1: CLOUDERA-BUILD. Add ability to exclude
+ multiple MR1 tests from being executed
+ (CDH-14677)
 
 (cherry picked from commit e56339642a01922a06bf2552eae23aecfeb2de09)
 (cherry picked from commit 524e7f34fa942cd7012b7260f1891b6e9ed2840c)

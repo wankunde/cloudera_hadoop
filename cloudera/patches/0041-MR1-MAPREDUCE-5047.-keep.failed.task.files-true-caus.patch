@@ -1,9 +1,9 @@
 From 3b7d4f06bee6be1738a2ecea57855356cfa005d3 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 11 Mar 2013 18:57:46 +0000
-Subject: [PATCH 041/924] MR1: MAPREDUCE-5047. keep.failed.task.files=true
- causes job failure on secure clusters. (sandyr via
- tucu)
+Subject: [PATCH 0041/2639] MR1: MAPREDUCE-5047. keep.failed.task.files=true
+ causes job failure on secure clusters. (sandyr
+ via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1455283 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b7824899b559389d140415f76a7a830e1a641de7)

@@ -1,7 +1,7 @@
 From 9b5903c0328f59e9540eb588aac7fd4e943ea610 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 4 Feb 2013 22:26:34 +0000
-Subject: [PATCH 038/924] MR1: MAPREDUCE-4843. When using
+Subject: [PATCH 0038/2639] MR1: MAPREDUCE-4843. When using
  DefaultTaskController, JobLocalizer not thread
  safe. (kkambatl via tucu)
 

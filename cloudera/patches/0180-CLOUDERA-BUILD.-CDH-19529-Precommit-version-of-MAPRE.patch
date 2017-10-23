@@ -1,9 +1,9 @@
 From 6092c10818e9a334c653757f246ad13b0690684c Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Mon, 2 Jun 2014 13:58:01 -0700
-Subject: [PATCH 180/924] CLOUDERA-BUILD. CDH-19529 Precommit version of
- MAPREDUCE-5875 Make Counter limits consistent conf
- across JobClient, MRAppMaster, and YarnChild
+Subject: [PATCH 0180/2639] CLOUDERA-BUILD. CDH-19529 Precommit version of
+ MAPREDUCE-5875 Make Counter limits consistent
+ conf across JobClient, MRAppMaster, and YarnChild
 
 (cherry picked from commit 7abf3862ee87142935df8be7e58ec020355a8840)
 (cherry picked from commit d3812d9d23631598a104e5846df3594f0fa7542c)

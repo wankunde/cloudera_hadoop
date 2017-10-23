@@ -1,7 +1,7 @@
 From e5f5121b8024c53c1d5488b55a4aa71f9fe7bef9 Mon Sep 17 00:00:00 2001
 From: Binglin Chang <bchang@apache.org>
 Date: Wed, 6 Aug 2014 06:01:12 +0000
-Subject: [PATCH 335/924] MAPREDUCE-5984. native-task: Reuse lz4 sources in
+Subject: [PATCH 0335/2639] MAPREDUCE-5984. native-task: Reuse lz4 sources in
  hadoop-common. Contributed by Binglin Chang
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1616105 13f79535-47bb-0310-9956-ffa450edef68

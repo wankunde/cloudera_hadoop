@@ -1,7 +1,7 @@
 From a53b9e978b1cd55d9bbacc3cc878348ee1a4e466 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 21 Nov 2013 13:26:10 -0800
-Subject: [PATCH 126/924] MR1: CLOUDERA-BUILD.  Backport HDFS-5511 to MR1.
+Subject: [PATCH 0126/2639] MR1: CLOUDERA-BUILD.  Backport HDFS-5511 to MR1.
 
 (cherry picked from commit d5ef8b6157d4d414d7961c27a79e0e405e793af0)
 (cherry picked from commit 837acf49c3bde43057572392655ed1237cc261be)

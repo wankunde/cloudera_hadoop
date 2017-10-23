@@ -1,7 +1,7 @@
 From 62477811ab63c6b0126fe417806ce8e0595dc0a9 Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Wed, 17 Jul 2013 16:02:31 -0700
-Subject: [PATCH 078/924] MR1: HADOOP-8329. Build fails with Java 7.
+Subject: [PATCH 0078/2639] MR1: HADOOP-8329. Build fails with Java 7.
  Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1340270 13f79535-47bb-0310-9956-ffa450edef68

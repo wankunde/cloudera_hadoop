@@ -1,7 +1,7 @@
 From 8c5f44d4a5fdad7426d557ef5a562ab25bce6c42 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Fri, 26 Jun 2015 11:30:59 -0700
-Subject: [PATCH 615/924] HDFS-8656. Preserve compatibility of
+Subject: [PATCH 0615/2639] HDFS-8656. Preserve compatibility of
  ClientProtocol#rollingUpgrade after finalization.
 
 (cherry picked from commit 60b858bfa65e0feb665e1a84784a3d45e9091c66)

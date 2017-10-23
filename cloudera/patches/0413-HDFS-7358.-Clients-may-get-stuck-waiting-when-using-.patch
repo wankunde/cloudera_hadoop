@@ -1,8 +1,8 @@
 From 1fac25c27d24afa838ffc7f48ee197d771e4c342 Mon Sep 17 00:00:00 2001
 From: Tsz-Wo Nicholas Sze <szetszwo@hortonworks.com>
 Date: Thu, 13 Nov 2014 12:28:44 -0800
-Subject: [PATCH 413/924] HDFS-7358. Clients may get stuck waiting when using
- ByteArrayManager.
+Subject: [PATCH 0413/2639] HDFS-7358. Clients may get stuck waiting when
+ using ByteArrayManager.
 
 (cherry picked from commit 679684ab10e5abc2d1ec200790bdda1d6d340e56)
 

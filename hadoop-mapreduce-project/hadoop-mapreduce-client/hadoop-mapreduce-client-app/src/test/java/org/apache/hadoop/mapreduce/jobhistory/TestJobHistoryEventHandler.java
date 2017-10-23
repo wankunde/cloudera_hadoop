@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.util.HashMap;
 
@@ -52,6 +53,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -77,6 +79,7 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.junit.Ignore;
 
 public class TestJobHistoryEventHandler {
 
@@ -125,7 +128,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
@@ -168,7 +171,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
@@ -213,7 +216,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
@@ -256,7 +259,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
@@ -293,7 +296,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-        t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+        t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       verify(jheh, times(0)).processDoneFiles(any(JobId.class));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
@@ -338,7 +341,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-        t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+        t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       verify(jheh, times(0)).processDoneFiles(t.jobId);
 
       // skip processing done files
@@ -370,6 +373,74 @@ public class TestJobHistoryEventHandler {
     }
   }
 
+  @Test
+  public void testPropertyRedactionForJHS() throws Exception {
+    final Configuration conf = new Configuration();
+
+    String sensitivePropertyName = "aws.fake.credentials.name";
+    String sensitivePropertyValue = "aws.fake.credentials.val";
+    conf.set(sensitivePropertyName, sensitivePropertyValue);
+    conf.set(MRJobConfig.MR_JOB_REDACTED_PROPERTIES,
+        sensitivePropertyName);
+    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+        dfsCluster.getURI().toString());
+    final TestParams params = new TestParams();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, params.dfsWorkDir);
+
+    final JHEvenHandlerForTest jheh =
+        new JHEvenHandlerForTest(params.mockAppContext, 0, false);
+
+    try {
+      jheh.init(conf);
+      jheh.start();
+      handleEvent(jheh, new JobHistoryEvent(params.jobId,
+          new AMStartedEvent(params.appAttemptId, 200, params.containerId,
+              "nmhost", 3000, 4000, -1)));
+      handleEvent(jheh, new JobHistoryEvent(params.jobId,
+          new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(
+              params.jobId), 0, 0, 0, JobStateInternal.FAILED.toString())));
+
+      // verify the value of the sensitive property in job.xml is restored.
+      Assert.assertEquals(sensitivePropertyName + " is modified.",
+          conf.get(sensitivePropertyName), sensitivePropertyValue);
+
+      // load the job_conf.xml in JHS directory and verify property redaction.
+      Path jhsJobConfFile = getJobConfInIntermediateDoneDir(conf, params.jobId);
+      Assert.assertTrue("The job_conf.xml file is not in the JHS directory",
+          FileContext.getFileContext(conf).util().exists(jhsJobConfFile));
+      Configuration jhsJobConf = new Configuration();
+
+      try (InputStream input = FileSystem.get(conf).open(jhsJobConfFile)) {
+        jhsJobConf.addResource(input);
+        Assert.assertEquals(
+            sensitivePropertyName + " is not redacted in HDFS.",
+            MRJobConfUtil.REDACTION_REPLACEMENT_VAL,
+            jhsJobConf.get(sensitivePropertyName));
+      }
+    } finally {
+      jheh.stop();
+      purgeHdfsHistoryIntermediateDoneDirectory(conf);
+    }
+  }
+
+  private static Path getJobConfInIntermediateDoneDir(Configuration conf,
+      JobId jobId) throws IOException {
+    Path userDoneDir = new Path(
+        JobHistoryUtils.getHistoryIntermediateDoneDirForUser(conf));
+    Path doneDirPrefix =
+        FileContext.getFileContext(conf).makeQualified(userDoneDir);
+    return new Path(
+        doneDirPrefix, JobHistoryUtils.getIntermediateConfFileName(jobId));
+  }
+
+  private void purgeHdfsHistoryIntermediateDoneDirectory(Configuration conf)
+      throws IOException {
+    FileSystem fs = FileSystem.get(dfsCluster.getConfiguration(0));
+    String intermDoneDirPrefix =
+        JobHistoryUtils.getConfiguredHistoryIntermediateDoneDirPrefix(conf);
+    fs.delete(new Path(intermDoneDirPrefix), true);
+  }
+
   @Test (timeout=50000)
   public void testDefaultFsIsUsedForHistory() throws Exception {
     // Create default configuration pointing to the minicluster
@@ -395,7 +466,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
           TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
@@ -411,6 +482,7 @@ public class TestJobHistoryEventHandler {
           localFileSystem.exists(new Path(t.dfsWorkDir)));
     } finally {
       jheh.stop();
+      purgeHdfsHistoryIntermediateDoneDirectory(conf);
     }
   }
 
@@ -441,8 +513,50 @@ public class TestJobHistoryEventHandler {
         pathStr);
   }
 
+  // test AMStartedEvent for submitTime and startTime
+  @Test (timeout=50000)
+  public void testAMStartedEvent() throws Exception {
+    TestParams t = new TestParams();
+    Configuration conf = new Configuration();
+
+    JHEvenHandlerForTest realJheh =
+        new JHEvenHandlerForTest(t.mockAppContext, 0);
+    JHEvenHandlerForTest jheh = spy(realJheh);
+    jheh.init(conf);
+
+    EventWriter mockWriter = null;
+    try {
+      jheh.start();
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, 100)));
+
+      JobHistoryEventHandler.MetaInfo mi =
+          JobHistoryEventHandler.fileMap.get(t.jobId);
+      Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
+      Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
+      Assert.assertEquals(mi.getJobSummary().getJobSubmitTime(), 100);
+      Assert.assertEquals(mi.getJobSummary().getJobLaunchTime(), 200);
+
+      handleEvent(jheh, new JobHistoryEvent(t.jobId,
+        new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
+          0, 0, JobStateInternal.FAILED.toString())));
+
+      Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
+      Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
+      Assert.assertEquals(mi.getJobSummary().getJobSubmitTime(), 100);
+      Assert.assertEquals(mi.getJobSummary().getJobLaunchTime(), 200);
+      verify(jheh, times(1)).processDoneFiles(t.jobId);
+
+      mockWriter = jheh.getEventWriter();
+      verify(mockWriter, times(2)).write(any(HistoryEvent.class));
+    } finally {
+      jheh.stop();
+    }
+  }
+
   // Have JobHistoryEventHandler handle some events and make sure they get
   // stored to the Timeline store
+  @Ignore("TimelineEventHandling is not supported in CDH 5")
   @Test (timeout=50000)
   public void testTimelineEventHandling() throws Exception {
     TestParams t = new TestParams(false);
@@ -455,7 +569,7 @@ public class TestJobHistoryEventHandler {
     long currentTime = System.currentTimeMillis();
     try {
       yarnCluster = new MiniYARNCluster(
-            TestJobHistoryEventHandler.class.getSimpleName(), 1, 1, 1, 1, true);
+            TestJobHistoryEventHandler.class.getSimpleName(), 1, 1, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
       jheh.start();
@@ -463,7 +577,7 @@ public class TestJobHistoryEventHandler {
               .getTimelineStore();
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-              t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000),
+              t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1),
               currentTime - 10));
       TimelineEntities entities = ts.getEntities("MAPREDUCE_JOB", null, null,
               null, null, null, null, null, null);

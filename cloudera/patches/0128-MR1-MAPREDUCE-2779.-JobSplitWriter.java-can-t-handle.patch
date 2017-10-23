@@ -1,7 +1,7 @@
 From 3fa18d58a8f21c0e8c7fc05c589b3b2e1902fde1 Mon Sep 17 00:00:00 2001
 From: Konstantin Shvachko <shv@apache.org>
 Date: Fri, 30 Sep 2011 19:16:54 +0000
-Subject: [PATCH 128/924] MR1: MAPREDUCE-2779. JobSplitWriter.java can't
+Subject: [PATCH 0128/2639] MR1: MAPREDUCE-2779. JobSplitWriter.java can't
  handle large job.split file. Contributed by Ming
  Ma.
 

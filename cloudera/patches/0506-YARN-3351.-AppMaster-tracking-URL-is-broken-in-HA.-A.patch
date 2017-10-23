@@ -1,7 +1,7 @@
 From e4de1070f4f5221adc137fdf6f832e78285f7c3b Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 18 Mar 2015 16:30:33 -0700
-Subject: [PATCH 506/924] YARN-3351. AppMaster tracking URL is broken in HA.
+Subject: [PATCH 0506/2639] YARN-3351. AppMaster tracking URL is broken in HA.
  (Anubhav Dhoot via kasha)
 
 (cherry picked from commit 20b49224eb90c796f042ac4251508f3979fd4787)

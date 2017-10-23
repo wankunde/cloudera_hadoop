@@ -1,7 +1,7 @@
 From 11a6575a8c8d806a03993804db109013ed72834b Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@cloudera.com>
 Date: Sun, 29 Mar 2015 00:45:01 +0530
-Subject: [PATCH 679/924] HDFS-7501. TransactionsSinceLastCheckpoint can be
+Subject: [PATCH 0679/2639] HDFS-7501. TransactionsSinceLastCheckpoint can be
  negative on SBNs. Contributed by Gautam
  Gopalakrishnan.
 

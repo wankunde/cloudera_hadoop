@@ -1,8 +1,8 @@
 From ebc63f90c0d7fd909f29a5a7469db8bbaede404f Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Wed, 28 Jan 2015 15:51:30 -0800
-Subject: [PATCH 483/924] MAPREDUCE-6230. Fixed RMContainerAllocator to update
- the new AMRMToken service name properly.
+Subject: [PATCH 0483/2639] MAPREDUCE-6230. Fixed RMContainerAllocator to
+ update the new AMRMToken service name properly.
  Contributed by Jason Lowe (cherry picked from
  commit cff05bff1fe24628677d41a0d537f2c383b44faf)
 

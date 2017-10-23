@@ -1,7 +1,7 @@
 From dade26c4d798dddc2bd8566ecde3b393da8c967a Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Thu, 19 Mar 2015 21:39:21 +0000
-Subject: [PATCH 509/924] MAPREDUCE-6275. Race condition in
+Subject: [PATCH 0509/2639] MAPREDUCE-6275. Race condition in
  FileOutputCommitter v2 for user-specified task
  output subdirs. Contributed by Gera Shegalov and
  Siqi Li

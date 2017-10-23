@@ -1,7 +1,7 @@
 From d5c48aababe994a1d0be7d23f3b2566872db7eb3 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Wed, 5 Nov 2014 17:50:01 -0800
-Subject: [PATCH 415/924] HDFS-7366. BlockInfo should take replication as an
+Subject: [PATCH 0415/2639] HDFS-7366. BlockInfo should take replication as an
  short in the constructor. Contributed by Li Lu.
 
 (cherry picked from commit 0f9d0d9d8f3f91af7406168f241f9233b3f3c647)

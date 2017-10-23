@@ -1,7 +1,7 @@
 From db4d0a853d5827f81646cd91f803a933daa85c46 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Tue, 31 Dec 2013 14:11:37 -0800
-Subject: [PATCH 119/924] MR1: MAPREDUCE-3169. Create a new MiniMRCluster
+Subject: [PATCH 0119/2639] MR1: MAPREDUCE-3169. Create a new MiniMRCluster
  equivalent which only provides client APIs cross
  MR1 and MR2 (ahmed via tucu)
 

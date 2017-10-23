@@ -1,7 +1,7 @@
 From 4f8086c7de7317459ee5f93ba366ea972625338e Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Fri, 21 Nov 2014 16:04:32 -0800
-Subject: [PATCH 263/924] YARN-2669. FairScheduler: queue names shouldn't
+Subject: [PATCH 0263/2639] YARN-2669. FairScheduler: queue names shouldn't
  allow periods (Wei Yan via Sandy Ryza)
 
 (cherry picked from commit a128cca305cecb215a2eef2ef543d1bf9b23a41b)

@@ -27,13 +27,16 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfEntryInfo;
+import org.apache.hadoop.mapreduce.v2.hs.UnparsedJob;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.AMAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
@@ -72,8 +75,18 @@ public class HsJobBlock extends HtmlBlock {
     JobId jobID = MRApps.toJobID(jid);
     Job j = appContext.getJob(jobID);
     if (j == null) {
-      html.
-        p()._("Sorry, ", jid, " not found.")._();
+      html.p()._("Sorry, ", jid, " not found.")._();
+      return;
+    }
+    if(j instanceof UnparsedJob) {
+      final int taskCount = j.getTotalMaps() + j.getTotalReduces();
+      UnparsedJob oversizedJob = (UnparsedJob) j;
+      html.p()._("The job has a total of " + taskCount + " tasks. ")
+          ._("Any job larger than " + oversizedJob.getMaxTasksAllowed() +
+              " will not be loaded.")._();
+      html.p()._("You can either use the CLI tool: 'mapred job -history'"
+          + " to view large jobs or adjust the property " +
+          JHAdminConfig.MR_HS_LOADED_JOBS_TASKS_MAX + ".")._();
       return;
     }
     List<AMInfo> amInfos = j.getAMInfos();
@@ -85,7 +98,7 @@ public class HsJobBlock extends HtmlBlock {
         _("State:", job.getState()).
         _("Uberized:", job.isUber()).
         _("Submitted:", new Date(job.getSubmitTime())).
-        _("Started:", new Date(job.getStartTime())).
+        _("Started:", job.getStartTimeStr()).
         _("Finished:", new Date(job.getFinishTime())).
         _("Elapsed:", StringUtils.formatTime(
             Times.elapsed(job.getStartTime(), job.getFinishTime(), false)));
@@ -98,7 +111,7 @@ public class HsJobBlock extends HtmlBlock {
     if(diagnostics != null && !diagnostics.isEmpty()) {
       StringBuffer b = new StringBuffer();
       for(String diag: diagnostics) {
-        b.append(diag);
+        b.append(addTaskLinks(diag));
       }
       infoBlock._("Diagnostics:", b.toString());
     }
@@ -141,7 +154,7 @@ public class HsJobBlock extends HtmlBlock {
               td().a(".nodelink", url(MRWebAppUtil.getYARNWebappScheme(),
                   attempt.getNodeHttpAddress()),
                   attempt.getNodeHttpAddress())._().
-              td().a(".logslink", url(attempt.getShortLogsLink()), 
+              td().a(".logslink", url(attempt.getLogsLink()),
                       "logs")._().
             _();
           }
@@ -202,5 +215,10 @@ public class HsJobBlock extends HtmlBlock {
          _().
        _().
      _();
+  }
+
+  static String addTaskLinks(String text) {
+    return TaskID.taskIdPattern.matcher(text).replaceAll(
+        "<a href=\"/jobhistory/task/$0\">$0</a>");
   }
 }

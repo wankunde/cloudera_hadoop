@@ -1,7 +1,7 @@
 From 1e3eb1f51cf5175ce6a7cbc1f2558f2db0e2c503 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 17 Dec 2014 11:27:48 -0800
-Subject: [PATCH 432/924] HDFS-7430. Refactor the BlockScanner to use O(1)
+Subject: [PATCH 0432/2639] HDFS-7430. Refactor the BlockScanner to use O(1)
  memory and use multiple threads (cmccabe)
 
 Conflicts:

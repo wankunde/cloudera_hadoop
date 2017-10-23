@@ -1,9 +1,9 @@
 From a580ab8b97c0a17cfdf9127fbe068a15465b6db9 Mon Sep 17 00:00:00 2001
 From: Uma Maheswara Rao G <umamahesh@apache.org>
 Date: Wed, 26 Nov 2014 23:27:25 +0530
-Subject: [PATCH 416/924] HDFS-7310. Mover can give first priority to local DN
- if it has target storage type available in local
- DN. (Vinayakumar B via umamahesh)
+Subject: [PATCH 0416/2639] HDFS-7310. Mover can give first priority to local
+ DN if it has target storage type available in
+ local DN. (Vinayakumar B via umamahesh)
 
 Conflicts:
 	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/FsDatasetSpi.java

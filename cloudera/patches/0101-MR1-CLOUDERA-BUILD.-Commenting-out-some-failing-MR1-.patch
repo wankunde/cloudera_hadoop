@@ -1,8 +1,8 @@
 From 316917d9cc36ccfe74121bf8c256fce8e12a5aea Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Tue, 1 Oct 2013 22:25:52 -0700
-Subject: [PATCH 101/924] MR1: CLOUDERA-BUILD. Commenting out some failing MR1
- tests for cdh5b1 (CDH-14666)
+Subject: [PATCH 0101/2639] MR1: CLOUDERA-BUILD. Commenting out some failing
+ MR1 tests for cdh5b1 (CDH-14666)
 
 (cherry picked from commit b27120d80586fd0e70e3e966a733a7a8974c3856)
 (cherry picked from commit d92d7142d05e206471f7a5fb94d2732b0e6c853d)

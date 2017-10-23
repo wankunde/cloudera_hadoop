@@ -1,8 +1,9 @@
 From 52c6c7171f29cc38c20a59c6e54aa63bfffa498d Mon Sep 17 00:00:00 2001
 From: Arun Suresh <asuresh@apache.org>
 Date: Thu, 23 Apr 2015 01:42:24 -0700
-Subject: [PATCH 540/924] HDFS-4448. Allow HA NN to start in secure mode with
- wildcard address configured (atm via asuresh)
+Subject: [PATCH 0540/2639] HDFS-4448. Allow HA NN to start in secure mode
+ with wildcard address configured (atm via
+ asuresh)
 
 (cherry picked from commit baf8bc6c488de170d2caf76d9fa4c99faaa8f1a6)
 (cherry picked from commit 889b92fa403f5bd82b20eb2333110c5793d28a34)

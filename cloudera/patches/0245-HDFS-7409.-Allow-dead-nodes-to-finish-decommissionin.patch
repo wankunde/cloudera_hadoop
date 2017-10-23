@@ -1,8 +1,9 @@
 From eaa02103a7337470f06a857bb97fa1e67f448b4b Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Wed, 19 Nov 2014 17:53:00 -0800
-Subject: [PATCH 245/924] HDFS-7409. Allow dead nodes to finish
- decommissioning if all files are fully replicated.
+Subject: [PATCH 0245/2639] HDFS-7409. Allow dead nodes to finish
+ decommissioning if all files are fully
+ replicated.
 
 (cherry picked from commit 765aecb4e127ebaf6c7b060a8b5cd40c6428e296)
 (cherry picked from commit 988682ac2957da0f34e9fe524d71c5931365fe95)

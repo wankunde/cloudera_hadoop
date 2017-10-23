@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,11 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.AclFeatu
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrCompactProto;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
+import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;
@@ -66,11 +72,11 @@ public final class FSImageFormatPBINode {
   private final static int GROUP_STRID_OFFSET = 16;
   private static final Log LOG = LogFactory.getLog(FSImageFormatPBINode.class);
 
-  private static final int ACL_ENTRY_NAME_MASK = (1 << 24) - 1;
-  private static final int ACL_ENTRY_NAME_OFFSET = 6;
-  private static final int ACL_ENTRY_TYPE_OFFSET = 3;
-  private static final int ACL_ENTRY_SCOPE_OFFSET = 5;
-  private static final int ACL_ENTRY_PERM_MASK = 7;
+  public static final int ACL_ENTRY_NAME_MASK = (1 << 24) - 1;
+  public static final int ACL_ENTRY_NAME_OFFSET = 6;
+  public static final int ACL_ENTRY_TYPE_OFFSET = 3;
+  public static final int ACL_ENTRY_SCOPE_OFFSET = 5;
+  public static final int ACL_ENTRY_PERM_MASK = 7;
   private static final int ACL_ENTRY_TYPE_MASK = 3;
   private static final int ACL_ENTRY_SCOPE_MASK = 1;
   private static final FsAction[] FSACTION_VALUES = FsAction.values();
@@ -79,14 +85,14 @@ public final class FSImageFormatPBINode {
   private static final AclEntryType[] ACL_ENTRY_TYPE_VALUES = AclEntryType
       .values();
   
-  private static final int XATTR_NAMESPACE_MASK = 3;
-  private static final int XATTR_NAMESPACE_OFFSET = 30;
-  private static final int XATTR_NAME_MASK = (1 << 24) - 1;
-  private static final int XATTR_NAME_OFFSET = 6;
+  public static final int XATTR_NAMESPACE_MASK = 3;
+  public static final int XATTR_NAMESPACE_OFFSET = 30;
+  public static final int XATTR_NAME_MASK = (1 << 24) - 1;
+  public static final int XATTR_NAME_OFFSET = 6;
 
   /* See the comments in fsimage.proto for an explanation of the following. */
-  private static final int XATTR_NAMESPACE_EXT_OFFSET = 5;
-  private static final int XATTR_NAMESPACE_EXT_MASK = 1;
+  public static final int XATTR_NAMESPACE_EXT_OFFSET = 5;
+  public static final int XATTR_NAMESPACE_EXT_MASK = 1;
 
   private static final XAttr.NameSpace[] XATTR_NAMESPACE_VALUES =
       XAttr.NameSpace.values();
@@ -156,8 +162,9 @@ public final class FSImageFormatPBINode {
       }
 
       if (d.hasAcl()) {
-        dir.addAclFeature(new AclFeature(loadAclEntries(d.getAcl(),
-            state.getStringTable())));
+        int[] entries = AclEntryStatusFormat.toInt(loadAclEntries(
+            d.getAcl(), state.getStringTable()));
+        dir.addAclFeature(new AclFeature(entries));
       }
       if (d.hasXAttrs()) {
         dir.addXAttrFeature(new XAttrFeature(
@@ -179,11 +186,13 @@ public final class FSImageFormatPBINode {
     private final FSDirectory dir;
     private final FSNamesystem fsn;
     private final FSImageFormatProtobuf.Loader parent;
+    private final List<INodeFile> ucFiles;
 
     Loader(FSNamesystem fsn, final FSImageFormatProtobuf.Loader parent) {
       this.fsn = fsn;
       this.dir = fsn.dir;
       this.parent = parent;
+      this.ucFiles = new ArrayList<INodeFile>();
     }
 
     void loadINodeDirectorySection(InputStream in) throws IOException {
@@ -208,11 +217,15 @@ public final class FSImageFormatPBINode {
       }
     }
 
-    void loadINodeSection(InputStream in) throws IOException {
+    void loadINodeSection(InputStream in, StartupProgress prog,
+        Step currentStep) throws IOException {
       INodeSection s = INodeSection.parseDelimitedFrom(in);
       fsn.resetLastInodeId(s.getLastInodeId());
-      LOG.info("Loading " + s.getNumInodes() + " INodes.");
-      for (int i = 0; i < s.getNumInodes(); ++i) {
+      long numInodes = s.getNumInodes();
+      LOG.info("Loading " + numInodes + " INodes.");
+      prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numInodes);
+      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
+      for (int i = 0; i < numInodes; ++i) {
         INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
         if (p.getId() == INodeId.ROOT_INODE_ID) {
           loadRootINode(p);
@@ -220,6 +233,7 @@ public final class FSImageFormatPBINode {
           INode n = loadINode(p);
           dir.addToInodeMap(n);
         }
+        counter.increment();
       }
     }
 
@@ -227,17 +241,25 @@ public final class FSImageFormatPBINode {
      * Load the under-construction files section, and update the lease map
      */
     void loadFilesUnderConstructionSection(InputStream in) throws IOException {
+     // This section is consumed, but not actually used for restoring leases.
       while (true) {
         FileUnderConstructionEntry entry = FileUnderConstructionEntry
             .parseDelimitedFrom(in);
         if (entry == null) {
           break;
         }
-        // update the lease manager
-        INodeFile file = dir.getInode(entry.getInodeId()).asFile();
+      }
+
+      // Add a lease for each and every file under construction.
+      for (INodeFile file : ucFiles) {
         FileUnderConstructionFeature uc = file.getFileUnderConstructionFeature();
         Preconditions.checkState(uc != null); // file must be under-construction
-        fsn.leaseManager.addLease(uc.getClientName(), entry.getFullPath());
+        String path = file.getFullPathName();
+        // Skip the deleted files in snapshot. This leaks UC inodes that are
+        // deleted from the current view.
+        if (path.startsWith("/")) {
+          fsn.leaseManager.addLease(uc.getClientName(), file.getId());
+        }
       }
     }
 
@@ -293,8 +315,9 @@ public final class FSImageFormatPBINode {
           (byte)f.getStoragePolicyID());
 
       if (f.hasAcl()) {
-        file.addAclFeature(new AclFeature(loadAclEntries(f.getAcl(),
-            state.getStringTable())));
+        int[] entries = AclEntryStatusFormat.toInt(loadAclEntries(
+            f.getAcl(), state.getStringTable()));
+        file.addAclFeature(new AclFeature(entries));
       }
       
       if (f.hasXAttrs()) {
@@ -304,6 +327,7 @@ public final class FSImageFormatPBINode {
 
       // under-construction information
       if (f.hasFileUC()) {
+        ucFiles.add(file);
         INodeSection.FileUnderConstructionFeature uc = f.getFileUC();
         file.toUnderConstruction(uc.getClientName(), uc.getClientMachine());
         if (blocks.length > 0) {
@@ -338,19 +362,24 @@ public final class FSImageFormatPBINode {
       }
       dir.rootDir.cloneModificationTime(root);
       dir.rootDir.clonePermissionStatus(root);
+      final AclFeature af = root.getFeature(AclFeature.class);
+      if (af != null) {
+        dir.rootDir.addAclFeature(af);
+      }
       // root dir supports having extended attributes according to POSIX
       final XAttrFeature f = root.getXAttrFeature();
       if (f != null) {
         dir.rootDir.addXAttrFeature(f);
       }
+      dir.addRootDirToEncryptionZone(f);
     }
   }
 
   public final static class Saver {
     private static long buildPermissionStatus(INodeAttributes n,
         final SaverContext.DeduplicationMap<String> stringMap) {
-      long userId = stringMap.getId(n.getUserName());
-      long groupId = stringMap.getId(n.getGroupName());
+      long userId = stringMap.getId(n.getFsimageUserName());
+      long groupId = stringMap.getId(n.getFsimageGroupName());
       return ((userId & USER_GROUP_STRID_MASK) << USER_STRID_OFFSET)
           | ((groupId & USER_GROUP_STRID_MASK) << GROUP_STRID_OFFSET)
           | n.getFsPermissionShort();
@@ -359,11 +388,13 @@ public final class FSImageFormatPBINode {
     private static AclFeatureProto.Builder buildAclEntries(AclFeature f,
         final SaverContext.DeduplicationMap<String> map) {
       AclFeatureProto.Builder b = AclFeatureProto.newBuilder();
-      for (AclEntry e : f.getEntries()) {
-        int v = ((map.getId(e.getName()) & ACL_ENTRY_NAME_MASK) << ACL_ENTRY_NAME_OFFSET)
-            | (e.getType().ordinal() << ACL_ENTRY_TYPE_OFFSET)
-            | (e.getScope().ordinal() << ACL_ENTRY_SCOPE_OFFSET)
-            | (e.getPermission().ordinal());
+      for (int pos = 0, e; pos < f.getEntriesSize(); pos++) {
+        e = f.getEntryAt(pos);
+        int nameId = map.getId(AclEntryStatusFormat.getName(e));
+        int v = ((nameId & ACL_ENTRY_NAME_MASK) << ACL_ENTRY_NAME_OFFSET)
+            | (AclEntryStatusFormat.getType(e).ordinal() << ACL_ENTRY_TYPE_OFFSET)
+            | (AclEntryStatusFormat.getScope(e).ordinal() << ACL_ENTRY_SCOPE_OFFSET)
+            | (AclEntryStatusFormat.getPermission(e).ordinal());
         b.addEntries(v);
       }
       return b;
@@ -402,7 +433,7 @@ public final class FSImageFormatPBINode {
           .setReplication(file.getFileReplication())
           .setStoragePolicyID(file.getLocalStoragePolicyID());
 
-      AclFeature f = file.getAclFeature();
+      AclFeature f = file.getFsimageAclFeature();
       if (f != null) {
         b.setAcl(buildAclEntries(f, state.getStringMap()));
       }
@@ -422,7 +453,7 @@ public final class FSImageFormatPBINode {
           .setDsQuota(quota.get(Quota.DISKSPACE))
           .setPermission(buildPermissionStatus(dir, state.getStringMap()));
 
-      AclFeature f = dir.getAclFeature();
+      AclFeature f = dir.getFsimageAclFeature();
       if (f != null) {
         b.setAcl(buildAclEntries(f, state.getStringMap()));
       }
@@ -505,10 +536,21 @@ public final class FSImageFormatPBINode {
     }
 
     void serializeFilesUCSection(OutputStream out) throws IOException {
-      Map<String, INodeFile> ucMap = fsn.getFilesUnderConstruction();
-      for (Map.Entry<String, INodeFile> entry : ucMap.entrySet()) {
-        String path = entry.getKey();
-        INodeFile file = entry.getValue();
+      Collection<Long> filesWithUC = fsn.getLeaseManager()
+              .getINodeIdWithLeases();
+      for (Long id : filesWithUC) {
+        INode inode = fsn.getFSDirectory().getInode(id);
+        if (inode == null) {
+          LOG.warn("Fail to find inode " + id + " when saving the leases.");
+          continue;
+        }
+        INodeFile file = inode.asFile();
+        if (!file.isUnderConstruction()) {
+          LOG.warn("Fail to save the lease for inode id " + id
+                       + " as the file is not under construction");
+          continue;
+        }
+        String path = file.getFullPathName();
         FileUnderConstructionEntry.Builder b = FileUnderConstructionEntry
             .newBuilder().setInodeId(file.getId()).setFullPath(path);
         FileUnderConstructionEntry e = b.build();

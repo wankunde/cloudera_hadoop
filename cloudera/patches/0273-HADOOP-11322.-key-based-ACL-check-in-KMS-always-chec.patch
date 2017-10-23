@@ -1,9 +1,9 @@
 From b3fd664c78f5a065aaae6ce020c16e0485cf78e9 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Tue, 25 Nov 2014 01:12:31 +0800
-Subject: [PATCH 273/924] HADOOP-11322. key based ACL check in KMS always
- check KeyOpType.MANAGEMENT even actual KeyOpType is
- not MANAGEMENT. (Dian Fu via yliu)
+Subject: [PATCH 0273/2639] HADOOP-11322. key based ACL check in KMS always
+ check KeyOpType.MANAGEMENT even actual KeyOpType
+ is not MANAGEMENT. (Dian Fu via yliu)
 
 (cherry picked from commit 4b62d6d2fd1c7740b7b768e3294ecd9572f94e98)
 (cherry picked from commit 81a067b0f83166b7b1a6235139229073d4eb1f25)

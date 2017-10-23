@@ -1,8 +1,8 @@
 From cdc172c5883eaa401d81d046ca23159cd2cd2504 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 26 Aug 2013 23:11:14 +0200
-Subject: [PATCH 161/924] CLOUDERA-BUILD. Change env variable for protoc to be
- CDH5 specific
+Subject: [PATCH 0161/2639] CLOUDERA-BUILD. Change env variable for protoc to
+ be CDH5 specific
 
 (cherry picked from commit bb30321ad5867b51b0fa7f2419f98e951a44fa3c)
 (cherry picked from commit e9e6f3994bc6b62ed7f356d7c91dc1c4521247c5)

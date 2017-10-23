@@ -239,7 +239,36 @@ public class TestDelegationToken {
       }
     });
   }
-  
+
+  @Test
+  public void testDelegationTokenUgi() throws Exception {
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    Token<?>[] tokens = dfs.addDelegationTokens("renewer", null);
+    Assert.assertEquals(1, tokens.length);
+    Token<?> token1 = tokens[0];
+    DelegationTokenIdentifier ident =
+        (DelegationTokenIdentifier) token1.decodeIdentifier();
+    UserGroupInformation expectedUgi = ident.getUser();
+
+    // get 2 new instances (clones) of the identifier, query their ugi
+    // twice each, all ugi instances should be equivalent
+    for (int i=0; i<2; i++) {
+      DelegationTokenIdentifier identClone =
+          (DelegationTokenIdentifier)token1.decodeIdentifier();
+      Assert.assertEquals(ident, identClone);
+      Assert.assertNotSame(ident, identClone);
+      Assert.assertSame(expectedUgi, identClone.getUser());
+      Assert.assertSame(expectedUgi, identClone.getUser());
+    }
+
+    // a new token must decode to a different ugi instance than the first token
+    tokens = dfs.addDelegationTokens("renewer", null);
+    Assert.assertEquals(1, tokens.length);
+    Token<?> token2 = tokens[0];
+    Assert.assertNotEquals(token1, token2);
+    Assert.assertNotSame(expectedUgi, token2.decodeIdentifier().getUser());
+  }
+
   /**
    * Test that the delegation token secret manager only runs when the
    * NN is out of safe mode. This is because the secret manager
@@ -314,5 +343,14 @@ public class TestDelegationToken {
             return null;
           }
         });
+  }
+
+  @Test
+  public void testDelegationTokenIdentifierToString() throws Exception {
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(new Text(
+        "SomeUser"), new Text("JobTracker"), null);
+    Assert.assertEquals("HDFS_DELEGATION_TOKEN token 0" +
+        " for SomeUser with renewer JobTracker",
+        dtId.toStringStable());
   }
 }

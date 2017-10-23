@@ -1,7 +1,7 @@
 From 11b47a2f11c4f43741a6f42b39777c588836d5d8 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 4 Mar 2015 18:06:36 -0800
-Subject: [PATCH 493/924] YARN-3231. FairScheduler: Changing
+Subject: [PATCH 0493/2639] YARN-3231. FairScheduler: Changing
  queueMaxRunningApps interferes with pending jobs.
  (Siqi Li via kasha)
 

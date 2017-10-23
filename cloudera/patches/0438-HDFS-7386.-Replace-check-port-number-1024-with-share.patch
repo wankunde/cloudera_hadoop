@@ -1,7 +1,7 @@
 From 7825f1a1a6158911ac7bee0f35a4632468d0ea81 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Fri, 14 Nov 2014 16:43:09 -0800
-Subject: [PATCH 438/924] HDFS-7386. Replace check "port number < 1024" with
+Subject: [PATCH 0438/2639] HDFS-7386. Replace check "port number < 1024" with
  shared isPrivilegedPort method. Contributed by
  Yongjun Zhang.
 

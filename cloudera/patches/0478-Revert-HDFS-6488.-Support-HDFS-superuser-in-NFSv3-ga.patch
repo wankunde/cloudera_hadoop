@@ -1,7 +1,7 @@
 From 1b01802d24cfe1b8fd863ea744507ee9a268ac49 Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Thu, 12 Mar 2015 12:20:34 -0700
-Subject: [PATCH 478/924] Revert "HDFS-6488. Support HDFS superuser in NFSv3
+Subject: [PATCH 0478/2639] Revert "HDFS-6488. Support HDFS superuser in NFSv3
  gateway. Contributed by Brandon Li"
 
 This reverts commit fdfe803b649d5a455f47ba8089293a76644bf747.

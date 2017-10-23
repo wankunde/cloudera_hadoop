@@ -1,7 +1,7 @@
 From f3cb7130f2d1409938d1777be708622b5f56fc61 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Sat, 15 Aug 2015 00:52:11 -0700
-Subject: [PATCH 729/924] MAPREDUCE-6439. AM may fail instead of retrying if
+Subject: [PATCH 0729/2639] MAPREDUCE-6439. AM may fail instead of retrying if
  RM shuts down during the allocate call. (Anubhav
  Dhoot via kasha) (cherry picked from commit
  8dfec7a1979e8f70f8355c096874921d368342ef)

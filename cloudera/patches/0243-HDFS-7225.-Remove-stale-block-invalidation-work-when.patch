@@ -1,9 +1,9 @@
 From 734a1b0c41e03329089f35c48cc0924743273cb8 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 18 Nov 2014 22:14:04 -0800
-Subject: [PATCH 243/924] HDFS-7225. Remove stale block invalidation work when
- DN re-registers with different UUID. (Zhe Zhang and
- Andrew Wang)
+Subject: [PATCH 0243/2639] HDFS-7225. Remove stale block invalidation work
+ when DN re-registers with different UUID. (Zhe
+ Zhang and Andrew Wang)
 
 (cherry picked from commit 406c09ad1150c4971c2b7675fcb0263d40517fbf)
 (cherry picked from commit 2e15754a92c6589308ccbbb646166353cc2f2456)

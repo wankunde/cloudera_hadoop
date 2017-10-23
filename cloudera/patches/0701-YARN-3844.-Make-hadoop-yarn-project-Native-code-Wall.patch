@@ -1,7 +1,7 @@
 From 5d067a672d05dc471c0a9e69146d91976ebc6309 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 17 Jul 2015 11:38:59 -0700
-Subject: [PATCH 701/924] YARN-3844. Make hadoop-yarn-project Native code
+Subject: [PATCH 0701/2639] YARN-3844. Make hadoop-yarn-project Native code
  -Wall-clean (Alan Burlison via Colin P. McCabe)
 
 (cherry picked from commit 419c51d233bd124eadb38ff013693576ec02c4f1)

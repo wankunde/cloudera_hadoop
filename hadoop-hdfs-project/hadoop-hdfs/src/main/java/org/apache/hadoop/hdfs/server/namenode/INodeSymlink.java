@@ -74,17 +74,17 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   @Override
   public Quota.Counts cleanSubtree(final int snapshotId, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID
         && priorSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
-      destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      destroyAndCollectBlocks(collectedBlocks, removedINodes, removedUCFiles);
     }
     return Quota.Counts.newInstance(1, 0);
   }
   
   @Override
   public void destroyAndCollectBlocks(final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     removedINodes.add(this);
   }
 
@@ -96,7 +96,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   @Override
-  public ContentSummaryComputationContext computeContentSummary(
+  public ContentSummaryComputationContext computeContentSummary(int snapshotId,
       final ContentSummaryComputationContext summary) {
     summary.getCounts().add(Content.SYMLINK, 1);
     return summary;

@@ -37,6 +37,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -51,7 +52,7 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 /**
  * The {@link KerberosAuthenticationHandler} implements the Kerberos SPNEGO authentication mechanism for HTTP.
- * <p/>
+ * <p>
  * The supported configuration properties are:
  * <ul>
  * <li>kerberos.principal: the Kerberos principal to used by the server. As stated by the Kerberos SPNEGO
@@ -168,9 +169,9 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
 
   /**
    * Initializes the authentication handler instance.
-   * <p/>
+   * <p>
    * It creates a Kerberos context using the principal and keytab specified in the configuration.
-   * <p/>
+   * <p>
    * This method is invoked by the {@link AuthenticationFilter#init} method.
    *
    * @param config configuration properties to initialize the handler.
@@ -243,7 +244,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
 
   /**
    * Releases any resources initialized by the authentication handler.
-   * <p/>
+   * <p>
    * It destroys the Kerberos context.
    */
   @Override
@@ -262,7 +263,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
 
   /**
    * Returns the authentication type of the authentication handler, 'kerberos'.
-   * <p/>
+   * <p>
    *
    * @return the authentication type of the authentication handler, 'kerberos'.
    */
@@ -313,7 +314,6 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
   /**
    * It enforces the the Kerberos SPNEGO authentication sequence returning an {@link AuthenticationToken} only
    * after the Kerberos SPNEGO sequence has completed successfully.
-   * <p/>
    *
    * @param request the HTTP client request.
    * @param response the HTTP client response.
@@ -343,7 +343,8 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
       authorization = authorization.substring(KerberosAuthenticator.NEGOTIATE.length()).trim();
       final Base64 base64 = new Base64(0);
       final byte[] clientToken = base64.decode(authorization);
-      final String serverName = request.getServerName();
+      final String serverName = InetAddress.getByName(request.getServerName())
+                                           .getCanonicalHostName();
       try {
         token = Subject.doAs(serverSubject, new PrivilegedExceptionAction<AuthenticationToken>() {
 

@@ -1,9 +1,9 @@
 From a79256b9e40be1fdf89011417d3948eaca55dd80 Mon Sep 17 00:00:00 2001
 From: Tsuyoshi Ozawa <ozawa@apache.org>
 Date: Wed, 25 Feb 2015 10:34:28 +0900
-Subject: [PATCH 454/924] YARN-3247. TestQueueMappings should use
- CapacityScheduler explicitly. Contributed by Zhihai
- Xu.
+Subject: [PATCH 0454/2639] YARN-3247. TestQueueMappings should use
+ CapacityScheduler explicitly. Contributed by
+ Zhihai Xu.
 
 (cherry picked from commit 6cbd9f1113fca9ff86fd6ffa783ecd54b147e0db)
 

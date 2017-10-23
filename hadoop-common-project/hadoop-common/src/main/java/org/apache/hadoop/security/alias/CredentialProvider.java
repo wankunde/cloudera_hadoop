@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  * A provider of credentials or password for Hadoop applications. Provides an
@@ -33,8 +34,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public abstract class CredentialProvider {
-  public static final String CLEAR_TEXT_FALLBACK 
-    = "hadoop.security.credential.clear-text-fallback";
+  public static final String CLEAR_TEXT_FALLBACK =
+      CommonConfigurationKeysPublic.
+          HADOOP_SECURITY_CREDENTIAL_CLEAR_TEXT_FALLBACK;
 
   /**
    * The combination of both the alias and the actual credential value.
@@ -85,7 +87,8 @@ public abstract class CredentialProvider {
   }
 
   /**
-   * Ensures that any changes to the credentials are written to persistent store.
+   * Ensures that any changes to the credentials are written to persistent
+   * store.
    * @throws IOException
    */
   public abstract void flush() throws IOException;
@@ -121,4 +124,36 @@ public abstract class CredentialProvider {
    * @throws IOException
    */
   public abstract void deleteCredentialEntry(String name) throws IOException;
+
+  /**
+   * Does this provider require a password? This means that a password is
+   * required for normal operation, and it has not been found through normal
+   * means. If true, the password should be provided by the caller using
+   * setPassword().
+   * @return Whether or not the provider requires a password
+   * @throws IOException
+   */
+  public boolean needsPassword() throws IOException {
+    return false;
+  }
+
+  /**
+   * If a password for the provider is needed, but is not provided, this will
+   * return a warning and instructions for supplying said password to the
+   * provider.
+   * @return A warning and instructions for supplying the password
+   */
+  public String noPasswordWarning() {
+    return null;
+  }
+
+  /**
+   * If a password for the provider is needed, but is not provided, this will
+   * return an error message and instructions for supplying said password to
+   * the provider.
+   * @return An error message and instructions for supplying the password
+   */
+  public String noPasswordError() {
+    return null;
+  }
 }

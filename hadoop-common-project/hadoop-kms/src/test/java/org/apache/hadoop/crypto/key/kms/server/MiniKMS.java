@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSRESTConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
+import org.apache.hadoop.util.ThreadUtil;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.security.SslSocketConnector;
@@ -34,6 +35,7 @@ import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
@@ -47,19 +49,13 @@ public class MiniKMS {
   private static Server createJettyServer(String keyStore, String password, int inPort) {
     try {
       boolean ssl = keyStore != null;
-      InetAddress localhost = InetAddress.getByName("localhost");
       String host = "localhost";
-      ServerSocket ss = new ServerSocket((inPort < 0) ? 0 : inPort, 50, localhost);
-      int port = ss.getLocalPort();
-      ss.close();
-      Server server = new Server(0);
+      Server server = new Server(inPort);
       if (!ssl) {
         server.getConnectors()[0].setHost(host);
-        server.getConnectors()[0].setPort(port);
       } else {
         SslSocketConnector c = new SslSocketConnectorSecure();
         c.setHost(host);
-        c.setPort(port);
         c.setNeedClientAuth(false);
         c.setKeystore(keyStore);
         c.setKeystoreType("jks");
@@ -80,7 +76,7 @@ public class MiniKMS {
       String scheme = (ssl) ? "https" : "http";
       return new URL(scheme + "://" +
           server.getConnectors()[0].getHost() + ":" +
-          server.getConnectors()[0].getPort());
+          server.getConnectors()[0].getLocalPort());
     } catch (MalformedURLException ex) {
       throw new RuntimeException("It should never happen, " + ex.getMessage(),
           ex);
@@ -92,7 +88,7 @@ public class MiniKMS {
     private String log4jConfFile;
     private File keyStoreFile;
     private String keyStorePassword;
-    private int inPort = -1;
+    private int inPort;
 
     public Builder() {
       kmsConfDir = new File("target/test-classes").getAbsoluteFile();
@@ -155,16 +151,26 @@ public class MiniKMS {
     this.inPort = inPort;
   }
 
+  private void copyResource(String inputResourceName, File outputFile) throws
+      IOException {
+    InputStream is = null;
+    OutputStream os = null;
+    try {
+      is = ThreadUtil.getResourceAsStream(inputResourceName);
+      os = new FileOutputStream(outputFile);
+      IOUtils.copy(is, os);
+    } finally {
+      IOUtils.closeQuietly(is);
+      IOUtils.closeQuietly(os);
+    }
+  }
+
   public void start() throws Exception {
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     System.setProperty(KMSConfiguration.KMS_CONFIG_DIR, kmsConfDir);
     File aclsFile = new File(kmsConfDir, "kms-acls.xml");
     if (!aclsFile.exists()) {
-      InputStream is = cl.getResourceAsStream("mini-kms-acls-default.xml");
-      OutputStream os = new FileOutputStream(aclsFile);
-      IOUtils.copy(is, os);
-      is.close();
-      os.close();
+      copyResource("mini-kms-acls-default.xml", aclsFile);
     }
     File coreFile = new File(kmsConfDir, "core-site.xml");
     if (!coreFile.exists()) {
@@ -201,11 +207,7 @@ public class MiniKMS {
           "/kms-webapp/WEB-INF");
       webInf.mkdirs();
       new File(webInf, "web.xml").delete();
-      InputStream is = cl.getResourceAsStream("kms-webapp/WEB-INF/web.xml");
-      OutputStream os = new FileOutputStream(new File(webInf, "web.xml"));
-      IOUtils.copy(is, os);
-      is.close();
-      os.close();
+      copyResource("kms-webapp/WEB-INF/web.xml", new File(webInf, "web.xml"));
       webappPath = webInf.getParentFile().getAbsolutePath();
     } else {
       webappPath = cl.getResource("kms-webapp").getPath();

@@ -1,8 +1,8 @@
 From 643bc81be43008ef3253d57ae12e9c0866d04352 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Mon, 29 Sep 2014 18:10:47 -0700
-Subject: [PATCH 286/924] HDFS-6779. Add missing version subcommand for hdfs.
- Contributed by Sasaki Toru.
+Subject: [PATCH 0286/2639] HDFS-6779. Add missing version subcommand for
+ hdfs. Contributed by Sasaki Toru.
 
 Conflicts:
 	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt

@@ -1,7 +1,7 @@
 From ef5a68f90dd9372c524a2aa63090e98322f7814f Mon Sep 17 00:00:00 2001
 From: "Aaron T. Myers" <atm@apache.org>
 Date: Wed, 11 Mar 2015 23:37:15 -0700
-Subject: [PATCH 469/924] Revert "HDFS-7668. Backport "Convert site
+Subject: [PATCH 0469/2639] Revert "HDFS-7668. Backport "Convert site
  documentation from apt to markdown" to branch-2
  (Masatake Iwasaki via Colin P. McCabe)"
 

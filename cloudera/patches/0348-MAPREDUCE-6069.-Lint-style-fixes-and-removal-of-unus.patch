@@ -1,7 +1,7 @@
 From bc68980c216705c470e6286bf3099b2a3555d0cd Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 3 Sep 2014 13:07:24 -0700
-Subject: [PATCH 348/924] MAPREDUCE-6069. Lint/style fixes and removal of
+Subject: [PATCH 0348/2639] MAPREDUCE-6069. Lint/style fixes and removal of
  unused code. Contributed by Todd Lipcon.
 
 (cherry picked from commit 683987be7c160e67ddb8534eeb3c464bbe2796dd)

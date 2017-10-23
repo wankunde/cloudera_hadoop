@@ -47,6 +47,9 @@ static const char* TC_MODIFY_STATE_OPTS [] = { "-b" , NULL};
 static const char* TC_READ_STATE_OPTS [] = { "-b", NULL};
 static const char* TC_READ_STATS_OPTS [] = { "-s",  "-b", NULL};
 
+static const int DEFAULT_DOCKER_SUPPORT_ENABLED = 0;
+static const int DEFAULT_TC_SUPPORT_ENABLED = 0;
+
 //struct to store the user details
 struct passwd *user_detail = NULL;
 
@@ -56,6 +59,8 @@ FILE* ERRORFILE = NULL;
 static uid_t nm_uid = -1;
 static gid_t nm_gid = -1;
 
+struct configuration executor_cfg = {.size=0, .confdetails=NULL};
+
 char *concatenate(char *concat_pattern, char *return_path_name,
    int numArgs, ...);
 
@@ -64,21 +69,36 @@ void set_nm_uid(uid_t user, gid_t group) {
   nm_gid = group;
 }
 
+//function used to load the configurations present in the secure config
+void read_executor_config(const char* file_name) {
+    read_config(file_name, &executor_cfg);
+}
+
+//function used to free executor configuration data
+void free_executor_configurations() {
+    free_configurations(&executor_cfg);
+}
+
+//Lookup nodemanager group from container executor configuration.
+char *get_nodemanager_group() {
+    return get_value(NM_GROUP_KEY, &executor_cfg);
+}
+
 /**
  * get the executable filename.
  */
 char* get_executable() {
-  char buffer[PATH_MAX];
-  snprintf(buffer, PATH_MAX, "/proc/%" PRId64 "/exe", (int64_t)getpid());
-  char *filename = malloc(PATH_MAX);
-  ssize_t len = readlink(buffer, filename, PATH_MAX);
+  char buffer[EXECUTOR_PATH_MAX];
+  snprintf(buffer, EXECUTOR_PATH_MAX, "/proc/%" PRId64 "/exe", (int64_t)getpid());
+  char *filename = malloc(EXECUTOR_PATH_MAX);
+  ssize_t len = readlink(buffer, filename, EXECUTOR_PATH_MAX);
   if (len == -1) {
     fprintf(ERRORFILE, "Can't get executable name from %s - %s\n", buffer,
             strerror(errno));
     exit(-1);
-  } else if (len >= PATH_MAX) {
+  } else if (len >= EXECUTOR_PATH_MAX) {
     fprintf(ERRORFILE, "Executable name %.*s is longer than %d characters.\n",
-            PATH_MAX, filename, PATH_MAX);
+            EXECUTOR_PATH_MAX, filename, EXECUTOR_PATH_MAX);
     exit(-1);
   }
   filename[len] = '\0';
@@ -550,7 +570,7 @@ int check_dir(const char* npath, mode_t st_mode, mode_t desired, int finalCompon
     int filePermInt = st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
     int desiredInt = desired & (S_IRWXU | S_IRWXG | S_IRWXO);
     if (filePermInt != desiredInt) {
-      fprintf(LOGFILE, "Path %s does not have desired permission.\n", npath);
+      fprintf(LOGFILE, "Path %s has permission %o but needs permission %o.\n", npath, filePermInt, desiredInt);
       return -1;
     }
   }
@@ -655,7 +675,7 @@ static struct passwd* get_user_info(const char* user) {
 }
 
 int is_whitelisted(const char *user) {
-  char **whitelist = get_values(ALLOWED_SYSTEM_USERS_KEY);
+  char **whitelist = get_values(ALLOWED_SYSTEM_USERS_KEY, &executor_cfg);
   char **users = whitelist;
   if (whitelist != NULL) {
     for(; *users; ++users) {
@@ -683,7 +703,7 @@ struct passwd* check_user(const char *user) {
     fflush(LOGFILE);
     return NULL;
   }
-  char *min_uid_str = get_value(MIN_USERID_KEY);
+  char *min_uid_str = get_value(MIN_USERID_KEY, &executor_cfg);
   int min_uid = DEFAULT_MIN_USERID;
   if (min_uid_str != NULL) {
     char *end_ptr = NULL;
@@ -710,7 +730,7 @@ struct passwd* check_user(const char *user) {
     free(user_info);
     return NULL;
   }
-  char **banned_users = get_values(BANNED_USERS_KEY);
+  char **banned_users = get_values(BANNED_USERS_KEY, &executor_cfg);
   banned_users = banned_users == NULL ?
     (char**) DEFAULT_BANNED_USERS : banned_users;
   char **banned_user = banned_users;
@@ -943,6 +963,41 @@ int create_log_dirs(const char *app_id, char * const * log_dirs) {
 }
 
 
+static int is_feature_enabled(const char* feature_key, int default_value) {
+    char *enabled_str = get_value(feature_key, &executor_cfg);
+    int enabled = default_value;
+
+    if (enabled_str != NULL) {
+        char *end_ptr = NULL;
+        enabled = strtol(enabled_str, &end_ptr, 10);
+
+        if ((enabled_str == end_ptr || *end_ptr != '\0') ||
+            (enabled < 0 || enabled > 1)) {
+              fprintf(LOGFILE, "Illegal value '%s' for '%s' in configuration. "
+              "Using default value: %d.\n", enabled_str, feature_key,
+              default_value);
+              fflush(LOGFILE);
+              free(enabled_str);
+              return default_value;
+        }
+
+        free(enabled_str);
+        return enabled;
+    } else {
+        return default_value;
+    }
+}
+
+
+int is_docker_support_enabled() {
+    return is_feature_enabled(DOCKER_SUPPORT_ENABLED_KEY,
+    DEFAULT_DOCKER_SUPPORT_ENABLED);
+}
+
+int is_tc_support_enabled() {
+    return is_feature_enabled(TC_SUPPORT_ENABLED_KEY,
+    DEFAULT_TC_SUPPORT_ENABLED);
+}
 /**
  * Function to prepare the application directories for the container.
  */
@@ -1036,7 +1091,6 @@ int initialize_app(const char *user, const char *app_id,
 }
 
 char* parse_docker_command_file(const char* command_file) {
-  int i = 0;
   size_t len = 0;
   char *line = NULL;
   ssize_t read;
@@ -1060,9 +1114,9 @@ char* parse_docker_command_file(const char* command_file) {
 
 int run_docker(const char *command_file) {
   char* docker_command = parse_docker_command_file(command_file);
-  char* docker_binary = get_value(DOCKER_BINARY_KEY);
-  char* docker_command_with_binary = calloc(sizeof(char), PATH_MAX);
-  sprintf(docker_command_with_binary, "%s %s", docker_binary, docker_command);
+  char* docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
+  char* docker_command_with_binary = calloc(sizeof(char), EXECUTOR_PATH_MAX);
+  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
   char **args = extract_values_delim(docker_command_with_binary, " ");
 
   int exit_code = -1;
@@ -1208,15 +1262,18 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
-  char *docker_command_with_binary[PATH_MAX];
-  char *docker_wait_command[PATH_MAX];
-  char *docker_inspect_command[PATH_MAX];
-  char *docker_rm_command[PATH_MAX];
+  char docker_command_with_binary[EXECUTOR_PATH_MAX];
+  char docker_wait_command[EXECUTOR_PATH_MAX];
+  char docker_logs_command[EXECUTOR_PATH_MAX];
+  char docker_inspect_command[EXECUTOR_PATH_MAX];
+  char docker_rm_command[EXECUTOR_PATH_MAX];
   int container_file_source =-1;
   int cred_file_source = -1;
+  int BUFFER_SIZE = 4096;
+  char buffer[BUFFER_SIZE];
 
   char *docker_command = parse_docker_command_file(command_file);
-  char *docker_binary = get_value(DOCKER_BINARY_KEY);
+  char *docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
   if (docker_binary == NULL) {
     docker_binary = "docker";
   }
@@ -1228,7 +1285,6 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     fflush(ERRORFILE);
     goto cleanup;
   }
-  uid_t user_uid = geteuid();
   gid_t user_gid = getegid();
 
   exit_code = create_local_dirs(user, app_id, container_id,
@@ -1255,7 +1311,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  sprintf(docker_command_with_binary, "%s %s", docker_binary, docker_command);
+  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
 
   FILE* start_docker = popen(docker_command_with_binary, "r");
   if (pclose (start_docker) != 0)
@@ -1267,17 +1323,17 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  sprintf(docker_inspect_command,
+  snprintf(docker_inspect_command, EXECUTOR_PATH_MAX,
     "%s inspect --format {{.State.Pid}} %s",
     docker_binary, container_id);
 
   FILE* inspect_docker = popen(docker_inspect_command, "r");
   int pid = 0;
-  fscanf (inspect_docker, "%d", &pid);
-  if (pclose (inspect_docker) != 0)
+  int res = fscanf (inspect_docker, "%d", &pid);
+  if (pclose (inspect_docker) != 0 || res <= 0)
   {
     fprintf (ERRORFILE,
-     "Could not inspect docker %s.\n", docker_inspect_command);
+     "Could not inspect docker to get pid %s.\n", docker_inspect_command);
     fflush(ERRORFILE);
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;
@@ -1306,19 +1362,47 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       goto cleanup;
     }
 
-    sprintf(docker_wait_command,
+    snprintf(docker_wait_command, EXECUTOR_PATH_MAX,
       "%s wait %s", docker_binary, container_id);
 
     FILE* wait_docker = popen(docker_wait_command, "r");
-    fscanf (wait_docker, "%d", &exit_code);
-    if (pclose (wait_docker) != 0) {
+    res = fscanf (wait_docker, "%d", &exit_code);
+    if (pclose (wait_docker) != 0 || res <= 0) {
       fprintf (ERRORFILE,
-       "Could not attach to docker is container dead? %s.\n", docker_wait_command);
+       "Could not attach to docker; is container dead? %s.\n", docker_wait_command);
       fflush(ERRORFILE);
+    }
+    if(exit_code != 0) {
+      snprintf(docker_logs_command, EXECUTOR_PATH_MAX, "%s logs --tail=250 %s",
+        docker_binary, container_id);
+      FILE* logs = popen(docker_logs_command, "r");
+      if(logs != NULL) {
+        clearerr(logs);
+        res = fread(buffer, BUFFER_SIZE, 1, logs);
+        if(res < 1) {
+          fprintf(ERRORFILE, "%s %d %d\n",
+            "Unable to read from docker logs(ferror, feof):", ferror(logs), feof(logs));
+          fflush(ERRORFILE);
+        }
+        else {
+          fprintf(ERRORFILE, "%s\n", buffer);
+          fflush(ERRORFILE);
+        }
+      }
+      else {
+        fprintf(ERRORFILE, "%s\n", "Failed to get output of docker logs");
+        fprintf(ERRORFILE, "Command was '%s'\n", docker_logs_command);
+        fprintf(ERRORFILE, "%s\n", strerror(errno));
+        fflush(ERRORFILE);
+      }
+      if(pclose(logs) != 0) {
+        fprintf(ERRORFILE, "%s\n", "Failed to fetch docker logs");
+        fflush(ERRORFILE);
+      }
     }
   }
 
-  sprintf(docker_rm_command,
+  snprintf(docker_rm_command, EXECUTOR_PATH_MAX,
     "%s rm %s", docker_binary, container_id);
   FILE* rm_docker = popen(docker_rm_command, "w");
   if (pclose (rm_docker) != 0)
@@ -1331,6 +1415,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   }
 
 cleanup:
+
   if (exit_code_file != NULL && write_exit_code_file(exit_code_file, exit_code) < 0) {
     fprintf (ERRORFILE,
       "Could not write exit code to file %s.\n", exit_code_file);
@@ -1464,21 +1549,13 @@ int signal_container_as_user(const char *user, int pid, int sig) {
   }
 
   //Don't continue if the process-group is not alive anymore.
-  int has_group = 1;
   if (kill(-pid,0) < 0) {
-    if (kill(pid, 0) < 0) {
-      if (errno == ESRCH) {
-        return INVALID_CONTAINER_PID;
-      }
-      fprintf(LOGFILE, "Error signalling container %d with %d - %s\n",
-	      pid, sig, strerror(errno));
-      return -1;
-    } else {
-      has_group = 0;
-    }
+    fprintf(LOGFILE, "Error signalling not exist process group %d "
+            "with signal %d\n", pid, sig);
+    return INVALID_CONTAINER_PID;
   }
 
-  if (kill((has_group ? -1 : 1) * pid, sig) < 0) {
+  if (kill(-pid, sig) < 0) {
     if(errno != ESRCH) {
       fprintf(LOGFILE, 
               "Error signalling process group %d with signal %d - %s\n", 
@@ -1492,8 +1569,7 @@ int signal_container_as_user(const char *user, int pid, int sig) {
       return INVALID_CONTAINER_PID;
     }
   }
-  fprintf(LOGFILE, "Killing process %s%d with %d\n",
-	  (has_group ? "group " :""), pid, sig);
+  fprintf(LOGFILE, "Killing process group %d with %d\n", pid, sig);
   return 0;
 }
 
@@ -1672,8 +1748,13 @@ int delete_as_user(const char *user,
     char* full_path = NULL;
     struct stat sb;
     if (stat(*ptr, &sb) != 0) {
-      fprintf(LOGFILE, "Could not stat %s\n", *ptr);
-      return -1;
+      if (errno == ENOENT) {
+        // Ignore missing dir. Continue deleting other directories.
+        continue;
+      } else {
+        fprintf(LOGFILE, "Could not stat %s - %s\n", *ptr, strerror(errno));
+        return -1;
+      }
     }
     if (!S_ISDIR(sb.st_mode)) {
       if (!subDirEmptyStr) {
@@ -1737,7 +1818,7 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
 #else
   char *controller = malloc(strlen(pair));
   char *mount_path = malloc(strlen(pair));
-  char hier_path[PATH_MAX];
+  char hier_path[EXECUTOR_PATH_MAX];
   int result = 0;
 
   if (get_kv_key(pair, controller, strlen(pair)) < 0 ||
@@ -1749,7 +1830,7 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
     if (mount("none", mount_path, "cgroup", 0, controller) == 0) {
       char *buf = stpncpy(hier_path, mount_path, strlen(mount_path));
       *buf++ = '/';
-      snprintf(buf, PATH_MAX - (buf - hier_path), "%s", hierarchy);
+      snprintf(buf, EXECUTOR_PATH_MAX - (buf - hier_path), "%s", hierarchy);
 
       // create hierarchy as 0750 and chown to Hadoop NM user
       const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
@@ -1799,7 +1880,6 @@ static int run_traffic_control(const char *opts[], char *command_file) {
       fprintf(LOGFILE, "failed to execute tc command!\n");
       return TRAFFIC_CONTROL_EXECUTION_FAILED;
     }
-    unlink(command_file);
     return 0;
   } else {
     execv(TC_BIN, (char**)args);

@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -57,6 +58,8 @@ public class TestResourceManager {
   @Before
   public void setUp() throws Exception {
     Configuration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class.getCanonicalName());
     UserGroupInformation.setConfiguration(conf);
     resourceManager = new ResourceManager();
     resourceManager.init(conf);
@@ -212,9 +215,8 @@ public class TestResourceManager {
   public void testResourceManagerInitConfigValidation() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, -1);
-    resourceManager = new ResourceManager();
     try {
-      resourceManager.init(conf);
+      resourceManager = new MockRM(conf);
       fail("Exception is expected because the global max attempts" +
           " is negative.");
     } catch (YarnRuntimeException e) {
@@ -229,9 +231,8 @@ public class TestResourceManager {
     Configuration conf = new YarnConfiguration();
     conf.setLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS, 1000);
     conf.setLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 1001);
-    resourceManager = new ResourceManager();;
     try {
-      resourceManager.init(conf);
+      resourceManager = new MockRM(conf);
     } catch (YarnRuntimeException e) {
       // Exception is expected.
       if (!e.getMessage().startsWith("Nodemanager expiry interval should be no"
@@ -262,6 +263,8 @@ public class TestResourceManager {
         }
       };
       Configuration conf = new YarnConfiguration();
+      conf.set(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class.getCanonicalName());
       conf.set(filterInitializerConfKey, filterInitializer);
       conf.set("hadoop.security.authentication", "kerberos");
       conf.set("hadoop.http.authentication.type", "kerberos");
@@ -296,6 +299,8 @@ public class TestResourceManager {
     for (String filterInitializer : simpleFilterInitializers) {
       resourceManager = new ResourceManager();
       Configuration conf = new YarnConfiguration();
+      conf.set(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class.getCanonicalName());
       conf.set(filterInitializerConfKey, filterInitializer);
       try {
         UserGroupInformation.setConfiguration(conf);

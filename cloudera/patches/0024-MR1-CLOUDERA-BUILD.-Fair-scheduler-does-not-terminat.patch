@@ -1,7 +1,7 @@
 From ebc2289ac5936625fefa739418b556a4811d4f6a Mon Sep 17 00:00:00 2001
 From: Tom White <tom@cloudera.com>
 Date: Tue, 29 Jan 2013 12:01:51 +0000
-Subject: [PATCH 024/924] MR1: CLOUDERA-BUILD. Fair scheduler does not
+Subject: [PATCH 0024/2639] MR1: CLOUDERA-BUILD. Fair scheduler does not
  terminate its EagerTaskInitializationListener.
 
 Reason: Bug

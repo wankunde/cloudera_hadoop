@@ -1,9 +1,9 @@
 From d6618290216c0d65968690799b667fb68ee5818e Mon Sep 17 00:00:00 2001
 From: Byron Wong <byron.wong@wandisco.com>
 Date: Sat, 25 Oct 2014 12:30:17 -0700
-Subject: [PATCH 253/924] HADOOP-6857. FsShell should report raw disk usage
- including replication factor. Contributed by Byron
- Wong. (cherry picked from commit
+Subject: [PATCH 0253/2639] HADOOP-6857. FsShell should report raw disk usage
+ including replication factor. Contributed by
+ Byron Wong. (cherry picked from commit
  d991cd52d8b2338faffaacf2a49c379e94cb55ac)
 
 Conflicts:

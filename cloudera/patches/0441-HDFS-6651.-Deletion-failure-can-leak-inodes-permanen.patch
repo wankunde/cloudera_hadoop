@@ -1,7 +1,7 @@
 From dbdc776e64d4b2bda838724526a1e3566f6503a5 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Mon, 2 Feb 2015 16:32:38 -0800
-Subject: [PATCH 441/924] HDFS-6651. Deletion failure can leak inodes
+Subject: [PATCH 0441/2639] HDFS-6651. Deletion failure can leak inodes
  permanently. Contributed by Jing Zhao.
 
 Conflicts:

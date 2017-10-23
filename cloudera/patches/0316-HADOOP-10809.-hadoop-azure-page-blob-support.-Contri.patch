@@ -1,7 +1,7 @@
 From cc201ce47e3d9c5678775b6f5bb3230513a01b62 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Wed, 8 Oct 2014 14:20:23 -0700
-Subject: [PATCH 316/924] HADOOP-10809. hadoop-azure: page blob support.
+Subject: [PATCH 0316/2639] HADOOP-10809. hadoop-azure: page blob support.
  Contributed by Dexter Bradshaw, Mostafa Elhemali,
  Eric Hanson, and Mike Liddell.
 
@@ -8787,7 +8787,7 @@ index 0000000..4c2df8d
 +  }
 +}
 diff --git a/hadoop-tools/hadoop-azure/src/test/java/org/apache/hadoop/fs/azure/TestOutOfBandAzureBlobOperations.java b/hadoop-tools/hadoop-azure/src/test/java/org/apache/hadoop/fs/azure/TestOutOfBandAzureBlobOperations.java
-index b49f6ee..9d5d6a2 100644
+index b49f6ee..9d5d6a22c 100644
 --- a/hadoop-tools/hadoop-azure/src/test/java/org/apache/hadoop/fs/azure/TestOutOfBandAzureBlobOperations.java
 +++ b/hadoop-tools/hadoop-azure/src/test/java/org/apache/hadoop/fs/azure/TestOutOfBandAzureBlobOperations.java
 @@ -57,10 +57,14 @@ public void tearDown() throws Exception {

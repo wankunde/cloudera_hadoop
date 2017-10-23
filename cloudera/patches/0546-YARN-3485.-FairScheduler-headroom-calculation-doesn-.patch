@@ -1,7 +1,7 @@
 From 14abc62275ba148ffa94a570f6f6be56c4420dc5 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Tue, 28 Apr 2015 21:00:35 -0700
-Subject: [PATCH 546/924] YARN-3485. FairScheduler headroom calculation
+Subject: [PATCH 0546/2639] YARN-3485. FairScheduler headroom calculation
  doesn't consider maxResources for Fifo and
  FairShare policies. (kasha)
 

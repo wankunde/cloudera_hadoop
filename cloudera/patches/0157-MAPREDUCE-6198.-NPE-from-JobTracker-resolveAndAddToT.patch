@@ -1,7 +1,7 @@
 From 6f1241627c9a406263547a7945d481e898378116 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@apache.org>
 Date: Fri, 19 Dec 2014 11:39:04 -0800
-Subject: [PATCH 157/924] MAPREDUCE-6198. NPE from
+Subject: [PATCH 0157/2639] MAPREDUCE-6198. NPE from
  JobTracker#resolveAndAddToTopology in MR1 cause
  initJob and heartbeat failure. (zxu via rkanter)
 

@@ -1,9 +1,9 @@
 From aea03f11d877419ec3f43bc3c028226b5dbd8926 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 25 Nov 2014 15:12:04 -0800
-Subject: [PATCH 271/924] HADOOP-11300. KMS startup scripts must not display
- the keystore / truststore passwords. Contributed by
- Arun Suresh.
+Subject: [PATCH 0271/2639] HADOOP-11300. KMS startup scripts must not display
+ the keystore / truststore passwords. Contributed
+ by Arun Suresh.
 
 (cherry picked from commit 56f3eecc129486d3297d082d9b97f26b40d0a2c6)
 

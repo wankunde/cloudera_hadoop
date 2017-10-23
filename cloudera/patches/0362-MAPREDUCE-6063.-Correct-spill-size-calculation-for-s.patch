@@ -1,9 +1,9 @@
 From e194e9fc7b97216fee473e55abc4e8ed669ad5ab Mon Sep 17 00:00:00 2001
 From: Chris Douglas <cdouglas@apache.org>
 Date: Wed, 3 Sep 2014 14:32:35 -0700
-Subject: [PATCH 362/924] MAPREDUCE-6063. Correct spill size calculation for
- spills wrapping the circular buffer. Contributed by
- zhihai xu.
+Subject: [PATCH 0362/2639] MAPREDUCE-6063. Correct spill size calculation for
+ spills wrapping the circular buffer. Contributed
+ by zhihai xu.
 
 (cherry picked from commit a18424e724982d01e0191ca7db713da1d43d1e4d)
 

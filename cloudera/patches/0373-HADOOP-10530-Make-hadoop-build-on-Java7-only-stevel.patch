@@ -1,7 +1,7 @@
 From 3ca58f453198cf9e76d614142127d40294590a99 Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Mon, 8 Dec 2014 15:30:34 +0000
-Subject: [PATCH 373/924] HADOOP-10530 Make hadoop build on Java7+ only
+Subject: [PATCH 0373/2639] HADOOP-10530 Make hadoop build on Java7+ only
  (stevel)
 
 (cherry picked from commit 275561d8488fda9a2735b29f5396d8b6140ffa19)

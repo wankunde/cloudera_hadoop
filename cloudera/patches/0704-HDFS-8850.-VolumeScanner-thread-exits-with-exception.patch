@@ -1,10 +1,10 @@
 From 154d90f15c3c47bb8eef6ba6348798fc58a7a08d Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Tue, 4 Aug 2015 15:51:37 +0800
-Subject: [PATCH 704/924] HDFS-8850. VolumeScanner thread exits with exception
- if there is no block pool to be scanned but there
- are suspicious blocks. (Colin Patrick McCabe via
- yliu)
+Subject: [PATCH 0704/2639] HDFS-8850. VolumeScanner thread exits with
+ exception if there is no block pool to be scanned
+ but there are suspicious blocks. (Colin Patrick
+ McCabe via yliu)
 
 (cherry picked from commit d2b941f94a835f7bdde7714d21a470b505aa582b)
 ---

@@ -1,7 +1,7 @@
 From 5c5eb58ca836c1517b69363e705cfe96acc5e311 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 6 Feb 2013 01:48:16 +0000
-Subject: [PATCH 037/924] MR1: MAPREDUCE-4970. Child tasks (try to) create
+Subject: [PATCH 0037/2639] MR1: MAPREDUCE-4970. Child tasks (try to) create
  security audit log files. (sandyr via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1442831 13f79535-47bb-0310-9956-ffa450edef68

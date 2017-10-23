@@ -1,9 +1,9 @@
 From a9543b1102393b55d9e52b97567df70a1b14c266 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Tue, 28 Apr 2015 14:05:26 -0700
-Subject: [PATCH 547/924] MAPREDUCE-6343. JobConf.parseMaximumHeapSizeMB()
- fails to parse value greater than 2GB expressed in
- bytes. (Hao Xia via kasha) (cherry picked from
+Subject: [PATCH 0547/2639] MAPREDUCE-6343. JobConf.parseMaximumHeapSizeMB()
+ fails to parse value greater than 2GB expressed
+ in bytes. (Hao Xia via kasha) (cherry picked from
  commit 519092322dd1bf71984bef1393d8e082643408cd)
 
 Conflicts:

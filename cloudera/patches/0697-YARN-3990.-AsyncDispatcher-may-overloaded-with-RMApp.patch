@@ -1,7 +1,7 @@
 From d0dcb7431204cc942ff2636dd115205cd6700cc6 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Fri, 31 Jul 2015 17:37:24 +0000
-Subject: [PATCH 697/924] YARN-3990. AsyncDispatcher may overloaded with
+Subject: [PATCH 0697/2639] YARN-3990. AsyncDispatcher may overloaded with
  RMAppNodeUpdateEvent when Node is
  connected/disconnected. Contributed by Bibin A
  Chundatt

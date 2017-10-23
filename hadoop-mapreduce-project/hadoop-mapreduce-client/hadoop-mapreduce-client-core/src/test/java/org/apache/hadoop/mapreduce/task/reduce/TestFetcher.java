@@ -24,6 +24,7 @@ import java.lang.Void;
 
 import java.net.HttpURLConnection;
 
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.MapOutputFile;
@@ -31,6 +32,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskID;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -54,6 +56,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Counters;
+import org.apache.hadoop.mapred.IFileInputStream;
 import org.apache.hadoop.mapred.IFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
@@ -88,6 +91,7 @@ public class TestFetcher {
   final MapHost host = new MapHost("localhost", "http://localhost:8080/");
   final TaskAttemptID map1ID = TaskAttemptID.forName("attempt_0_1_m_1_1");
   final TaskAttemptID map2ID = TaskAttemptID.forName("attempt_0_1_m_2_1");
+  FileSystem fs = null;
 
   @Rule public TestName name = new TestName();
 
@@ -118,8 +122,11 @@ public class TestFetcher {
   }
 
   @After
-  public void teardown() {
+  public void teardown() throws IllegalArgumentException, IOException {
     LOG.info("<<<< " + name.getMethodName());
+    if (fs != null) {
+      fs.delete(new Path(name.getMethodName()),true);
+    }
   }
   
   @Test
@@ -169,6 +176,27 @@ public class TestFetcher {
     verify(ss).copyFailed(map1ID, host, false, false);
     verify(ss).copyFailed(map2ID, host, false, false);
     
+    verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
+    verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
+  }
+
+  @Test
+  public void testCopyFromHostConnectionRejected() throws Exception {
+    when(connection.getResponseCode())
+        .thenReturn(Fetcher.TOO_MANY_REQ_STATUS_CODE);
+
+    Fetcher<Text, Text> fetcher = new FakeFetcher<>(job, id, ss, mm, r, metrics,
+        except, key, connection);
+    fetcher.copyFromHost(host);
+
+    Assert.assertEquals("No host failure is expected.",
+        ss.hostFailureCount(host.getHostName()), 0);
+    Assert.assertEquals("No fetch failure is expected.",
+        ss.fetchFailureCount(map1ID), 0);
+    Assert.assertEquals("No fetch failure is expected.",
+        ss.fetchFailureCount(map2ID), 0);
+
+    verify(ss).penalize(eq(host), anyLong());
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
   }
@@ -342,6 +370,43 @@ public class TestFetcher {
   
   @SuppressWarnings("unchecked")
   @Test(timeout=10000) 
+  public void testCopyFromHostOnAnyException() throws Exception {
+    InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
+
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
+        r, metrics, except, key, connection);
+
+    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+
+    when(connection.getResponseCode()).thenReturn(200);
+    when(connection.getHeaderField(
+        SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH)).thenReturn(replyHash);
+    ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    header.write(new DataOutputStream(bout));
+    ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
+    when(connection.getInputStream()).thenReturn(in);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+    when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
+        .thenReturn(immo);
+
+    doThrow(new ArrayIndexOutOfBoundsException()).when(immo)
+        .shuffle(any(MapHost.class), any(InputStream.class), anyLong(),
+            anyLong(), any(ShuffleClientMetrics.class), any(Reporter.class));
+
+    underTest.copyFromHost(host);
+
+    verify(connection)
+        .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH,
+          encHash);
+    verify(ss, times(1)).copyFailed(map1ID, host, true, false);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test(timeout=10000)
   public void testCopyFromHostWithRetry() throws Exception {
     InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
     ss = mock(ShuffleSchedulerImpl.class);
@@ -465,6 +530,70 @@ public class TestFetcher {
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
   }
 
+  @Test
+  public void testCorruptedIFile() throws Exception {
+    final int fetcher = 7;
+    Path onDiskMapOutputPath = new Path(name.getMethodName() + "/foo");
+    Path shuffledToDisk =
+        OnDiskMapOutput.getTempPath(onDiskMapOutputPath, fetcher);
+    fs = FileSystem.getLocal(job).getRaw();
+    MapOutputFile mof = mock(MapOutputFile.class);
+    OnDiskMapOutput<Text,Text> odmo = new OnDiskMapOutput<Text,Text>(map1ID,
+        id, mm, 100L, job, mof, fetcher, true, fs, onDiskMapOutputPath);
+
+    String mapData = "MAPDATA12345678901234567890";
+
+    ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 14, 10, 1);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(bout);
+    IFileOutputStream ios = new IFileOutputStream(dos);
+    header.write(dos);
+
+    int headerSize = dos.size();
+    try {
+      ios.write(mapData.getBytes());
+    } finally {
+      ios.close();
+    }
+
+    int dataSize = bout.size() - headerSize;
+
+    // Ensure that the OnDiskMapOutput shuffler can successfully read the data.
+    MapHost host = new MapHost("TestHost", "http://test/url");
+    ByteArrayInputStream bin = new ByteArrayInputStream(bout.toByteArray());
+    try {
+      // Read past the shuffle header.
+      bin.read(new byte[headerSize], 0, headerSize);
+      odmo.shuffle(host, bin, dataSize, dataSize, metrics, Reporter.NULL);
+    } finally {
+      bin.close();
+    }
+
+    // Now corrupt the IFile data.
+    byte[] corrupted = bout.toByteArray();
+    corrupted[headerSize + (dataSize / 2)] = 0x0;
+
+    try {
+      bin = new ByteArrayInputStream(corrupted);
+      // Read past the shuffle header.
+      bin.read(new byte[headerSize], 0, headerSize);
+      odmo.shuffle(host, bin, dataSize, dataSize, metrics, Reporter.NULL);
+      fail("OnDiskMapOutput.shuffle didn't detect the corrupted map partition file");
+    } catch(ChecksumException e) {
+      LOG.info("The expected checksum exception was thrown.", e);
+    } finally {
+      bin.close();
+    }
+
+    // Ensure that the shuffled file can be read.
+    IFileInputStream iFin = new IFileInputStream(fs.open(shuffledToDisk), dataSize, job);
+    try {
+      iFin.read(new byte[dataSize], 0, dataSize);
+    } finally {
+      iFin.close();
+    }
+  }
+
   @Test(timeout=10000)
   public void testInterruptInMemory() throws Exception {
     final int FETCHER = 2;
@@ -556,6 +685,40 @@ public class TestFetcher {
     verify(mFs).create(eq(pTmp));
     verify(mFs).delete(eq(pTmp), eq(false));
     verify(odmo).abort();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test(timeout=10000)
+  public void testCopyFromHostWithRetryUnreserve() throws Exception {
+    InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry,
+        id, ss, mm, r, metrics, except, key, connection);
+
+    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+
+    when(connection.getResponseCode()).thenReturn(200);
+    when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
+        .thenReturn(replyHash);
+    ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    header.write(new DataOutputStream(bout));
+    ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
+    when(connection.getInputStream()).thenReturn(in);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+
+    // Verify that unreserve occurs if an exception happens after shuffle
+    // buffer is reserved.
+    when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
+        .thenReturn(immo);
+    doThrow(new IOException("forced error")).when(immo).shuffle(
+        any(MapHost.class), any(InputStream.class), anyLong(),
+        anyLong(), any(ShuffleClientMetrics.class), any(Reporter.class));
+
+    underTest.copyFromHost(host);
+    verify(immo).abort();
   }
 
   public static class FakeFetcher<K,V> extends Fetcher<K,V> {

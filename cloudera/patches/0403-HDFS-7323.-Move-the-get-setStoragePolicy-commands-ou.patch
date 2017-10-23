@@ -1,7 +1,7 @@
 From a3e0ab607edb0c94e2a5158ec32754a15a024e93 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Mon, 12 Jan 2015 00:45:27 +0800
-Subject: [PATCH 403/924] HDFS-7323. Move the get/setStoragePolicy commands
+Subject: [PATCH 0403/2639] HDFS-7323. Move the get/setStoragePolicy commands
  out from dfsadmin. (jing9 via yliu)
 
 Conflicts:

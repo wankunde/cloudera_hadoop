@@ -1,7 +1,7 @@
 From 3d4353e74a921957d781a273d2b1af544a47f8d8 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Sat, 31 Jan 2015 18:31:33 -0800
-Subject: [PATCH 352/924] CLOUDERA-BUILD. Update the versions in
+Subject: [PATCH 0352/2639] CLOUDERA-BUILD. Update the versions in
  hadoop-mapreduce-client-nativetask pom.xml
 
 ---

@@ -18,20 +18,12 @@
 
 package org.apache.hadoop.tools.util;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.UnknownHostException;
-import java.text.DecimalFormat;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
+import com.google.common.collect.Maps;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,6 +32,7 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -50,7 +43,14 @@ import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.mapred.UniformSizeInputFormat;
 
-import com.google.common.collect.Maps;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Utility functions used in DistCp.
@@ -120,7 +120,7 @@ public class DistCpUtils {
    * @return Class implementing the strategy specified in options.
    */
   public static Class<? extends InputFormat> getStrategy(Configuration conf,
-                                                                 DistCpOptions options) {
+      DistCpOptions options) {
     String confLabel = "distcp." +
         options.getCopyStrategy().toLowerCase(Locale.getDefault()) + ".strategy.impl";
     return conf.getClass(confLabel, UniformSizeInputFormat.class, InputFormat.class);
@@ -198,9 +198,13 @@ public class DistCpUtils {
                               EnumSet<FileAttribute> attributes,
                               boolean preserveRawXattrs) throws IOException {
 
-    FileStatus targetFileStatus = targetFS.getFileStatus(path);
-    String group = targetFileStatus.getGroup();
-    String user = targetFileStatus.getOwner();
+    // If not preserving anything from FileStatus, don't bother fetching it.
+    FileStatus targetFileStatus = attributes.isEmpty() ? null :
+        targetFS.getFileStatus(path);
+    String group = targetFileStatus == null ? null :
+        targetFileStatus.getGroup();
+    String user = targetFileStatus == null ? null :
+        targetFileStatus.getOwner();
     boolean chown = false;
 
     if (attributes.contains(FileAttribute.ACL)) {
@@ -267,7 +271,7 @@ public class DistCpUtils {
    *
    * @param fileSystem FileSystem containing the file
    * @param fileStatus FileStatus of file
-   * @return List<AclEntry> containing full logical ACL
+   * @return List containing full logical ACL
    * @throws IOException if there is an I/O error
    */
   public static List<AclEntry> getAcl(FileSystem fileSystem,
@@ -282,12 +286,92 @@ public class DistCpUtils {
    * 
    * @param fileSystem FileSystem containing the file
    * @param path file path
-   * @return Map<String, byte[]> containing all xAttrs
+   * @return Map containing all xAttrs
    * @throws IOException if there is an I/O error
    */
   public static Map<String, byte[]> getXAttrs(FileSystem fileSystem,
       Path path) throws IOException {
     return fileSystem.getXAttrs(path);
+  }
+
+  /**
+   * Converts FileStatus to a list of CopyListingFileStatus.
+   * The resulted list contains either one CopyListingFileStatus per chunk of
+   * file-blocks (if file-size exceeds blockSize * blocksPerChunk, and there
+   * are more blocks in the file than blocksperChunk), or a single
+   * CopyListingFileStatus for the entire file (if file-size is too small to
+   * split).
+   * If preserving ACLs, populates the CopyListingFileStatus with the ACLs.
+   * If preserving XAttrs, populates the CopyListingFileStatus with the XAttrs.
+   *
+   * @param fileSystem FileSystem containing the file
+   * @param fileStatus FileStatus of file
+   * @param preserveAcls boolean true if preserving ACLs
+   * @param preserveXAttrs boolean true if preserving XAttrs
+   * @param preserveRawXAttrs boolean true if preserving raw.* XAttrs
+   * @param blocksPerChunk size of chunks when copying chunks in parallel
+   * @return list of CopyListingFileStatus
+   * @throws IOException if there is an I/O error
+   */
+  public static LinkedList<CopyListingFileStatus> toCopyListingFileStatus(
+      FileSystem fileSystem, FileStatus fileStatus, boolean preserveAcls,
+      boolean preserveXAttrs, boolean preserveRawXAttrs, int blocksPerChunk)
+          throws IOException {
+    LinkedList<CopyListingFileStatus> copyListingFileStatus =
+        new LinkedList<CopyListingFileStatus>();
+
+    final CopyListingFileStatus clfs = toCopyListingFileStatusHelper(
+        fileSystem, fileStatus, preserveAcls,
+        preserveXAttrs, preserveRawXAttrs,
+        0, fileStatus.getLen());
+    final long blockSize = fileStatus.getBlockSize();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("toCopyListing: " + fileStatus + " chunkSize: "
+          + blocksPerChunk + " isDFS: " +
+          (fileSystem instanceof DistributedFileSystem));
+    }
+    if ((blocksPerChunk > 0) &&
+        !fileStatus.isDirectory() &&
+        (fileStatus.getLen() > blockSize * blocksPerChunk)) {
+      // split only when the file size is larger than the intended chunk size
+      final BlockLocation[] blockLocations;
+      blockLocations = fileSystem.getFileBlockLocations(fileStatus, 0,
+            fileStatus.getLen());
+
+      int numBlocks = blockLocations.length;
+      long curPos = 0;
+      if (numBlocks <= blocksPerChunk) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("  add file " + clfs);
+        }
+        copyListingFileStatus.add(clfs);
+      } else {
+        int i = 0;
+        while (i < numBlocks) {
+          long curLength = 0;
+          for (int j = 0; j < blocksPerChunk && i < numBlocks; ++j, ++i) {
+            curLength += blockLocations[i].getLength();
+          }
+          if (curLength > 0) {
+            CopyListingFileStatus clfs1 = new CopyListingFileStatus(clfs);
+            clfs1.setChunkOffset(curPos);
+            clfs1.setChunkLength(curLength);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("  add file chunk " + clfs1);
+            }
+            copyListingFileStatus.add(clfs1);
+            curPos += curLength;
+          }
+        }
+      }
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("  add file/dir " + clfs);
+      }
+      copyListingFileStatus.add(clfs);
+    }
+
+    return copyListingFileStatus;
   }
 
   /**
@@ -300,13 +384,17 @@ public class DistCpUtils {
    * @param preserveAcls boolean true if preserving ACLs
    * @param preserveXAttrs boolean true if preserving XAttrs
    * @param preserveRawXAttrs boolean true if preserving raw.* XAttrs
+   * @param chunkOffset chunk offset in bytes
+   * @param chunkLength chunk length in bytes
+   * @return CopyListingFileStatus
    * @throws IOException if there is an I/O error
    */
-  public static CopyListingFileStatus toCopyListingFileStatus(
+  public static CopyListingFileStatus toCopyListingFileStatusHelper(
       FileSystem fileSystem, FileStatus fileStatus, boolean preserveAcls, 
-      boolean preserveXAttrs, boolean preserveRawXAttrs) throws IOException {
+      boolean preserveXAttrs, boolean preserveRawXAttrs,
+      long chunkOffset, long chunkLength) throws IOException {
     CopyListingFileStatus copyListingFileStatus =
-      new CopyListingFileStatus(fileStatus);
+        new CopyListingFileStatus(fileStatus, chunkOffset, chunkLength);
     if (preserveAcls) {
       FsPermission perm = fileStatus.getPermission();
       if (perm.getAclBit()) {
@@ -463,5 +551,20 @@ public class DistCpUtils {
     }
     return (sourceChecksum == null || targetChecksum == null ||
             sourceChecksum.equals(targetChecksum));
+  }
+
+  /*
+   * Return the Path for a given chunk.
+   * Used when splitting large file into chunks to copy in parallel.
+   * @param targetFile path to target file
+   * @param srcFileStatus source file status in copy listing
+   * @return path to the chunk specified by the parameters to store
+   * in target cluster temporarily
+   */
+  public static Path getSplitChunkPath(Path targetFile,
+      CopyListingFileStatus srcFileStatus) {
+    return new Path(targetFile.toString()
+        + ".____distcpSplit____" + srcFileStatus.getChunkOffset()
+        + "." + srcFileStatus.getChunkLength());
   }
 }

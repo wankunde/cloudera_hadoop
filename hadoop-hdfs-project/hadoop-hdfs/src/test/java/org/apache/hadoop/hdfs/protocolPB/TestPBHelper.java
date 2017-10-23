@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -637,5 +639,55 @@ public class TestPBHelper {
     AclStatus s = new AclStatus.Builder().owner("foo").group("bar").addEntry(e)
         .build();
     Assert.assertEquals(s, PBHelper.convert(PBHelper.convert(s)));
+  }
+
+  @Test
+  public void testDataNodeInfoPBHelper() {
+    DatanodeID id = DFSTestUtil.getLocalDatanodeID();
+    DatanodeInfo dnInfos0 = new DatanodeInfo(id);
+    dnInfos0.setCapacity(3500L);
+    dnInfos0.setDfsUsed(1000L);
+    dnInfos0.setNonDfsUsed(2000L);
+    dnInfos0.setRemaining(500L);
+    HdfsProtos.DatanodeInfoProto dnproto = PBHelper.convert(dnInfos0);
+    DatanodeInfo dnInfos1 = PBHelper.convert(dnproto);
+    compare(dnInfos0, dnInfos1);
+    assertEquals(dnInfos0.getNonDfsUsed(), dnInfos1.getNonDfsUsed());
+
+    //Testing without nonDfs field
+    HdfsProtos.DatanodeInfoProto.Builder b =
+        HdfsProtos.DatanodeInfoProto.newBuilder();
+    b.setId(PBHelper.convert(id)).setCapacity(3500L).setDfsUsed(1000L)
+        .setRemaining(500L);
+    DatanodeInfo dnInfos3 = PBHelper.convert(b.build());
+    assertEquals(dnInfos0.getNonDfsUsed(), dnInfos3.getNonDfsUsed());
+  }
+
+  /**
+   * Test case for old namenode where the namenode doesn't support returning
+   * keyProviderUri.
+   */
+  @Test
+  public void testFSServerDefaultsHelper() {
+    HdfsProtos.FsServerDefaultsProto.Builder b =
+        HdfsProtos.FsServerDefaultsProto.newBuilder();
+    b.setBlockSize(DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
+    b.setBytesPerChecksum(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
+    b.setWritePacketSize(
+        DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
+    b.setReplication(DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+    b.setFileBufferSize(DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
+    b.setEncryptDataTransfer(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT);
+    b.setTrashInterval(DFSConfigKeys.FS_TRASH_INTERVAL_DEFAULT);
+    b.setChecksumType(HdfsProtos.ChecksumTypeProto.valueOf(DataChecksum.Type
+        .valueOf(DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT).id));
+    HdfsProtos.FsServerDefaultsProto proto = b.build();
+
+    Assert.assertFalse("KeyProvider uri is not supported",
+        proto.hasKeyProviderUri());
+    FsServerDefaults fsServerDefaults = PBHelper.convert(proto);
+    Assert.assertNotNull("FsServerDefaults is null", fsServerDefaults);
+    Assert.assertNull("KeyProviderUri should be null",
+        fsServerDefaults.getKeyProviderUri());
   }
 }

@@ -1,7 +1,7 @@
 From c23b26d96d0632e507755ac5aae8481136cee724 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 12 Mar 2015 12:00:18 -0700
-Subject: [PATCH 480/924] HDFS-7722. DataNode#checkDiskError should also
+Subject: [PATCH 0480/2639] HDFS-7722. DataNode#checkDiskError should also
  remove Storage when error is found. (Lei Xu via
  Colin P. McCabe) (cherry picked from commit
  7455412a241486a86ad4232f2eaa666c6454329e) (cherry

@@ -1,7 +1,7 @@
 From 59141878c8a9df3f28ffbea1df1a8108018a89b3 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 6 Jan 2014 15:40:21 -0800
-Subject: [PATCH 121/924] MR1: MAPREDUCE-3310. Addendum fixing javadocs
+Subject: [PATCH 0121/2639] MR1: MAPREDUCE-3310. Addendum fixing javadocs
  warnings (tucu)
 
 (cherry picked from commit 820a059a60f6eb42887db77df0286a8d2695b6b4)

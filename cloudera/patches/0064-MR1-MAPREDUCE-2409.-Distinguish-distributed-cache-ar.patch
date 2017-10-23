@@ -1,9 +1,9 @@
 From 95f4109fa33e5f1e1096ac4386d619c062f93c66 Mon Sep 17 00:00:00 2001
 From: Christopher Douglas <cdouglas@apache.org>
 Date: Thu, 31 Mar 2011 08:12:48 +0000
-Subject: [PATCH 064/924] MR1: MAPREDUCE-2409. Distinguish distributed cache
- artifacts localized as files, archives. Contributed
- by Siddharth Seth
+Subject: [PATCH 0064/2639] MR1: MAPREDUCE-2409. Distinguish distributed cache
+ artifacts localized as files, archives.
+ Contributed by Siddharth Seth
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-0.20-security@1087209 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 093cf31c10a2d05fd82ec9406ccb8e4b20a582e0)

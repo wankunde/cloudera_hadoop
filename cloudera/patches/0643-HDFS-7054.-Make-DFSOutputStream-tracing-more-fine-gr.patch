@@ -1,7 +1,7 @@
 From e1a36e0c41ed276a7c718b9d75e60fcfbc5c240c Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 8 Jul 2015 19:13:49 -0700
-Subject: [PATCH 643/924] HDFS-7054. Make DFSOutputStream tracing more
+Subject: [PATCH 0643/2639] HDFS-7054. Make DFSOutputStream tracing more
  fine-grained (cmccabe)
 
 Conflicts:

@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -74,18 +75,21 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryScopeProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryTypeProto;
@@ -93,6 +97,7 @@ import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.FsActionPro
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
@@ -106,6 +111,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Datano
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeStorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEditsFromTxidResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.OpenFilesBatchResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
@@ -125,6 +131,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDele
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ReencryptActionProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ReencryptionStateProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ZoneReencryptionStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -162,6 +171,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
@@ -172,6 +182,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypesProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ZoneEncryptionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.InotifyProtos;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
@@ -228,6 +239,7 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.base.Preconditions;
@@ -630,19 +642,32 @@ public class PBHelper {
     case DECOMMISSION_INPROGRESS: 
         return DatanodeInfoProto.AdminState.DECOMMISSION_INPROGRESS;
     case DECOMMISSIONED: return DatanodeInfoProto.AdminState.DECOMMISSIONED;
+    case ENTERING_MAINTENANCE:
+        return DatanodeInfoProto.AdminState.ENTERING_MAINTENANCE;
+    case IN_MAINTENANCE:
+        return DatanodeInfoProto.AdminState.IN_MAINTENANCE;
     default: return DatanodeInfoProto.AdminState.NORMAL;
     }
   }
   
   static public DatanodeInfo convert(DatanodeInfoProto di) {
-    if (di == null) return null;
-    return new DatanodeInfo(
-        PBHelper.convert(di.getId()),
-        di.hasLocation() ? di.getLocation() : null , 
-        di.getCapacity(),  di.getDfsUsed(),  di.getRemaining(),
-        di.getBlockPoolUsed(), di.getCacheCapacity(), di.getCacheUsed(),
-        di.getLastUpdate(), di.getXceiverCount(),
-        PBHelper.convert(di.getAdminState())); 
+    if (di == null) {
+      return null;
+    }
+    DatanodeInfo dinfo = new DatanodeInfo(PBHelper.convert(di.getId()),
+        di.hasLocation() ? di.getLocation() : null, di.getCapacity(),
+        di.getDfsUsed(), di.getRemaining(), di.getBlockPoolUsed(),
+        di.getCacheCapacity(), di.getCacheUsed(), di.getLastUpdate(),
+        di.getXceiverCount(), PBHelper.convert(di.getAdminState()),
+        di.hasUpgradeDomain() ? di.getUpgradeDomain() : null);
+    if (di.hasNonDfsUsed()) {
+      dinfo.setNonDfsUsed(di.getNonDfsUsed());
+    } else {
+      // use the legacy way for older datanodes
+      long nonDFSUsed = di.getCapacity() - di.getDfsUsed() - di.getRemaining();
+      dinfo.setNonDfsUsed(nonDFSUsed < 0 ? 0 : nonDFSUsed);
+    }
+    return dinfo;
   }
   
   static public DatanodeInfoProto convertDatanodeInfo(DatanodeInfo di) {
@@ -694,10 +719,14 @@ public class PBHelper {
     if (info.getNetworkLocation() != null) {
       builder.setLocation(info.getNetworkLocation());
     }
+    if (info.getUpgradeDomain() != null) {
+      builder.setUpgradeDomain(info.getUpgradeDomain());
+    }
     builder
         .setId(PBHelper.convert((DatanodeID)info))
         .setCapacity(info.getCapacity())
         .setDfsUsed(info.getDfsUsed())
+        .setNonDfsUsed(info.getNonDfsUsed())
         .setRemaining(info.getRemaining())
         .setBlockPoolUsed(info.getBlockPoolUsed())
         .setCacheCapacity(info.getCacheCapacity())
@@ -750,6 +779,10 @@ public class PBHelper {
       return AdminStates.DECOMMISSION_INPROGRESS;
     case DECOMMISSIONED:
       return AdminStates.DECOMMISSIONED;
+    case ENTERING_MAINTENANCE:
+      return AdminStates.ENTERING_MAINTENANCE;
+    case IN_MAINTENANCE:
+      return AdminStates.IN_MAINTENANCE;
     case NORMAL:
     default:
       return AdminStates.NORMAL;
@@ -1334,7 +1367,8 @@ public class PBHelper {
         fs.getFileBufferSize(),
         fs.getEncryptDataTransfer(),
         fs.getTrashInterval(),
-        PBHelper.convert(fs.getChecksumType()));
+        PBHelper.convert(fs.getChecksumType()),
+        fs.hasKeyProviderUri() ? fs.getKeyProviderUri() : null);
   }
   
   public static FsServerDefaultsProto convert(FsServerDefaults fs) {
@@ -1348,6 +1382,7 @@ public class PBHelper {
       .setEncryptDataTransfer(fs.getEncryptDataTransfer())
       .setTrashInterval(fs.getTrashInterval())
       .setChecksumType(PBHelper.convert(fs.getChecksumType()))
+      .setKeyProviderUri(fs.getKeyProviderUri())
       .build();
   }
   
@@ -1643,7 +1678,29 @@ public class PBHelper {
       throw new IllegalArgumentException("Unexpected SafeModeAction :" + a);
     }
   }
-  
+
+  public static ReencryptActionProto convert(ReencryptAction a) {
+    switch (a) {
+    case CANCEL:
+      return ReencryptActionProto.CANCEL_REENCRYPT;
+    case START:
+      return ReencryptActionProto.START_REENCRYPT;
+    default:
+      throw new IllegalArgumentException("Unexpected value: " + a);
+    }
+  }
+
+  public static ReencryptAction convert(ReencryptActionProto a) {
+    switch (a) {
+    case CANCEL_REENCRYPT:
+      return ReencryptAction.CANCEL;
+    case START_REENCRYPT:
+      return ReencryptAction.START;
+    default:
+      throw new IllegalArgumentException("Unexpected value: " + a);
+    }
+  }
+
   public static RollingUpgradeActionProto convert(RollingUpgradeAction a) {
     switch (a) {
     case QUERY:
@@ -1720,7 +1777,9 @@ public class PBHelper {
     if (cs == null) return null;
     return new ContentSummary(
       cs.getLength(), cs.getFileCount(), cs.getDirectoryCount(), cs.getQuota(),
-      cs.getSpaceConsumed(), cs.getSpaceQuota());
+      cs.getSpaceConsumed(), cs.getSpaceQuota(), cs.getSnapshotLength(),
+      cs.getSnapshotFileCount(), cs.getSnapshotDirectoryCount(),
+      cs.getSnapshotSpaceConsumed());
   }
   
   public static ContentSummaryProto convert(ContentSummary cs) {
@@ -1729,6 +1788,10 @@ public class PBHelper {
         setLength(cs.getLength()).
         setFileCount(cs.getFileCount()).
         setDirectoryCount(cs.getDirectoryCount()).
+        setSnapshotLength(cs.getSnapshotLength()).
+        setSnapshotFileCount(cs.getSnapshotFileCount()).
+        setSnapshotDirectoryCount(cs.getSnapshotDirectoryCount()).
+        setSnapshotSpaceConsumed(cs.getSnapshotSpaceConsumed()).
         setQuota(cs.getQuota()).
         setSpaceConsumed(cs.getSpaceConsumed()).
         setSpaceQuota(cs.getSpaceQuota()).
@@ -1868,17 +1931,19 @@ public class PBHelper {
         .setBlockPoolUsed(r.getBlockPoolUsed()).setCapacity(r.getCapacity())
         .setDfsUsed(r.getDfsUsed()).setRemaining(r.getRemaining())
         .setStorageUuid(r.getStorage().getStorageID())
-        .setStorage(convert(r.getStorage()));
+        .setStorage(convert(r.getStorage()))
+        .setNonDfsUsed(r.getNonDfsUsed());
     return builder.build();
   }
 
   public static StorageReport convert(StorageReportProto p) {
-    return new StorageReport(
-        p.hasStorage() ?
-            convert(p.getStorage()) :
-            new DatanodeStorage(p.getStorageUuid()),
-        p.getFailed(), p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
-        p.getBlockPoolUsed());
+    long nonDfsUsed = p.hasNonDfsUsed() ?
+        p.getNonDfsUsed() :
+        p.getCapacity() - p.getDfsUsed() - p.getRemaining();
+    return new StorageReport(p.hasStorage() ?
+        convert(p.getStorage()) :
+        new DatanodeStorage(p.getStorageUuid()), p.getFailed(), p.getCapacity(),
+        p.getDfsUsed(), p.getRemaining(), p.getBlockPoolUsed(), nonDfsUsed);
   }
 
   public static StorageReport[] convertStorageReports(
@@ -2010,7 +2075,7 @@ public class PBHelper {
     String toSnapshot = reportProto.getToSnapshot();
     List<SnapshotDiffReportEntryProto> list = reportProto
         .getDiffReportEntriesList();
-    List<DiffReportEntry> entries = new ArrayList<DiffReportEntry>();
+    List<DiffReportEntry> entries = new ChunkedArrayList<>();
     for (SnapshotDiffReportEntryProto entryProto : list) {
       DiffReportEntry entry = convert(entryProto);
       if (entry != null)
@@ -2025,8 +2090,7 @@ public class PBHelper {
       return null;
     }
     List<DiffReportEntry> entries = report.getDiffList();
-    List<SnapshotDiffReportEntryProto> entryProtos = 
-        new ArrayList<SnapshotDiffReportEntryProto>();
+    List<SnapshotDiffReportEntryProto> entryProtos = new ChunkedArrayList<>();
     for (DiffReportEntry entry : entries) {
       SnapshotDiffReportEntryProto entryProto = convert(entry);
       if (entryProto != null)
@@ -2311,15 +2375,24 @@ public class PBHelper {
 
   public static AclStatus convert(GetAclStatusResponseProto e) {
     AclStatusProto r = e.getResult();
-    return new AclStatus.Builder().owner(r.getOwner()).group(r.getGroup())
-        .stickyBit(r.getSticky())
-        .addEntries(convertAclEntry(r.getEntriesList())).build();
+    AclStatus.Builder builder = new AclStatus.Builder();
+    builder.owner(r.getOwner()).group(r.getGroup()).stickyBit(r.getSticky())
+        .addEntries(convertAclEntry(r.getEntriesList()));
+    if (r.hasPermission()) {
+      builder.setPermission(convert(r.getPermission()));
+    }
+    return builder.build();
   }
 
   public static GetAclStatusResponseProto convert(AclStatus e) {
-    AclStatusProto r = AclStatusProto.newBuilder().setOwner(e.getOwner())
+    AclStatusProto.Builder builder = AclStatusProto.newBuilder();
+    builder.setOwner(e.getOwner())
         .setGroup(e.getGroup()).setSticky(e.isStickyBit())
-        .addAllEntries(convertAclEntryProto(e.getEntries())).build();
+        .addAllEntries(convertAclEntryProto(e.getEntries()));
+    if (e.getPermission() != null) {
+      builder.setPermission(convert(e.getPermission()));
+    }
+    AclStatusProto r = builder.build();
     return GetAclStatusResponseProto.newBuilder().setResult(r).build();
   }
   
@@ -2458,6 +2531,22 @@ public class PBHelper {
         convert(proto.getSuite()), convert(proto.getCryptoProtocolVersion()),
         proto.getKeyName());
   }
+
+  public static OpenFilesBatchResponseProto convert(OpenFileEntry
+      openFileEntry) {
+    return OpenFilesBatchResponseProto.newBuilder()
+        .setId(openFileEntry.getId())
+        .setPath(openFileEntry.getFilePath())
+        .setClientName(openFileEntry.getClientName())
+        .setClientMachine(openFileEntry.getClientMachine())
+        .build();
+  }
+
+  public static OpenFileEntry convert(OpenFilesBatchResponseProto proto) {
+    return new OpenFileEntry(proto.getId(), proto.getPath(),
+        proto.getClientName(), proto.getClientMachine());
+  }
+
 
   public static ShortCircuitShmSlotProto convert(SlotId slotId) {
     return ShortCircuitShmSlotProto.newBuilder().
@@ -2931,16 +3020,24 @@ public class PBHelper {
         .build();
   }
 
-  public static HdfsProtos.ZoneEncryptionInfoProto convert(
-      CipherSuite suite, CryptoProtocolVersion version, String keyName) {
+  public static ZoneEncryptionInfoProto convert(CipherSuite suite,
+      CryptoProtocolVersion version, String keyName) {
+    return convert(suite, version, keyName, null);
+  }
+
+  public static ZoneEncryptionInfoProto convert(CipherSuite suite,
+      CryptoProtocolVersion version, String keyName,
+      ReencryptionInfoProto proto) {
     if (suite == null || version == null || keyName == null) {
       return null;
     }
-    return HdfsProtos.ZoneEncryptionInfoProto.newBuilder()
-        .setSuite(convert(suite))
-        .setCryptoProtocolVersion(convert(version))
-        .setKeyName(keyName)
-        .build();
+    ZoneEncryptionInfoProto.Builder builder =
+        ZoneEncryptionInfoProto.newBuilder().setSuite(convert(suite))
+            .setCryptoProtocolVersion(convert(version)).setKeyName(keyName);
+    if (proto != null) {
+      builder.setReencryptionProto(proto);
+    }
+    return builder.build();
   }
 
   public static FileEncryptionInfo convert(
@@ -2972,9 +3069,95 @@ public class PBHelper {
         ezKeyVersionName);
   }
 
+  public static ReencryptionInfoProto convert(String ezkvn, Long submissionTime,
+      boolean isCanceled, long numReencrypted, long numFailures,
+      Long completionTime, String lastFile) {
+    if (ezkvn == null || submissionTime == null) {
+      return null;
+    }
+    ReencryptionInfoProto.Builder builder =
+        ReencryptionInfoProto.newBuilder().setEzKeyVersionName(ezkvn)
+            .setSubmissionTime(submissionTime).setCanceled(isCanceled)
+            .setNumReencrypted(numReencrypted).setNumFailures(numFailures);
+    if (completionTime != null) {
+      builder.setCompletionTime(completionTime);
+    }
+    if (lastFile != null) {
+      builder.setLastFile(lastFile);
+    }
+    return builder.build();
+  }
+
+  public static ZoneReencryptionStatusProto convert(ZoneReencryptionStatus zs) {
+    ZoneReencryptionStatusProto.Builder builder =
+        ZoneReencryptionStatusProto.newBuilder()
+            .setId(zs.getId())
+            .setPath(zs.getZoneName())
+            .setEzKeyVersionName(zs.getEzKeyVersionName())
+            .setSubmissionTime(zs.getSubmissionTime())
+            .setCanceled(zs.isCanceled())
+            .setNumReencrypted(zs.getFilesReencrypted())
+            .setNumFailures(zs.getNumReencryptionFailures());
+    switch (zs.getState()) {
+    case Submitted:
+      builder.setState(ReencryptionStateProto.SUBMITTED);
+      break;
+    case Processing:
+      builder.setState(ReencryptionStateProto.PROCESSING);
+      break;
+    case Completed:
+      builder.setState(ReencryptionStateProto.COMPLETED);
+      break;
+    default:
+      throw new IllegalArgumentException("Unknown state " + zs.getState());
+    }
+    final long completion = zs.getCompletionTime();
+    if (completion != 0) {
+      builder.setCompletionTime(completion);
+    }
+    final String file = zs.getLastCheckpointFile();
+    if (file != null) {
+      builder.setLastFile(file);
+    }
+    return builder.build();
+  }
+
+  public static ZoneReencryptionStatus convert(
+      ZoneReencryptionStatusProto proto) {
+    ZoneReencryptionStatus.State state;
+    switch (proto.getState()) {
+    case SUBMITTED:
+      state = ZoneReencryptionStatus.State.Submitted;
+      break;
+    case PROCESSING:
+      state = ZoneReencryptionStatus.State.Processing;
+      break;
+    case COMPLETED:
+      state = ZoneReencryptionStatus.State.Completed;
+      break;
+    default:
+      throw new IllegalArgumentException("Unknown state " + proto.getState());
+    }
+    ZoneReencryptionStatus.Builder builder = new ZoneReencryptionStatus.
+        Builder().
+        id(proto.getId()).zoneName(proto.getPath()).state(state)
+        .ezKeyVersionName(proto.getEzKeyVersionName())
+        .submissionTime(proto.getSubmissionTime()).canceled(proto.getCanceled())
+        .filesReencrypted(proto.getNumReencrypted())
+        .fileReencryptionFailures(proto.getNumFailures());
+    if (proto.hasCompletionTime()) {
+      builder.completionTime(proto.getCompletionTime());
+    }
+    if (proto.hasLastFile()) {
+      builder.lastCheckpointFile(proto.getLastFile());
+    }
+    return builder.build();
+  }
+
   public static BlockReportContext convert(BlockReportContextProto proto) {
     return new BlockReportContext(proto.getTotalRpcs(),
-        proto.getCurRpc(), proto.getId(), proto.getLeaseId());
+        proto.getCurRpc(), proto.getId(), proto.getLeaseId(),
+        proto.getSorted());
   }
 
   public static BlockReportContextProto convert(BlockReportContext context) {
@@ -2983,6 +3166,7 @@ public class PBHelper {
         setCurRpc(context.getCurRpc()).
         setId(context.getReportId()).
         setLeaseId(context.getLeaseId()).
+        setSorted(context.isSorted()).
         build();
   }
 
@@ -3007,4 +3191,28 @@ public class PBHelper {
     return targetPinnings;
   }
 
+  public static EnumSet<AddBlockFlag> convertAddBlockFlags(
+      List<AddBlockFlagProto> addBlockFlags) {
+    EnumSet<AddBlockFlag> flags =
+        EnumSet.noneOf(AddBlockFlag.class);
+    for (AddBlockFlagProto af : addBlockFlags) {
+      AddBlockFlag flag = AddBlockFlag.valueOf((short)af.getNumber());
+      if (flag != null) {
+        flags.add(flag);
+      }
+    }
+    return flags;
+  }
+
+  public static List<AddBlockFlagProto> convertAddBlockFlags(
+      EnumSet<AddBlockFlag> flags) {
+    List<AddBlockFlagProto> ret = new ArrayList<>();
+    for (AddBlockFlag flag : flags) {
+      AddBlockFlagProto abfp = AddBlockFlagProto.valueOf(flag.getMode());
+      if (abfp != null) {
+        ret.add(abfp);
+      }
+    }
+    return ret;
+  }
 }

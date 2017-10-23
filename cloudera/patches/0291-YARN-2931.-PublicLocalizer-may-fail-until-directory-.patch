@@ -1,10 +1,10 @@
 From fd60a0bcf4d8daf6a7d14987aa5825ae7dceb102 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Mon, 8 Dec 2014 22:18:32 -0800
-Subject: [PATCH 291/924] YARN-2931. PublicLocalizer may fail until directory
- is initialized by LocalizeRunner. (Anubhav Dhoot
- via kasha) (cherry picked from commit
- db73cc9124bb8511c1626ba40d3fad81e980e44f)
+Subject: [PATCH 0291/2639] YARN-2931. PublicLocalizer may fail until
+ directory is initialized by LocalizeRunner.
+ (Anubhav Dhoot via kasha) (cherry picked from
+ commit db73cc9124bb8511c1626ba40d3fad81e980e44f)
 
 (cherry picked from commit 9d72b0282f2897489bbbe138c7a0d9e85a1ce2b8)
 

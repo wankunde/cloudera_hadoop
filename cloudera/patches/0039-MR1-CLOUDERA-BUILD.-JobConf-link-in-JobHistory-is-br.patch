@@ -1,7 +1,7 @@
 From a1143b35e892ddac5e84db781bf18b1f1d54194f Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Mon, 4 Mar 2013 18:55:17 -0800
-Subject: [PATCH 039/924] MR1: CLOUDERA-BUILD. JobConf link in JobHistory is
+Subject: [PATCH 0039/2639] MR1: CLOUDERA-BUILD. JobConf link in JobHistory is
  broken
 
 Reason: JobHistory is broken

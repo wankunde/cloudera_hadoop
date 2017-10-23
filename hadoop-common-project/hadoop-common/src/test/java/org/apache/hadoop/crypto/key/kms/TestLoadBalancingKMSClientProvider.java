@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms;
 
+import static org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -25,11 +26,15 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URI;
+import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.Options;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -162,5 +167,157 @@ public class TestLoadBalancingKMSClientProvider {
     } catch (Exception e) {
       assertTrue(e instanceof IOException);
     }
+  }
+
+  // copied from HttpExceptionUtils:
+
+  // trick, riding on generics to throw an undeclared exception
+
+  private static void throwEx(Throwable ex) {
+    TestLoadBalancingKMSClientProvider.<RuntimeException>throwException(ex);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <E extends Throwable> void throwException(Throwable ex)
+      throws E {
+    throw (E) ex;
+  }
+
+  private class MyKMSClientProvider extends KMSClientProvider {
+    public MyKMSClientProvider(URI uri, Configuration conf) throws IOException {
+      super(uri, conf);
+    }
+
+    @Override
+    public EncryptedKeyVersion generateEncryptedKey(
+        final String encryptionKeyName)
+        throws IOException, GeneralSecurityException {
+      throwEx(new AuthenticationException("bar"));
+      return null;
+    }
+
+    @Override
+    public KeyVersion decryptEncryptedKey(
+        final EncryptedKeyVersion encryptedKeyVersion) throws IOException,
+        GeneralSecurityException {
+      throwEx(new AuthenticationException("bar"));
+      return null;
+    }
+
+    @Override
+    public KeyVersion createKey(final String name, final Options options)
+        throws NoSuchAlgorithmException, IOException {
+      throwEx(new AuthenticationException("bar"));
+      return null;
+    }
+
+    @Override
+    public KeyVersion rollNewVersion(final String name)
+        throws NoSuchAlgorithmException, IOException {
+      throwEx(new AuthenticationException("bar"));
+      return null;
+    }
+  }
+
+  @Test
+  public void testClassCastException() throws Exception {
+    Configuration conf = new Configuration();
+    KMSClientProvider p1 = new MyKMSClientProvider(
+        new URI("kms://http@host1/kms/foo"), conf);
+    LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {p1}, 0, conf);
+    try {
+      kp.generateEncryptedKey("foo");
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause().getClass().getName().contains(
+          "AuthenticationException"));
+    }
+
+    try {
+      final KeyProviderCryptoExtension.EncryptedKeyVersion
+          encryptedKeyVersion =
+          mock(KeyProviderCryptoExtension.EncryptedKeyVersion.class);
+      kp.decryptEncryptedKey(encryptedKeyVersion);
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause().getClass().getName().contains(
+          "AuthenticationException"));
+    }
+
+    try {
+      final KeyProvider.Options options = KeyProvider.options(conf);
+      kp.createKey("foo", options);
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause().getClass().getName().contains(
+          "AuthenticationException"));
+    }
+
+    try {
+      kp.rollNewVersion("foo");
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause().getClass().getName().contains(
+          "AuthenticationException"));
+    }
+  }
+
+  /**
+   * tests {@link LoadBalancingKMSClientProvider#warmUpEncryptedKeys(String...)}
+   * error handling in case when all the providers throws {@link IOException}.
+   * @throws Exception
+   */
+  @Test
+  public void testWarmUpEncryptedKeysWhenAllProvidersFail() throws Exception {
+    Configuration conf = new Configuration();
+    KMSClientProvider p1 = mock(KMSClientProvider.class);
+    String keyName = "key1";
+    Mockito.doThrow(new IOException(new AuthorizationException("p1"))).when(p1)
+        .warmUpEncryptedKeys(Mockito.anyString());
+    KMSClientProvider p2 = mock(KMSClientProvider.class);
+    Mockito.doThrow(new IOException(new AuthorizationException("p2"))).when(p2)
+        .warmUpEncryptedKeys(Mockito.anyString());
+
+    when(p1.getKMSUrl()).thenReturn("p1");
+    when(p2.getKMSUrl()).thenReturn("p2");
+
+    LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {p1, p2}, 0, conf);
+    try {
+      kp.warmUpEncryptedKeys(keyName);
+      fail("Should fail since both providers threw IOException");
+    } catch (Exception e) {
+      assertTrue(e.getCause() instanceof IOException);
+    }
+    Mockito.verify(p1, Mockito.times(1)).warmUpEncryptedKeys(keyName);
+    Mockito.verify(p2, Mockito.times(1)).warmUpEncryptedKeys(keyName);
+  }
+
+  /**
+   * tests {@link LoadBalancingKMSClientProvider#warmUpEncryptedKeys(String...)}
+   * error handling in case atleast one provider succeeds.
+   * @throws Exception
+   */
+  @Test
+  public void testWarmUpEncryptedKeysWhenOneProviderSucceeds()
+      throws Exception {
+    Configuration conf = new Configuration();
+    KMSClientProvider p1 = mock(KMSClientProvider.class);
+    String keyName = "key1";
+    Mockito.doThrow(new IOException(new AuthorizationException("p1"))).when(p1)
+        .warmUpEncryptedKeys(Mockito.anyString());
+    KMSClientProvider p2 = mock(KMSClientProvider.class);
+    Mockito.doNothing().when(p2)
+        .warmUpEncryptedKeys(Mockito.anyString());
+
+    when(p1.getKMSUrl()).thenReturn("p1");
+    when(p2.getKMSUrl()).thenReturn("p2");
+
+    LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {p1, p2}, 0, conf);
+    try {
+      kp.warmUpEncryptedKeys(keyName);
+    } catch (Exception e) {
+      fail("Should not throw Exception since p2 doesn't throw Exception");
+    }
+    Mockito.verify(p1, Mockito.times(1)).warmUpEncryptedKeys(keyName);
+    Mockito.verify(p2, Mockito.times(1)).warmUpEncryptedKeys(keyName);
   }
 }

@@ -136,7 +136,7 @@ public class TestReplicationPolicyConsiderLoad {
       // returns false
       for (int i = 0; i < 3; i++) {
         DatanodeDescriptor d = dnManager.getDatanode(dnrList.get(i));
-        dnManager.startDecommission(d);
+        dnManager.getDecomManager().startDecommission(d);
         d.setDecommissioned();
       }
       assertEquals((double)load/3, fsn.getInServiceXceiverAverage(), EPSILON);
@@ -153,7 +153,7 @@ public class TestReplicationPolicyConsiderLoad {
       DatanodeStorageInfo[] targets = namenode.getNamesystem().getBlockManager()
           .getBlockPlacementPolicy().chooseTarget("testFile.txt", 3,
               writerDn, new ArrayList<DatanodeStorageInfo>(), false, null,
-              1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
+              1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
       assertEquals(3, targets.length);
       Set<DatanodeStorageInfo> targetSet = new HashSet<DatanodeStorageInfo>(

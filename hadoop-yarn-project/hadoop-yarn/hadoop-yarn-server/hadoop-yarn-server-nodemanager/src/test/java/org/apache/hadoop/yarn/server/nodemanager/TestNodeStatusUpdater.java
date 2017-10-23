@@ -90,6 +90,7 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -242,8 +243,10 @@ public class TestNodeStatusUpdater {
                 firstContainerID, InetAddress.getByName("localhost")
                     .getCanonicalHostName(), 1234, user, resource,
                 currentTime + 10000, 123, "password".getBytes(), currentTime));
+        Context context = mock(Context.class);
+        when(context.getNMStateStore()).thenReturn(stateStore);
         Container container = new ContainerImpl(conf, mockDispatcher,
-            stateStore, launchContext, null, mockMetrics, containerToken);
+            launchContext, null, mockMetrics, containerToken, context);
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
@@ -272,8 +275,10 @@ public class TestNodeStatusUpdater {
                 secondContainerID, InetAddress.getByName("localhost")
                     .getCanonicalHostName(), 1234, user, resource,
                 currentTime + 10000, 123, "password".getBytes(), currentTime));
+        Context context = mock(Context.class);
+        when(context.getNMStateStore()).thenReturn(stateStore);
         Container container = new ContainerImpl(conf, mockDispatcher,
-            stateStore, launchContext, null, mockMetrics, containerToken);
+            launchContext, null, mockMetrics, containerToken, context);
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end
@@ -433,6 +438,35 @@ public class TestNodeStatusUpdater {
     }
   }
 
+  private class MyNodeStatusUpdater6 extends NodeStatusUpdaterImpl {
+
+    private final long rmStartIntervalMS;
+    private final boolean rmNeverStart;
+    public ResourceTracker resourceTracker;
+    public MyNodeStatusUpdater6(Context context, Dispatcher dispatcher,
+        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
+        long rmStartIntervalMS, boolean rmNeverStart) {
+      super(context, dispatcher, healthChecker, metrics);
+      this.rmStartIntervalMS = rmStartIntervalMS;
+      this.rmNeverStart = rmNeverStart;
+    }
+
+    @Override
+    protected void serviceStart() throws Exception {
+      //record the startup time
+      super.serviceStart();
+    }
+
+    private boolean isTriggered() {
+      return triggered;
+    }
+
+    @Override
+    protected void stopRMProxy() {
+      return;
+    }
+  }
+
   private class MyNodeManager extends NodeManager {
 
     private MyNodeStatusUpdater3 nodeStatusUpdater;
@@ -470,6 +504,8 @@ public class TestNodeStatusUpdater {
 
     @Override
     protected void serviceStop() throws Exception {
+      // Make sure that all containers are started before starting shutdown
+      syncBarrier.await(10000, TimeUnit.MILLISECONDS);
       System.out.println("Called stooppppp");
       super.serviceStop();
       isStopped = true;
@@ -616,14 +652,14 @@ public class TestNodeStatusUpdater {
           <ContainerId>();
       try {
         if (heartBeatID == 0) {
-          Assert.assertEquals(request.getNodeStatus().getContainersStatuses()
-            .size(), 0);
-          Assert.assertEquals(context.getContainers().size(), 0);
+          Assert.assertEquals(0, request.getNodeStatus().getContainersStatuses()
+            .size());
+          Assert.assertEquals(0, context.getContainers().size());
         } else if (heartBeatID == 1) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(statuses.size(), 2);
-          Assert.assertEquals(context.getContainers().size(), 2);
+          Assert.assertEquals(2, statuses.size());
+          Assert.assertEquals(2, context.getContainers().size());
 
           boolean container2Exist = false, container3Exist = false;
           for (ContainerStatus status : statuses) {
@@ -649,8 +685,16 @@ public class TestNodeStatusUpdater {
         } else if (heartBeatID == 2 || heartBeatID == 3) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(statuses.size(), 4);
-          Assert.assertEquals(context.getContainers().size(), 4);
+          if (heartBeatID == 2) {
+            // NM should send completed containers again, since the last
+            // heartbeat is lost.
+            Assert.assertEquals(4, statuses.size());
+          } else {
+            // NM should not send completed containers again, since the last
+            // heartbeat is successful.
+            Assert.assertEquals(2, statuses.size());
+          }
+          Assert.assertEquals(4, context.getContainers().size());
 
           boolean container2Exist = false, container3Exist = false,
               container4Exist = false, container5Exist = false;
@@ -680,8 +724,14 @@ public class TestNodeStatusUpdater {
               container5Exist = true;
             }
           }
-          Assert.assertTrue(container2Exist && container3Exist
-              && container4Exist && container5Exist);
+          if (heartBeatID == 2) {
+            Assert.assertTrue(container2Exist && container3Exist
+                && container4Exist && container5Exist);
+          } else {
+            // NM do not send completed containers again
+            Assert.assertTrue(container2Exist && !container3Exist
+                && container4Exist && !container5Exist);
+          }
 
           if (heartBeatID == 3) {
             finishedContainersPulledByAM.add(containerStatus3.getContainerId());
@@ -689,8 +739,9 @@ public class TestNodeStatusUpdater {
         } else if (heartBeatID == 4) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(statuses.size(), 3);
-          Assert.assertEquals(context.getContainers().size(), 3);
+          Assert.assertEquals(2, statuses.size());
+          // Container 3 is acked by AM, hence removed from context
+          Assert.assertEquals(3, context.getContainers().size());
 
           boolean container3Exist = false;
           for (ContainerStatus status : statuses) {
@@ -874,8 +925,9 @@ public class TestNodeStatusUpdater {
             BuilderUtils.newResource(1024, 1), 0, 123,
             "password".getBytes(), 0);
     Container anyCompletedContainer = new ContainerImpl(conf, null,
-        null, null, null, null,
-        BuilderUtils.newContainerTokenIdentifier(containerToken)) {
+        null, null, null,
+        BuilderUtils.newContainerTokenIdentifier(containerToken),
+        nm.getNMContext()) {
 
       @Override
       public ContainerState getCurrentState() {
@@ -895,8 +947,9 @@ public class TestNodeStatusUpdater {
           1234, "anyUser", BuilderUtils.newResource(1024, 1), 0, 123,
           "password".getBytes(), 0);
     Container runningContainer =
-        new ContainerImpl(conf, null, null, null, null, null,
-          BuilderUtils.newContainerTokenIdentifier(runningContainerToken)) {
+        new ContainerImpl(conf, null, null, null, null,
+          BuilderUtils.newContainerTokenIdentifier(runningContainerToken),
+          nm.getNMContext()) {
           @Override
           public ContainerState getCurrentState() {
             return ContainerState.RUNNING;
@@ -923,15 +976,51 @@ public class TestNodeStatusUpdater {
     nodeStatusUpdater.removeOrTrackCompletedContainersFromContext(ackedContainers);
 
     Set<ContainerId> containerIdSet = new HashSet<ContainerId>();
-    for (ContainerStatus status : nodeStatusUpdater.getContainerStatuses()) {
+    List<ContainerStatus> containerStatuses = nodeStatusUpdater.getContainerStatuses();
+    for (ContainerStatus status : containerStatuses) {
       containerIdSet.add(status.getContainerId());
     }
 
-    Assert.assertTrue(nodeStatusUpdater.getContainerStatuses().size() == 1);
+    Assert.assertEquals(1, containerStatuses.size());
     // completed container is removed;
-    Assert.assertFalse(containerIdSet.contains(anyCompletedContainer));
+    Assert.assertFalse(containerIdSet.contains(cId));
     // running container is not removed;
     Assert.assertTrue(containerIdSet.contains(runningContainerId));
+  }
+
+  @Test(timeout = 10000)
+  public void testCompletedContainersIsRecentlyStopped() throws Exception {
+    NodeManager nm = new NodeManager();
+    nm.init(conf);
+    NodeStatusUpdaterImpl nodeStatusUpdater =
+        (NodeStatusUpdaterImpl) nm.getNodeStatusUpdater();
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    Application completedApp = mock(Application.class);
+    when(completedApp.getApplicationState()).thenReturn(
+        ApplicationState.FINISHED);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 0);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
+    Token containerToken =
+        BuilderUtils.newContainerToken(containerId, "host", 1234, "user",
+            BuilderUtils.newResource(1024, 1), 0, 123,
+            "password".getBytes(), 0);
+    Container completedContainer = new ContainerImpl(conf, null,
+        null, null, null,
+        BuilderUtils.newContainerTokenIdentifier(containerToken),
+        nm.getNMContext()) {
+      @Override
+      public ContainerState getCurrentState() {
+        return ContainerState.COMPLETE;
+      }
+    };
+
+    nm.getNMContext().getApplications().putIfAbsent(appId, completedApp);
+    nm.getNMContext().getContainers().put(containerId, completedContainer);
+
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
+    Assert.assertTrue(nodeStatusUpdater.isContainerRecentlyStopped(
+        containerId));
   }
 
   @Test
@@ -955,8 +1044,9 @@ public class TestNodeStatusUpdater {
             BuilderUtils.newResource(1024, 1), 0, 123,
             "password".getBytes(), 0);
     Container anyCompletedContainer = new ContainerImpl(conf, null,
-        null, null, null, null,
-        BuilderUtils.newContainerTokenIdentifier(containerToken)) {
+        null, null, null,
+        BuilderUtils.newContainerTokenIdentifier(containerToken),
+        nm.getNMContext()) {
 
       @Override
       public ContainerState getCurrentState() {
@@ -973,15 +1063,15 @@ public class TestNodeStatusUpdater {
 
     when(application.getApplicationState()).thenReturn(
         ApplicationState.FINISHING_CONTAINERS_WAIT);
-    // The completed container will be sent one time. Then we will delete it.
+    // The completed container will be saved in case of lost heartbeat.
     Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
-    Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
 
     nm.getNMContext().getContainers().put(cId, anyCompletedContainer);
     nm.getNMContext().getApplications().remove(appId);
-    // The completed container will be sent one time. Then we will delete it.
+    // The completed container will be saved in case of lost heartbeat.
     Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
-    Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
   }
 
   @Test
@@ -1169,6 +1259,59 @@ public class TestNodeStatusUpdater {
           "Recieved SHUTDOWN signal from Resourcemanager ,"
         + "Registration of NodeManager failed, "
         + "Message from ResourceManager: RM Shutting Down Node");
+  }
+
+  @Test (timeout = 100000)
+  public void testNMRMConnectionConf() throws Exception {
+    final long delta = 50000;
+    final long nmRmConnectionWaitMs = 100;
+    final long nmRmRetryInterval = 100;
+    final long connectionWaitMs = -1;
+    final long connectionRetryIntervalMs = 1000;
+    //Waiting for rmStartIntervalMS, RM will be started
+    final long rmStartIntervalMS = 2*1000;
+    conf.setLong(YarnConfiguration.NM_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS,
+        nmRmConnectionWaitMs);
+    conf.setLong(
+        YarnConfiguration.NM_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
+        nmRmRetryInterval);
+    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS,
+        connectionWaitMs);
+    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
+        connectionRetryIntervalMs);
+    conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
+            1);
+    //Test NM try to connect to RM Several times, but finally fail
+    NodeManagerWithCustomNodeStatusUpdater nmWithUpdater;
+    nm = nmWithUpdater = new NodeManagerWithCustomNodeStatusUpdater() {
+      @Override
+      protected NodeStatusUpdater createUpdater(Context context,
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+        NodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater6(
+            context, dispatcher, healthChecker, metrics,
+            rmStartIntervalMS, true);
+        return nodeStatusUpdater;
+      }
+    };
+    nm.init(conf);
+    long waitStartTime = System.currentTimeMillis();
+    try {
+      nm.start();
+      Assert.fail("NM should have failed to start due to RM connect failure");
+    } catch(Exception e) {
+      long t = System.currentTimeMillis();
+      long duration = t - waitStartTime;
+      boolean waitTimeValid = (duration >= nmRmConnectionWaitMs) &&
+          (duration < (nmRmConnectionWaitMs + delta));
+
+      if(!waitTimeValid) {
+        // throw exception if NM doesn't retry long enough
+        throw new Exception("NM should have tried re-connecting to RM during " +
+          "period of at least " + nmRmConnectionWaitMs + " ms, but " +
+          "stopped retrying within " + (nmRmConnectionWaitMs + delta) +
+          " ms: " + e, e);
+      }
+    }
   }
 
   @Test (timeout = 150000)
@@ -1394,6 +1537,9 @@ public class TestNodeStatusUpdater {
       new File("start_file.txt"));
 
     try {
+      // Wait until we start stopping
+      syncBarrier.await(10000, TimeUnit.MILLISECONDS);
+      // Wait until we finish stopping
       syncBarrier.await(10000, TimeUnit.MILLISECONDS);
     } catch (Exception e) {
     }

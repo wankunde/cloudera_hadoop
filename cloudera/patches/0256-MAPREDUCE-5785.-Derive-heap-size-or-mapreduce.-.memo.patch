@@ -1,9 +1,9 @@
 From 482ff51f59c4dbb73d321230e335fc2fe3987de1 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Fri, 21 Nov 2014 15:03:41 -0800
-Subject: [PATCH 256/924] MAPREDUCE-5785. Derive heap size or
- mapreduce.*.memory.mb automatically. (Gera Shegalov
- and Karthik Kambatla via kasha)
+Subject: [PATCH 0256/2639] MAPREDUCE-5785. Derive heap size or
+ mapreduce.*.memory.mb automatically. (Gera
+ Shegalov and Karthik Kambatla via kasha)
 
 (cherry picked from commit a4df9eed059977374c8e889cb85d79e8e514ad30)
 

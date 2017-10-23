@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -100,7 +101,8 @@ public class LogAggregationService extends AbstractService implements
 
   private final ConcurrentMap<ApplicationId, AppLogAggregator> appLogAggregators;
 
-  private final ExecutorService threadPool;
+  @VisibleForTesting
+  ExecutorService threadPool;
   
   public LogAggregationService(Dispatcher dispatcher, Context context,
       DeletionService deletionService, LocalDirsHandlerService dirsHandler) {
@@ -111,10 +113,6 @@ public class LogAggregationService extends AbstractService implements
     this.dirsHandler = dirsHandler;
     this.appLogAggregators =
         new ConcurrentHashMap<ApplicationId, AppLogAggregator>();
-    this.threadPool = Executors.newCachedThreadPool(
-        new ThreadFactoryBuilder()
-          .setNameFormat("LogAggregationService #%d")
-          .build());
   }
 
   protected void serviceInit(Configuration conf) throws Exception {
@@ -124,7 +122,11 @@ public class LogAggregationService extends AbstractService implements
     this.remoteRootLogDirSuffix =
         conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
-
+    int threadPoolSize = getAggregatorThreadPoolSize(conf);
+    this.threadPool = HadoopExecutors.newFixedThreadPool(threadPoolSize,
+        new ThreadFactoryBuilder()
+            .setNameFormat("LogAggregationService #%d")
+            .build());
     super.serviceInit(conf);
   }
 
@@ -176,7 +178,7 @@ public class LogAggregationService extends AbstractService implements
   }
 
   protected FileSystem getFileSystem(Configuration conf) throws IOException {
-    return FileSystem.get(conf);
+    return this.remoteRootLogDir.getFileSystem(conf);
   }
 
   void verifyAndCreateRemoteLogDir(Configuration conf) {
@@ -213,6 +215,21 @@ public class LogAggregationService extends AbstractService implements
                 remoteFS.getWorkingDirectory());
         remoteFS.mkdirs(qualified, new FsPermission(TLDIR_PERMISSIONS));
         remoteFS.setPermission(qualified, new FsPermission(TLDIR_PERMISSIONS));
+
+        UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+        String primaryGroupName = null;
+        try {
+          primaryGroupName = loginUser.getPrimaryGroupName();
+        } catch (IOException e) {
+          LOG.warn("No primary group found. The remote root log directory" +
+              " will be created with the HDFS superuser being its group " +
+              "owner. JobHistoryServer may be unable to read the directory.");
+        }
+        // set owner on the remote directory only if the primary group exists
+        if (primaryGroupName != null) {
+          remoteFS.setOwner(qualified,
+              loginUser.getShortUserName(), primaryGroupName);
+        }
       } catch (IOException e) {
         throw new YarnRuntimeException("Failed to create remoteLogDir ["
             + this.remoteRootLogDir + "]", e);
@@ -361,18 +378,21 @@ public class LogAggregationService extends AbstractService implements
       throw new YarnRuntimeException("Duplicate initApp for " + appId);
     }
     // wait until check for existing aggregator to create dirs
+    YarnRuntimeException appDirException = null;
     try {
       // Create the app dir
       createAppDir(user, appId, userUgi);
     } catch (Exception e) {
+      appLogAggregator.disableLogAggregation();
+      if (!(e instanceof YarnRuntimeException)) {
+        appDirException = new YarnRuntimeException(e);
+      } else {
+        appDirException = (YarnRuntimeException)e;
+      }
       appLogAggregators.remove(appId);
       closeFileSystems(userUgi);
-      if (!(e instanceof YarnRuntimeException)) {
-        e = new YarnRuntimeException(e);
-      }
-      throw (YarnRuntimeException)e;
+      throw appDirException;
     }
-
 
     // TODO Get the user configuration for the list of containers that need log
     // aggregation.
@@ -471,5 +491,27 @@ public class LogAggregationService extends AbstractService implements
   @VisibleForTesting
   public NodeId getNodeId() {
     return this.nodeId;
+  }
+
+
+  private int getAggregatorThreadPoolSize(Configuration conf) {
+    int threadPoolSize;
+    try {
+      threadPoolSize = conf.getInt(YarnConfiguration
+          .NM_LOG_AGGREGATION_THREAD_POOL_SIZE,
+          YarnConfiguration.DEFAULT_NM_LOG_AGGREGATION_THREAD_POOL_SIZE);
+    } catch (NumberFormatException ex) {
+      LOG.warn("Invalid thread pool size. Setting it to the default value " +
+          "in YarnConfiguration");
+      threadPoolSize = YarnConfiguration.
+          DEFAULT_NM_LOG_AGGREGATION_THREAD_POOL_SIZE;
+    }
+    if(threadPoolSize <= 0) {
+      LOG.warn("Invalid thread pool size. Setting it to the default value " +
+          "in YarnConfiguration");
+      threadPoolSize = YarnConfiguration.
+          DEFAULT_NM_LOG_AGGREGATION_THREAD_POOL_SIZE;
+    }
+    return threadPoolSize;
   }
 }

@@ -188,7 +188,8 @@ public class TestDataNodeVolumeFailure {
             new StorageBlockReport(dnStorage, blockList);
     }
     
-    cluster.getNameNodeRpc().blockReport(dnR, bpid, reports, null);
+    cluster.getNameNodeRpc().blockReport(dnR, bpid, reports,
+        new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
 
     // verify number of blocks and files...
     verify(filename, filesize);
@@ -242,9 +243,11 @@ public class TestDataNodeVolumeFailure {
 
     // 2. dn0Vol1 is removed from FsDataset
     FsDatasetSpi<? extends FsVolumeSpi> data = dn0.getFSDataset();
-    for (FsVolumeSpi volume : data.getVolumes()) {
-      assertNotEquals(new File(volume.getBasePath()).getAbsoluteFile(),
-          dn0Vol1.getAbsoluteFile());
+    try (FsDatasetSpi.FsVolumeReferences vols = data.getFsVolumeReferences()) {
+      for (FsVolumeSpi volume : vols) {
+        assertNotEquals(new File(volume.getBasePath()).getAbsoluteFile(),
+            dn0Vol1.getAbsoluteFile());
+      }
     }
 
     // 3. all blocks on dn0Vol1 have been removed.
@@ -476,7 +479,7 @@ public class TestDataNodeVolumeFailure {
   private boolean deteteBlocks(File dir) {
     File [] fileList = dir.listFiles();
     for(File f : fileList) {
-      if(f.getName().startsWith("blk_")) {
+      if(f.getName().startsWith(Block.BLOCK_FILE_PREFIX)) {
         if(!f.delete())
           return false;
         
@@ -505,7 +508,7 @@ public class TestDataNodeVolumeFailure {
                     "test-blockpoolid", block.getBlockId())).
       setBlockToken(lblock.getBlockToken()).
       setStartOffset(0).
-      setLength(-1).
+      setLength(0).
       setVerifyChecksum(true).
       setClientName("TestDataNodeVolumeFailure").
       setDatanodeInfo(datanode).

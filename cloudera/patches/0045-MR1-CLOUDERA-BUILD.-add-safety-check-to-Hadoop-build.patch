@@ -1,7 +1,7 @@
 From 6b484128128a9d10196b2e3978e2e2d723232d93 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Fri, 15 Mar 2013 11:16:19 -0700
-Subject: [PATCH 045/924] MR1: CLOUDERA-BUILD. add safety check to Hadoop
+Subject: [PATCH 0045/2639] MR1: CLOUDERA-BUILD. add safety check to Hadoop
  build build to ensure the right JDK is being used
  (cherry picked from commit
  5b7c295850c34e9ebfb9ec22978d1c31e65719c7)

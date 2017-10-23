@@ -1,7 +1,7 @@
 From f0ba7356a7cfe39789024dc46e2dbb935a7b8119 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 21 Jan 2015 11:38:08 -0800
-Subject: [PATCH 417/924] HDFS-7496. Fix FsVolume removal race conditions on
+Subject: [PATCH 0417/2639] HDFS-7496. Fix FsVolume removal race conditions on
  the DataNode by reference-counting the volume
  instances (Lei (Eddy) Xu via Colin P.  McCabe)
 

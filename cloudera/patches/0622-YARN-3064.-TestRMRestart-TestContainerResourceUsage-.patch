@@ -1,7 +1,7 @@
 From 0e133843e46263a2b86f5efe5443c41ce203b3fc Mon Sep 17 00:00:00 2001
 From: Junping Du <junping_du@apache.org>
 Date: Fri, 16 Jan 2015 00:08:36 -0800
-Subject: [PATCH 622/924] YARN-3064.
+Subject: [PATCH 0622/2639] YARN-3064.
  TestRMRestart/TestContainerResourceUsage/TestNodeManagerResync
  failure with allocation timeout. (Contributed by
  Jian He) (cherry picked from commit

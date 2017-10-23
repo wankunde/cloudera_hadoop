@@ -1,7 +1,7 @@
 From a8080b94f74aaed1f62310f777288f6dae8e30bc Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Wed, 23 Apr 2014 16:53:40 -0700
-Subject: [PATCH 131/924] MR1: CLOUDERA-BUILD. CDH-18781. Counter limits
+Subject: [PATCH 0131/2639] MR1: CLOUDERA-BUILD. CDH-18781. Counter limits
  always use defaults even if JobClient is given a
  different Configuration
 
@@ -173,7 +173,7 @@ index 597b01b..23d769b 100644
    }
  
 diff --git a/hadoop-mapreduce1-project/src/test/org/apache/hadoop/mapreduce/TestCounters.java b/hadoop-mapreduce1-project/src/test/org/apache/hadoop/mapreduce/TestCounters.java
-index ccdf516..9c69d3b 100644
+index ccdf516d..9c69d3b 100644
 --- a/hadoop-mapreduce1-project/src/test/org/apache/hadoop/mapreduce/TestCounters.java
 +++ b/hadoop-mapreduce1-project/src/test/org/apache/hadoop/mapreduce/TestCounters.java
 @@ -78,8 +78,8 @@ public void testCounterValue() {

@@ -1,7 +1,7 @@
 From a5ed8344e12a3722ca9c6766dbecd7a0280df66c Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 8 Jul 2015 20:07:21 -0700
-Subject: [PATCH 655/924] HADOOP-12201. Add tracing to
+Subject: [PATCH 0655/2639] HADOOP-12201. Add tracing to
  FileSystem#createFileSystem and Globber#glob
  (cmccabe)
 

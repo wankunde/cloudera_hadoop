@@ -1,7 +1,7 @@
 From 6b6a38d3d57289db51f0d9a3e7e2556b6e558ff4 Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Fri, 19 Jun 2015 14:06:17 -0700
-Subject: [PATCH 607/924] HADOOP-12103. Small refactoring of
+Subject: [PATCH 0607/2639] HADOOP-12103. Small refactoring of
  DelegationTokenAuthenticationFilter to allow code
  sharing. Contributed by Yongjun Zhang.
 

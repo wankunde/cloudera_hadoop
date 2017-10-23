@@ -1,7 +1,7 @@
 From 9fb842cf802c7702e856b79b703171e4d93ca390 Mon Sep 17 00:00:00 2001
 From: Allen Wittenauer <aw@apache.org>
 Date: Sun, 26 Apr 2015 20:31:40 -0700
-Subject: [PATCH 564/924] MAPREDUCE-6057. Remove obsolete entries from
+Subject: [PATCH 0564/2639] MAPREDUCE-6057. Remove obsolete entries from
  mapred-default.xml (Ray Chiang via aw)
 
 (cherry picked from commit 618ba707f0f2ddc353414dbd0eee0ab9e83b8013)

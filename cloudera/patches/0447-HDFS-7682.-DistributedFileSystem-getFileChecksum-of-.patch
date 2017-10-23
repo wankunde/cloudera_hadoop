@@ -1,8 +1,9 @@
 From 4e4b096f98ca32f7bb59d055e0786295a6e15432 Mon Sep 17 00:00:00 2001
 From: "Aaron T. Myers" <atm@apache.org>
 Date: Tue, 3 Mar 2015 18:08:59 -0800
-Subject: [PATCH 447/924] HDFS-7682. {{DistributedFileSystem#getFileChecksum}}
- of a snapshotted file includes non-snapshotted
+Subject: [PATCH 0447/2639] HDFS-7682.
+ {{DistributedFileSystem#getFileChecksum}} of a
+ snapshotted file includes non-snapshotted
  content. Contributed by Charles Lamb. (cherry
  picked from commit
  f2d7a67a2c1d9dde10ed3171fdec65dff885afcc)

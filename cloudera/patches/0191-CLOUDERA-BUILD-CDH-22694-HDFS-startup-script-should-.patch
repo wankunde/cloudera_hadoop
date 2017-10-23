@@ -1,7 +1,7 @@
 From bcb60e0158ce0db0680b5cfcf132220b9e1c9ab4 Mon Sep 17 00:00:00 2001
 From: Arun Suresh <asuresh@cloudera.com>
 Date: Fri, 24 Oct 2014 17:35:16 -0700
-Subject: [PATCH 191/924] CLOUDERA-BUILD: CDH-22694: HDFS startup script
+Subject: [PATCH 0191/2639] CLOUDERA-BUILD: CDH-22694: HDFS startup script
  should include jar from SENTRY_HOME/lib/plugins
 
 (cherry picked from commit ac961023527122dbc3afbd92ea2cfea1f21ed054)

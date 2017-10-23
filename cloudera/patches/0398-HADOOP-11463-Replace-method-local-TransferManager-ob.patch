@@ -1,7 +1,7 @@
 From b83be367fad9280e47991f93d7f6203a162eba79 Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Thu, 5 Feb 2015 12:19:49 +0000
-Subject: [PATCH 398/924] HADOOP-11463 Replace method-local TransferManager
+Subject: [PATCH 0398/2639] HADOOP-11463 Replace method-local TransferManager
  object with S3AFileSystem#transfers. (Ted Yu via
  stevel) (cherry picked from commit
  4cd9657b7153b571022495629acfb3fa4ec51b14)

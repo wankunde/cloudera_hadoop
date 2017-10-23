@@ -1,9 +1,10 @@
 From 145cd734fb68451197b4ab3c62d3a21a6b93b0d2 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Fri, 8 May 2015 09:32:07 -0500
-Subject: [PATCH 614/924] HDFS-7894. Rolling upgrade readiness is not updated
- in jmx until query command is issued. Contributed
- by Brahma Reddy Battula. (cherry picked from commit
+Subject: [PATCH 0614/2639] HDFS-7894. Rolling upgrade readiness is not
+ updated in jmx until query command is issued.
+ Contributed by Brahma Reddy Battula. (cherry
+ picked from commit
  6f622672b62aa8d719060063ef0e47480cdc8655)
 
 (cherry picked from commit 802a5775f3522c57c60ae29ecb9533dbbfecfe76)

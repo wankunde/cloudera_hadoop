@@ -1,7 +1,7 @@
 From e3a043c931ff370556c60f88125095505ea5af9b Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Sat, 16 Nov 2013 02:40:56 +0530
-Subject: [PATCH 117/924] MR1: CLOUDERA-BUILD. Add JobTokenIdentifier as a
+Subject: [PATCH 0117/2639] MR1: CLOUDERA-BUILD. Add JobTokenIdentifier as a
  provider for TokenIdentifier
 
 (cherry picked from commit 98d1bf08e6ce42df9fc3194c2d1037bc259707cf)

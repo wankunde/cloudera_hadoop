@@ -1,7 +1,7 @@
 From 27730b3345a24ad7a168974cdcab3e96ce4a6e8f Mon Sep 17 00:00:00 2001
 From: Zhihai Xu <zxu@cloudera.com>
 Date: Thu, 20 Nov 2014 19:44:40 -0800
-Subject: [PATCH 250/924] YARN-2816. NM fail to start with NPE during
+Subject: [PATCH 0250/2639] YARN-2816. NM fail to start with NPE during
  container recovery. Fix compilation error
 
 (cherry picked from commit c47e58c4ee89e3c99e82002e4d12fa3640647219)

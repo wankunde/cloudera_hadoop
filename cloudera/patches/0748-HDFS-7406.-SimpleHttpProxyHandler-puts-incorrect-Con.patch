@@ -1,7 +1,7 @@
-From 313d77c2f7c8e6941307aec7711dadb85b48f3b5 Mon Sep 17 00:00:00 2001
+From 67ade2bd74160cbc82b343d1ea7adb579d26ca96 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Tue, 18 Nov 2014 14:52:59 -0800
-Subject: [PATCH 748/924] HDFS-7406. SimpleHttpProxyHandler puts incorrect
+Subject: [PATCH 0748/2639] HDFS-7406. SimpleHttpProxyHandler puts incorrect
  "Connection: Close" header. Contributed by Haohui
  Mai.
 

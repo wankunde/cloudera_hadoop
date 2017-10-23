@@ -1,8 +1,8 @@
 From 073995318b10327e6e6b165080991396417f3ea3 Mon Sep 17 00:00:00 2001
 From: Roman Shaposhnik <rvs@cloudera.com>
 Date: Wed, 1 May 2013 19:26:14 -0700
-Subject: [PATCH 056/924] MR1: KITCHEN-BUILD. Grafting MR1 code base on top of
- Hadoop 2.X (cherry picked from commit
+Subject: [PATCH 0056/2639] MR1: KITCHEN-BUILD. Grafting MR1 code base on top
+ of Hadoop 2.X (cherry picked from commit
  4a161db6f714c4e6e28c1efdf62a94938e3f8691)
 
 (cherry picked from commit 3e8335fca76d1780a9a6c0726364ac93eb5364e7)

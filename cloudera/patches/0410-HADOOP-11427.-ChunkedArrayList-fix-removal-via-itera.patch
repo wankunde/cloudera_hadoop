@@ -1,7 +1,7 @@
 From 398bbb9d8bf1599a86d7e0a603eb4e3bbf8f88f4 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 18 Dec 2014 11:05:06 -0800
-Subject: [PATCH 410/924] HADOOP-11427. ChunkedArrayList: fix removal via
+Subject: [PATCH 0410/2639] HADOOP-11427. ChunkedArrayList: fix removal via
  iterator and implement get (cmccabe)
 
 (cherry picked from commit 07619aa516deb9094a18e0c64ce66ff9c8b05e92)

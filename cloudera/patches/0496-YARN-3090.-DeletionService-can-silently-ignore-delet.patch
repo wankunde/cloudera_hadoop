@@ -1,9 +1,9 @@
 From 5126bb69429727a4862cb789dba58e0d2b4bd3f6 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Tue, 10 Feb 2015 16:54:21 +0000
-Subject: [PATCH 496/924] YARN-3090. DeletionService can silently ignore
- deletion task failures. Contributed by Varun Saxena
- (cherry picked from commit
+Subject: [PATCH 0496/2639] YARN-3090. DeletionService can silently ignore
+ deletion task failures. Contributed by Varun
+ Saxena (cherry picked from commit
  4eb5f7fa32bab1b9ce3fb58eca51e2cd2e194cd5)
 
 (cherry picked from commit 9ffd985dc0e63234c7702be6919378d826a52e30)

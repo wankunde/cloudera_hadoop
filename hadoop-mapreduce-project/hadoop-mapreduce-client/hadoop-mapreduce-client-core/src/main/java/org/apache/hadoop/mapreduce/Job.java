@@ -323,7 +323,7 @@ public class Job extends JobContextImpl implements JobContext {
       this.status = ugi.doAs(new PrivilegedExceptionAction<JobStatus>() {
         @Override
         public JobStatus run() throws IOException, InterruptedException {
-          return cluster.getClient().getJobStatus(status.getJobID());
+          return cluster.getClient().getJobStatus(getJobID());
         }
       });
     }
@@ -436,7 +436,7 @@ public class Job extends JobContextImpl implements JobContext {
    * The user-specified job name.
    */
   public String getJobName() {
-    if (state == JobState.DEFINE) {
+    if (state == JobState.DEFINE || status == null) {
       return super.getJobName();
     }
     ensureState(JobState.RUNNING);

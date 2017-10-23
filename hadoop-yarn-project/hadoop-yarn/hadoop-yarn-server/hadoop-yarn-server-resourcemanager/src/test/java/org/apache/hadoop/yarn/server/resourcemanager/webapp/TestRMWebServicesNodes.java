@@ -32,19 +32,17 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
-import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -84,10 +82,6 @@ public class TestRMWebServicesNodes extends JerseyTest {
       rm.getRMContext().getContainerTokenSecretManager().rollMasterKey();
       rm.getRMContext().getNMTokenSecretManager().rollMasterKey();
       bind(ResourceManager.class).toInstance(rm);
-      bind(RMContext.class).toInstance(rm.getRMContext());
-      bind(ApplicationACLsManager.class).toInstance(
-          rm.getApplicationACLsManager());
-      bind(QueueACLsManager.class).toInstance(rm.getQueueACLsManager());
       serve("/*").with(GuiceContainer.class);
     }
   });
@@ -270,8 +264,9 @@ public class TestRMWebServicesNodes extends JerseyTest {
     assertEquals("incorrect number of elements", 2, nodeArray.length());
     for (int i = 0; i < nodeArray.length(); ++i) {
       JSONObject info = nodeArray.getJSONObject(i);
-      String host = info.get("id").toString().split(":")[0];
-      RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get(host);
+      String[] node = info.get("id").toString().split(":");
+      NodeId nodeId = NodeId.newInstance(node[0], Integer.parseInt(node[1]));
+      RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get(nodeId);
       WebServicesTestUtils.checkStringMatch("nodeHTTPAddress", "",
           info.getString("nodeHTTPAddress"));
       WebServicesTestUtils.checkStringMatch("state", rmNode.getState()
@@ -302,7 +297,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
 
     assertEquals("Incorrect Node Information.", "h2:1234", id);
 
-    RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get("h2");
+    NodeId nodeId = NodeId.newInstance("h2", 1234);
+    RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get(nodeId);
     WebServicesTestUtils.checkStringMatch("nodeHTTPAddress", "",
         info.getString("nodeHTTPAddress"));
     WebServicesTestUtils.checkStringMatch("state",

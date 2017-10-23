@@ -1,9 +1,9 @@
 From ad8b342437bc9da65ac8470fc0919d64c12068dc Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Sun, 8 Mar 2015 11:20:42 -0700
-Subject: [PATCH 507/924] HADOOP-11670. Regression: s3a auth setup broken.
- (Adam Budde via stevel) (cherry picked from commit
- 64443490d7f189e8e42d284615f3814ef751395a)
+Subject: [PATCH 0507/2639] HADOOP-11670. Regression: s3a auth setup broken.
+ (Adam Budde via stevel) (cherry picked from
+ commit 64443490d7f189e8e42d284615f3814ef751395a)
 
 ---
  .../java/org/apache/hadoop/fs/s3a/Constants.java   |    6 +++++-

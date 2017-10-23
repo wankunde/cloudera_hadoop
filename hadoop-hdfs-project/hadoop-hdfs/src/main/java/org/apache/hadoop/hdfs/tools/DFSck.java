@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -77,7 +78,8 @@ public class DFSck extends Configured implements Tool {
   private static final String USAGE = "Usage: DFSck <path> "
       + "[-list-corruptfileblocks | "
       + "[-move | -delete | -openforwrite] "
-      + "[-files [-blocks [-locations | -racks]]]]\n"
+      + "[-files [-blocks [-locations | -racks]]]] "
+      + "[-maintenance]\n"
       + "\t<path>\tstart checking from this path\n"
       + "\t-move\tmove corrupted files to /lost+found\n"
       + "\t-delete\tdelete corrupted files\n"
@@ -91,6 +93,10 @@ public class DFSck extends Configured implements Tool {
       + "\t-blocks\tprint out block report\n"
       + "\t-locations\tprint out locations for every block\n"
       + "\t-racks\tprint out network topology for data-node locations\n\n"
+      + "\t-maintenance\tprint out maintenance state node details\n"
+      + "\t-blockId\tprint out which file this blockId belongs to, locations"
+      + " (nodes, racks) of this block, and other diagnostics info"
+      + " (under replicated, corrupted or not, etc)\n\n"
       + "Please Note:\n"
       + "\t1. By default fsck ignores files opened for write, "
       + "use -openforwrite to report such files. They are usually "
@@ -224,14 +230,14 @@ public class DFSck extends Configured implements Tool {
    * @return Returns http address or null if failure.
    * @throws IOException if we can't determine the active NN address
    */
-  private URI getCurrentNamenodeAddress() throws IOException {
+  private URI getCurrentNamenodeAddress(Path target) throws IOException {
     //String nnAddress = null;
     Configuration conf = getConf();
 
     //get the filesystem object to verify it is an HDFS system
-    FileSystem fs;
+    final FileSystem fs;
     try {
-      fs = FileSystem.get(conf);
+      fs = target.getFileSystem(conf);
     } catch (IOException ioe) {
       System.err.println("FileSystem is inaccessible due to:\n"
           + StringUtils.stringifyException(ioe));
@@ -249,16 +255,6 @@ public class DFSck extends Configured implements Tool {
   private int doWork(final String[] args) throws IOException {
     final StringBuilder url = new StringBuilder();
     
-    URI namenodeAddress = getCurrentNamenodeAddress();
-    if (namenodeAddress == null) {
-      //Error message already output in {@link #getCurrentNamenodeAddress()}
-      System.err.println("DFSck exiting.");
-      return 0;
-    }
-
-    url.append(namenodeAddress.toString());
-    System.err.println("Connecting to namenode via " + url.toString());
-    
     url.append("/fsck?ugi=").append(ugi.getShortUserName());
     String dir = null;
     boolean doListCorruptFileBlocks = false;
@@ -275,6 +271,17 @@ public class DFSck extends Configured implements Tool {
         doListCorruptFileBlocks = true;
       } else if (args[idx].equals("-includeSnapshots")) {
         url.append("&includeSnapshots=1");
+      } else if (args[idx].equals("-maintenance")) {
+        url.append("&maintenance=1");
+      } else if (args[idx].equals("-blockId")) {
+        StringBuilder sb = new StringBuilder();
+        idx++;
+        while(idx < args.length && !args[idx].startsWith("-")){
+          sb.append(args[idx]);
+          sb.append(" ");
+          idx++;
+        }
+        url.append("&blockId=").append(URLEncoder.encode(sb.toString(), "UTF-8"));
       } else if (!args[idx].startsWith("-")) {
         if (null == dir) {
           dir = args[idx];
@@ -284,6 +291,7 @@ public class DFSck extends Configured implements Tool {
           printUsage(System.err);
           return -1;
         }
+
       } else {
         System.err.println("fsck: Illegal option '" + args[idx] + "'");
         printUsage(System.err);
@@ -293,7 +301,20 @@ public class DFSck extends Configured implements Tool {
     if (null == dir) {
       dir = "/";
     }
-    url.append("&path=").append(URLEncoder.encode(dir, "UTF-8"));
+
+    final Path dirpath = new Path(dir);
+    final URI namenodeAddress = getCurrentNamenodeAddress(dirpath);
+    if (namenodeAddress == null) {
+      //Error message already output in {@link #getCurrentNamenodeAddress()}
+      System.err.println("DFSck exiting.");
+      return 0;
+    }
+
+    url.insert(0, namenodeAddress.toString());
+    url.append("&path=").append(URLEncoder.encode(
+        Path.getPathWithoutSchemeAndAuthority(dirpath).toString(), "UTF-8"));
+    System.err.println("Connecting to namenode via " + url.toString());
+
     if (doListCorruptFileBlocks) {
       return listCorruptFileBlocks(dir, url.toString());
     }
@@ -324,6 +345,16 @@ public class DFSck extends Configured implements Tool {
       errCode = 1;
     } else if (lastLine.endsWith(NamenodeFsck.NONEXISTENT_STATUS)) {
       errCode = 0;
+    } else if (lastLine.contains("Incorrect blockId format:")) {
+      errCode = 0;
+    } else if (lastLine.endsWith(NamenodeFsck.DECOMMISSIONED_STATUS)) {
+      errCode = 2;
+    } else if (lastLine.endsWith(NamenodeFsck.DECOMMISSIONING_STATUS)) {
+      errCode = 3;
+    } else if (lastLine.endsWith(NamenodeFsck.IN_MAINTENANCE_STATUS))  {
+      errCode = 4;
+    } else if (lastLine.endsWith(NamenodeFsck.ENTERING_MAINTENANCE_STATUS)) {
+      errCode = 5;
     }
     return errCode;
   }

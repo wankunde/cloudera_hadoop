@@ -121,9 +121,9 @@ public abstract class AbstractContractCreateTest extends
     try {
       assertIsDirectory(path);
     } catch (AssertionError failure) {
-      if (isSupported(IS_BLOBSTORE)) {
+      if (isSupported(CREATE_OVERWRITES_DIRECTORY)) {
         // file/directory hack surfaces here
-        throw new AssumptionViolatedException(failure.toString()).initCause(failure);
+        throw new AssumptionViolatedException(failure.toString(), failure);
       }
       // else: rethrow
       throw failure;
@@ -137,10 +137,10 @@ public abstract class AbstractContractCreateTest extends
       FileStatus status = getFileSystem().getFileStatus(path);
 
       boolean isDir = status.isDirectory();
-      if (!isDir && isSupported(IS_BLOBSTORE)) {
-        // object store: downgrade to a skip so that the failure is visible
-        // in test results
-        skip("Object store allows a file to overwrite a directory");
+      if (!isDir && isSupported(CREATE_OVERWRITES_DIRECTORY)) {
+        // For some file systems, downgrade to a skip so that the failure is
+        // visible in test results.
+        skip("This Filesystem allows a file to overwrite a directory");
       }
       fail("write of file over dir succeeded");
     } catch (FileAlreadyExistsException expected) {
@@ -163,25 +163,21 @@ public abstract class AbstractContractCreateTest extends
   public void testCreatedFileIsImmediatelyVisible() throws Throwable {
     describe("verify that a newly created file exists as soon as open returns");
     Path path = path("testCreatedFileIsImmediatelyVisible");
-    FSDataOutputStream out = null;
-    try {
-      out = getFileSystem().create(path,
+    try(FSDataOutputStream out = getFileSystem().create(path,
                                    false,
                                    4096,
                                    (short) 1,
-                                   1024);
+                                   1024)) {
       if (!getFileSystem().exists(path)) {
 
-        if (isSupported(IS_BLOBSTORE)) {
-          // object store: downgrade to a skip so that the failure is visible
-          // in test results
-          skip("Filesystem is an object store and newly created files are not immediately visible");
+        if (isSupported(CREATE_VISIBILITY_DELAYED)) {
+          // For some file systems, downgrade to a skip so that the failure is
+          // visible in test results.
+          skip("This Filesystem delays visibility of newly created files");
         }
         assertPathExists("expected path to be visible before anything written",
                          path);
       }
-    } finally {
-      IOUtils.closeStream(out);
     }
   }
 }

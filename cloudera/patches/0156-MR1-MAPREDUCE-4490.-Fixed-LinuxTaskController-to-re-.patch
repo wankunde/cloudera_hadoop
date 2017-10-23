@@ -1,7 +1,7 @@
 From 0e5971e56b4d9d0938573fafd550af193addb9df Mon Sep 17 00:00:00 2001
 From: Eric Yang <eyang@apache.org>
 Date: Fri, 13 Jun 2014 21:36:15 +0000
-Subject: [PATCH 156/924] MR1: MAPREDUCE-4490. Fixed LinuxTaskController to
+Subject: [PATCH 0156/2639] MR1: MAPREDUCE-4490. Fixed LinuxTaskController to
  re-initialize user log directory when JVM reuse
  option is enabled.  (Sam Liu via eyang)
 

@@ -1,7 +1,7 @@
 From 89793f9f617f4b41bb05e69460cd3119a5d76ef9 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Mon, 12 Aug 2013 21:04:54 -0700
-Subject: [PATCH 085/924] MR1: CLOUDERA-BUILD. CDH-8579. Remove MRUnit from
+Subject: [PATCH 0085/2639] MR1: CLOUDERA-BUILD. CDH-8579. Remove MRUnit from
  contrib (cherry picked from commit
  112ae971dfe30762c46820690a84a27ea00a13a8)
 

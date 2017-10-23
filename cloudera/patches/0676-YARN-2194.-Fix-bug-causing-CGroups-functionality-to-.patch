@@ -1,8 +1,8 @@
 From aa1faee40d901d368f4ae685c7837bdde42726b5 Mon Sep 17 00:00:00 2001
 From: Varun Vasudev <vvasudev@apache.org>
 Date: Tue, 7 Jul 2015 16:59:29 +0530
-Subject: [PATCH 676/924] YARN-2194. Fix bug causing CGroups functionality to
- fail on RHEL7. Contributed by Wei Yan.
+Subject: [PATCH 0676/2639] YARN-2194. Fix bug causing CGroups functionality
+ to fail on RHEL7. Contributed by Wei Yan.
 
 (cherry-picked from commit 7e3ebc0fc59dbd1d7768b5a6c05af18b8c8fea4d)
 

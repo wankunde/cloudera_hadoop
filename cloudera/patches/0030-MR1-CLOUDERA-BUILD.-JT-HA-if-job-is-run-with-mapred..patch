@@ -1,9 +1,9 @@
 From 9c24d62eb6c736fe34508625d8d00e29fbcb728a Mon Sep 17 00:00:00 2001
 From: Tom White <tom@cloudera.com>
 Date: Fri, 1 Feb 2013 14:14:13 +0000
-Subject: [PATCH 030/924] MR1: CLOUDERA-BUILD. JT HA: if job is run with
- mapred.job.restart.recover=false, job client hangs
- on failover
+Subject: [PATCH 0030/2639] MR1: CLOUDERA-BUILD. JT HA: if job is run with
+ mapred.job.restart.recover=false, job client
+ hangs on failover
 
 Reason: Bug
 Ref: CDH-10247

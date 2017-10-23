@@ -1,7 +1,7 @@
 From 8873ff8042d796f3b0a1acc01caa2aa4b4a8e1e7 Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Tue, 17 Feb 2015 18:14:31 +0000
-Subject: [PATCH 399/924] HADOOP-11522. Update S3A Documentation. (Thomas
+Subject: [PATCH 0399/2639] HADOOP-11522. Update S3A Documentation. (Thomas
  Demoor via stevel)
 
 ---

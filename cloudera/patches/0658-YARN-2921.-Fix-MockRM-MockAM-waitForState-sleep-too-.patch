@@ -1,8 +1,8 @@
 From fa4f9af3d1ea64872b2a53d0641b56ffd655d960 Mon Sep 17 00:00:00 2001
 From: Wangda Tan <wangda@apache.org>
 Date: Wed, 13 May 2015 13:06:07 -0700
-Subject: [PATCH 658/924] YARN-2921. Fix MockRM/MockAM#waitForState sleep too
- long. (Tsuyoshi Ozawa via wangda)
+Subject: [PATCH 0658/2639] YARN-2921. Fix MockRM/MockAM#waitForState sleep
+ too long. (Tsuyoshi Ozawa via wangda)
 
 (cherry picked from commit 341a476812015d0d584b198b451ea9458645a47c)
 (cherry picked from commit 3df8880bbe75023bf4a814c36db00122e7931131)

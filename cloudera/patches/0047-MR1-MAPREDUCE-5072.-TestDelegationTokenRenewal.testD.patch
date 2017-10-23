@@ -1,7 +1,7 @@
 From a3f0f5f8d86ca322bb32b938e2800640c9928d1d Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 15 Mar 2013 17:48:32 +0000
-Subject: [PATCH 047/924] MR1: MAPREDUCE-5072.
+Subject: [PATCH 0047/2639] MR1: MAPREDUCE-5072.
  TestDelegationTokenRenewal.testDTRenewal fails in
  MR1 on jdk7. (sandyr via tucu)
 

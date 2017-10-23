@@ -28,6 +28,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
@@ -54,9 +55,13 @@ public class FairSchedulerQueueInfo {
   private ResourceInfo minResources;
   private ResourceInfo maxResources;
   private ResourceInfo usedResources;
+  private ResourceInfo amUsedResources;
+  private ResourceInfo amMaxResources;
+  private ResourceInfo demandResources;
   private ResourceInfo steadyFairResources;
   private ResourceInfo fairResources;
   private ResourceInfo clusterResources;
+  private ResourceInfo reservedResources;
 
   private long pendingContainers;
   private long allocatedContainers;
@@ -64,9 +69,11 @@ public class FairSchedulerQueueInfo {
 
   private String queueName;
   private String schedulingPolicy;
-  
-  private Collection<FairSchedulerQueueInfo> childQueues;
-  
+
+  private FairSchedulerQueueInfoList childQueues;
+
+  private boolean preemptable;
+
   public FairSchedulerQueueInfo() {
   }
   
@@ -79,6 +86,14 @@ public class FairSchedulerQueueInfo {
     clusterResources = new ResourceInfo(scheduler.getClusterResource());
     
     usedResources = new ResourceInfo(queue.getResourceUsage());
+    amUsedResources = new ResourceInfo(Resource.newInstance(
+        (int)queue.getMetrics().getAMResourceUsageMB(),
+        queue.getMetrics().getAMResourceUsageVCores()));
+    amMaxResources = new ResourceInfo(Resource.newInstance(
+        (int)queue.getMetrics().getMaxAMShareMB(),
+        queue.getMetrics().getMaxAMShareVCores()));
+
+    demandResources = new ResourceInfo(queue.getDemand());
     fractionMemUsed = (float)usedResources.getMemory() /
         clusterResources.getMemory();
 
@@ -89,6 +104,7 @@ public class FairSchedulerQueueInfo {
     maxResources = new ResourceInfo(
         Resources.componentwiseMin(queue.getMaxShare(),
             scheduler.getClusterResource()));
+    reservedResources = new ResourceInfo(queue.getReservedResource());
 
     fractionMemSteadyFairShare =
         (float)steadyFairResources.getMemory() / clusterResources.getMemory();
@@ -103,15 +119,31 @@ public class FairSchedulerQueueInfo {
     allocatedContainers = queue.getMetrics().getAllocatedContainers();
     reservedContainers = queue.getMetrics().getReservedContainers();
 
+    childQueues = getChildQueues(queue, scheduler);
+
+    preemptable = queue.isPreemptable();
+  }
+
+  protected FairSchedulerQueueInfoList getChildQueues(FSQueue queue,
+                                                      FairScheduler scheduler) {
+    // Return null to omit 'childQueues' field from the return value of
+    // REST API if it is empty. We omit the field to keep the consistency
+    // with CapacitySchedulerQueueInfo, which omits 'queues' field if empty.
     Collection<FSQueue> children = queue.getChildQueues();
-    childQueues = new ArrayList<FairSchedulerQueueInfo>();
+    if (children.isEmpty()) {
+      return null;
+    }
+    FairSchedulerQueueInfoList list = new FairSchedulerQueueInfoList();
     for (FSQueue child : children) {
       if (child instanceof FSLeafQueue) {
-        childQueues.add(new FairSchedulerLeafQueueInfo((FSLeafQueue)child, scheduler));
+        list.addToQueueInfoList(
+            new FairSchedulerLeafQueueInfo((FSLeafQueue) child, scheduler));
       } else {
-        childQueues.add(new FairSchedulerQueueInfo(child, scheduler));
+        list.addToQueueInfoList(
+            new FairSchedulerQueueInfo(child, scheduler));
       }
     }
+    return list;
   }
 
   public long getPendingContainers() {
@@ -162,6 +194,10 @@ public class FairSchedulerQueueInfo {
     return maxResources;
   }
   
+  public ResourceInfo getReservedResources() {
+    return reservedResources;
+  }
+
   public int getMaxApplications() {
     return maxApps;
   }
@@ -172,6 +208,27 @@ public class FairSchedulerQueueInfo {
   
   public ResourceInfo getUsedResources() {
     return usedResources;
+  }
+
+  /**
+   * @return the am used resource of this queue.
+   */
+  public ResourceInfo getAMUsedResources() {
+    return amUsedResources;
+  }
+
+  /**
+   * @return the am max resource of this queue.
+   */
+  public ResourceInfo getAMMaxResources() {
+    return amMaxResources;
+  }
+
+  /**
+   * @return the demand resource of this queue.
+     */
+  public ResourceInfo getDemandResources() {
+    return demandResources;
   }
 
   /**
@@ -204,8 +261,13 @@ public class FairSchedulerQueueInfo {
   public String getSchedulingPolicy() {
     return schedulingPolicy;
   }
-  
+
   public Collection<FairSchedulerQueueInfo> getChildQueues() {
-    return childQueues;
+    return childQueues != null ? childQueues.getQueueInfoList() :
+        new ArrayList<FairSchedulerQueueInfo>();
+  }
+
+  public boolean isPreemptable() {
+    return preemptable;
   }
 }

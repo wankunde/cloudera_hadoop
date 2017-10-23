@@ -1,7 +1,7 @@
 From 4051b9b7865b8485584346992f23cae1de0bc4e2 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Wed, 12 Nov 2014 14:23:09 -0800
-Subject: [PATCH 192/924] CLOUDERA-BUILD. CDH-22593 Revert "svn merge -c
+Subject: [PATCH 0192/2639] CLOUDERA-BUILD. CDH-22593 Revert "svn merge -c
  1580977 from trunk for HADOOP-10015.
  UserGroupInformation prints out excessive
  warnings."

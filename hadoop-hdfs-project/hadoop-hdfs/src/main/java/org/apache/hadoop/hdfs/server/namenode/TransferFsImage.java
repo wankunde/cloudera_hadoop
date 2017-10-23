@@ -100,9 +100,10 @@ public class TransferFsImage {
   }
 
   public static MD5Hash downloadImageToStorage(URL fsName, long imageTxId,
-      Storage dstStorage, boolean needDigest) throws IOException {
+      Storage dstStorage, boolean needDigest, boolean isBootstrapStandby)
+      throws IOException {
     String fileid = ImageServlet.getParamStringForImage(null,
-        imageTxId, dstStorage);
+        imageTxId, dstStorage, isBootstrapStandby);
     String fileName = NNStorage.getCheckpointImageFileName(imageTxId);
     
     List<File> dstFiles = dstStorage.getFiles(
@@ -337,6 +338,11 @@ public class TransferFsImage {
       FileInputStream infile, DataTransferThrottler throttler,
       Canceler canceler) throws IOException {
     byte buf[] = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
+    long total = 0;
+    int num = 1;
+    IOException ioe = null;
+    String reportStr = "Sending fileName: " + localfile.getAbsolutePath()
+        + ", fileSize: " + localfile.length() + ".";
     try {
       CheckpointFaultInjector.getInstance()
           .aboutToSendFile(localfile);
@@ -350,7 +356,6 @@ public class TransferFsImage {
           // and the rest of the image will be sent over the wire
           infile.read(buf);
       }
-      int num = 1;
       while (num > 0) {
         if (canceler != null && canceler.isCancelled()) {
           throw new SaveNamespaceCancelledException(
@@ -366,16 +371,29 @@ public class TransferFsImage {
           LOG.warn("SIMULATING A CORRUPT BYTE IN IMAGE TRANSFER!");
           buf[0]++;
         }
-        
+
         out.write(buf, 0, num);
+        total += num;
         if (throttler != null) {
           throttler.throttle(num, canceler);
         }
       }
     } catch (EofException e) {
-      LOG.info("Connection closed by client");
+      reportStr += " Connection closed by client.";
+      ioe = e;
       out = null; // so we don't close in the finally
+    } catch (IOException ie) {
+      ioe = ie;
+      throw ie;
     } finally {
+      reportStr += " Sent total: " + total +
+          " bytes. Size of last segment intended to send: " + num
+          + " bytes.";
+      if (ioe != null) {
+        LOG.info(reportStr, ioe);
+      } else {
+        LOG.info(reportStr);
+      }
       if (out != null) {
         out.close();
       }
@@ -480,6 +498,7 @@ public class TransferFsImage {
       stream = new DigestInputStream(stream, digester);
     }
     boolean finishedReceiving = false;
+    int num = 1;
 
     List<FileOutputStream> outputStreams = Lists.newArrayList();
 
@@ -509,7 +528,6 @@ public class TransferFsImage {
         }
       }
       
-      int num = 1;
       byte[] buf = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
       while (num > 0) {
         num = stream.read(buf);
@@ -530,13 +548,21 @@ public class TransferFsImage {
         fos.getChannel().force(true);
         fos.close();
       }
+
+      // Something went wrong and did not finish reading.
+      // Remove the temporary files.
+      if (!finishedReceiving) {
+        deleteTmpFiles(localPaths);
+      }
+
       if (finishedReceiving && received != advertisedSize) {
         // only throw this exception if we think we read all of it on our end
         // -- otherwise a client-side IOException would be masked by this
         // exception that makes it look like a server-side problem!
+        deleteTmpFiles(localPaths);
         throw new IOException("File " + url + " received length " + received +
-                              " is not of the advertised size " +
-                              advertisedSize);
+            " is not of the advertised size " + advertisedSize +
+            ". Fsimage name: " + fsImageName + " lastReceived: " + num);
       }
     }
     double xferSec = Math.max(
@@ -550,6 +576,7 @@ public class TransferFsImage {
       
       if (advertisedDigest != null &&
           !computedDigest.equals(advertisedDigest)) {
+        deleteTmpFiles(localPaths);
         throw new IOException("File " + url + " computed digest " +
             computedDigest + " does not match advertised digest " + 
             advertisedDigest);
@@ -559,6 +586,18 @@ public class TransferFsImage {
       return null;
     }    
   }
+
+  private static void deleteTmpFiles(List<File> files) {
+    if (files == null) {
+      return;
+    }
+
+    LOG.info("Deleting temporary files: " + files);
+    for (File file : files) {
+      file.delete(); // ignore the return value
+    }
+  }
+
 
   private static MD5Hash parseMD5Header(HttpURLConnection connection) {
     String header = connection.getHeaderField(MD5_HEADER);

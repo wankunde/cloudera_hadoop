@@ -1,9 +1,9 @@
 From fcd76babbc792d52c3ed93691954c0eb6e5c3160 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Wed, 21 Jan 2015 14:41:31 -0600
-Subject: [PATCH 427/924] HDFS-7548. Corrupt block reporting delayed until
- datablock scanner thread detects it. Contributed by
- Rushabh Shah.
+Subject: [PATCH 0427/2639] HDFS-7548. Corrupt block reporting delayed until
+ datablock scanner thread detects it. Contributed
+ by Rushabh Shah.
 
 (cherry picked from commit 95858db0c13f470a8df57ae5cd191e51609b69de)
 ---

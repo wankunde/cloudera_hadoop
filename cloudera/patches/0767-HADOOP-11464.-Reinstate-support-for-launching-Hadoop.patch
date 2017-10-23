@@ -1,9 +1,9 @@
-From a8f853e01b4493e127e41c06a437f1c18d58afb3 Mon Sep 17 00:00:00 2001
+From e510a75c44497c843dfb04d47bde529f049cce4c Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Fri, 9 Jan 2015 15:01:33 -0800
-Subject: [PATCH 767/924] HADOOP-11464. Reinstate support for launching Hadoop
- processes on Windows using Cygwin. Contributed by
- Chris Nauroth.
+Subject: [PATCH 0767/2639] HADOOP-11464. Reinstate support for launching
+ Hadoop processes on Windows using Cygwin.
+ Contributed by Chris Nauroth.
 
 (cherry picked from commit 9a7c763b3f97c08a9e18225f9ea5fb7568f7246f)
 
@@ -12,7 +12,6 @@ Conflicts:
 	hadoop-yarn-project/hadoop-yarn/bin/yarn
 
 Change-Id: Ibd6c98157959da37838756c27b033b7ca86ea58e
-(cherry picked from commit e510a75c44497c843dfb04d47bde529f049cce4c)
 ---
  .../hadoop-common/src/main/bin/hadoop              |   22 ++++++++++++++
  .../hadoop-common/src/main/bin/hadoop-config.sh    |   10 +++++-

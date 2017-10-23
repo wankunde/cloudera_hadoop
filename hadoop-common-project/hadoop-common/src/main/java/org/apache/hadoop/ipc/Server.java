@@ -63,6 +63,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -111,6 +112,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -124,6 +126,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -381,6 +384,62 @@ public abstract class Server {
   private Responder responder = null;
   private Handler[] handlers = null;
 
+  private boolean logSlowRPC = false;
+
+  /**
+   * Checks if LogSlowRPC is set true.
+   * @return
+   */
+  protected boolean isLogSlowRPC() {
+    return logSlowRPC;
+  }
+
+  /**
+   * Sets slow RPC flag.
+   * @param logSlowRPCFlag
+   */
+  @VisibleForTesting
+  protected void setLogSlowRPC(boolean logSlowRPCFlag) {
+    this.logSlowRPC = logSlowRPCFlag;
+  }
+
+
+  /**
+   * Logs a Slow RPC Request.
+   *
+   * @param methodName - RPC Request method name
+   * @param processingTime - Processing Time.
+   *
+   * if this request took too much time relative to other requests
+   * we consider that as a slow RPC. 3 is a magic number that comes
+   * from 3 sigma deviation. A very simple explanation can be found
+   * by searching for 68–95–99.7 rule. We flag an RPC as slow RPC
+   * if and only if it falls above 99.7% of requests. We start this logic
+   * only once we have enough sample size.
+   */
+  void logSlowRpcCalls(String methodName, int processingTime) {
+    final int deviation = 3;
+
+    // 1024 for minSampleSize just a guess -- not a number computed based on
+    // sample size analysis. It is chosen with the hope that this
+    // number is high enough to avoid spurious logging, yet useful
+    // in practice.
+    final int minSampleSize = 1024;
+    final double threeSigma = rpcMetrics.getProcessingMean() +
+        (rpcMetrics.getProcessingStdDev() * deviation);
+
+    if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
+        (processingTime > threeSigma)) {
+      if(LOG.isWarnEnabled()) {
+        String client = CurCall.get().connection.toString();
+        LOG.warn(
+            "Slow RPC : " + methodName + " took " + processingTime +
+                " milliseconds to process from client " + client);
+      }
+      rpcMetrics.incrSlowRpc();
+    }
+  }
+
   /**
    * A convenience method to bind to a given address and report 
    * better exceptions if the address is not a valid host.
@@ -517,9 +576,15 @@ public abstract class Server {
     private long timestamp;               // time received when response is null
                                           // time served when response is not null
     private ByteBuffer rpcResponse;       // the response for this call
+    private AtomicInteger responseWaitCount = new AtomicInteger(1);
     private final RPC.RpcKind rpcKind;
     private final byte[] clientId;
     private final TraceScope traceScope; // the HTrace scope on the server side
+
+    private Call(Call call) {
+      this(call.callId, call.retryCount, call.rpcRequest, call.connection,
+          call.rpcKind, call.clientId, call.traceScope);
+    }
 
     public Call(int id, int retryCount, Writable param, 
         Connection connection) {
@@ -553,6 +618,46 @@ public abstract class Server {
 
     public void setResponse(ByteBuffer response) {
       this.rpcResponse = response;
+    }
+
+    /**
+     * Allow a IPC response to be postponed instead of sent immediately
+     * after the handler returns from the proxy method.  The intended use
+     * case is freeing up the handler thread when the response is known,
+     * but an expensive pre-condition must be satisfied before it's sent
+     * to the client.
+     */
+    @InterfaceStability.Unstable
+    @InterfaceAudience.LimitedPrivate({"HDFS"})
+    public void postponeResponse() {
+      int count = responseWaitCount.incrementAndGet();
+      assert count > 0 : "response has already been sent";
+    }
+
+    @InterfaceStability.Unstable
+    @InterfaceAudience.LimitedPrivate({"HDFS"})
+    public void sendResponse() throws IOException {
+      int count = responseWaitCount.decrementAndGet();
+      assert count >= 0 : "response has already been sent";
+      if (count == 0) {
+        connection.sendResponse(this);
+      }
+    }
+
+    @InterfaceStability.Unstable
+    @InterfaceAudience.LimitedPrivate({"HDFS"})
+    public void abortResponse(Throwable t) throws IOException {
+      // don't send response if the call was already sent or aborted.
+      if (responseWaitCount.getAndSet(-1) > 0) {
+        // clone the call to prevent a race with the other thread stomping
+        // on the response while being sent.  the original call is
+        // effectively discarded since the wait count won't hit zero
+        Call call = new Call(this);
+        setupResponse(new ByteArrayOutputStream(), call,
+            RpcStatusProto.FATAL, RpcErrorCodeProto.ERROR_RPC_SERVER,
+            null, t.getClass().getName(), StringUtils.stringifyException(t));
+        call.sendResponse();
+      }
     }
 
     // For Schedulable
@@ -642,10 +747,16 @@ public abstract class Server {
             while (iter.hasNext()) {
               key = iter.next();
               iter.remove();
-              if (key.isValid()) {
+              try {
                 if (key.isReadable()) {
                   doRead(key);
                 }
+              } catch (CancelledKeyException cke) {
+                // something else closed the connection, ex. responder or
+                // the listener doing an idle scan.  ignore it and let them
+                // clean up.
+                LOG.info(Thread.currentThread().getName() +
+                    ": connection aborted from " + key.attachment());
               }
               key = null;
             }
@@ -655,6 +766,9 @@ public abstract class Server {
             }
           } catch (IOException ex) {
             LOG.error("Error in Reader", ex);
+          } catch (Throwable re) {
+            LOG.fatal("Bug in read selector!", re);
+            ExitUtil.terminate(1, "Bug in read selector!");
           }
         }
       }
@@ -757,6 +871,14 @@ public abstract class Server {
         
         Reader reader = getReader();
         Connection c = connectionManager.register(channel);
+        // If the connectionManager can't take it, close the connection.
+        if (c == null) {
+          if (channel.isOpen()) {
+            IOUtils.cleanup(null, channel);
+          }
+          connectionManager.droppedConnections.getAndIncrement();
+          continue;
+        }
         key.attach(c);  // so closeCurrentConnection can get the object
         reader.addConnection(c);
       }
@@ -862,8 +984,17 @@ public abstract class Server {
             SelectionKey key = iter.next();
             iter.remove();
             try {
-              if (key.isValid() && key.isWritable()) {
-                  doAsyncWrite(key);
+              if (key.isWritable()) {
+                doAsyncWrite(key);
+              }
+            } catch (CancelledKeyException cke) {
+              // something else closed the connection, ex. reader or the
+              // listener doing an idle scan.  ignore it and let them clean
+              // up
+              Call call = (Call)key.attachment();
+              if (call != null) {
+                LOG.info(Thread.currentThread().getName() +
+                    ": connection aborted from " + call.connection);
               }
             } catch (IOException e) {
               LOG.info(Thread.currentThread().getName() + ": doAsyncWrite threw exception " + e);
@@ -1049,6 +1180,13 @@ public abstract class Server {
     //
     void doRespond(Call call) throws IOException {
       synchronized (call.connection.responseQueue) {
+        // must only wrap before adding to the responseQueue to prevent
+        // postponed responses from being encrypted and sent out of order.
+        if (call.connection.useWrap) {
+          ByteArrayOutputStream response = new ByteArrayOutputStream();
+          wrapWithSasl(response, call);
+          call.setResponse(ByteBuffer.wrap(response.toByteArray()));
+        }
         call.connection.responseQueue.addLast(call);
         if (call.connection.responseQueue.size() == 1) {
           processResponse(call.connection.responseQueue, true);
@@ -1156,10 +1294,6 @@ public abstract class Server {
     private final Call authFailedCall = new Call(AUTHORIZATION_FAILED_CALL_ID,
         RpcConstants.INVALID_RETRY_COUNT, null, this);
     private ByteArrayOutputStream authFailedResponse = new ByteArrayOutputStream();
-    
-    private final Call saslCall = new Call(AuthProtocol.SASL.callId,
-        RpcConstants.INVALID_RETRY_COUNT, null, this);
-    private final ByteArrayOutputStream saslResponse = new ByteArrayOutputStream();
     
     private boolean sentNegotiate = false;
     private boolean useWrap = false;
@@ -1435,24 +1569,24 @@ public abstract class Server {
       }
       return response.build();
     }
-    
+
     private void doSaslReply(Message message) throws IOException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Sending sasl message "+message);
-      }
+      final Call saslCall = new Call(AuthProtocol.SASL.callId,
+          RpcConstants.INVALID_RETRY_COUNT, null, this);
+      final ByteArrayOutputStream saslResponse = new ByteArrayOutputStream();
       setupResponse(saslResponse, saslCall,
           RpcStatusProto.SUCCESS, null,
           new RpcResponseWrapper(message), null, null);
-      responder.doRespond(saslCall);
+      saslCall.sendResponse();
     }
-    
+
     private void doSaslReply(Exception ioe) throws IOException {
       setupResponse(authFailedResponse, authFailedCall,
           RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_UNAUTHORIZED,
           null, ioe.getClass().getName(), ioe.getLocalizedMessage());
-      responder.doRespond(authFailedCall);
+      authFailedCall.sendResponse();
     }
-    
+
     private void disposeSasl() {
       if (saslServer != null) {
         try {
@@ -1628,7 +1762,7 @@ public abstract class Server {
         setupResponse(buffer, fakeCall, 
             RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_VERSION_MISMATCH,
             null, VersionMismatch.class.getName(), errMsg);
-        responder.doRespond(fakeCall);
+        fakeCall.sendResponse();
       } else if (clientVersion >= 3) {
         Call fakeCall = new Call(-1, RpcConstants.INVALID_RETRY_COUNT, null,
             this);
@@ -1636,7 +1770,7 @@ public abstract class Server {
         setupResponseOldVersionFatal(buffer, fakeCall,
             null, VersionMismatch.class.getName(), errMsg);
 
-        responder.doRespond(fakeCall);
+        fakeCall.sendResponse();
       } else if (clientVersion == 2) { // Hadoop 0.18.3
         Call fakeCall = new Call(0, RpcConstants.INVALID_RETRY_COUNT, null,
             this);
@@ -1646,8 +1780,7 @@ public abstract class Server {
         WritableUtils.writeString(out, VersionMismatch.class.getName());
         WritableUtils.writeString(out, errMsg);
         fakeCall.setResponse(ByteBuffer.wrap(buffer.toByteArray()));
-        
-        responder.doRespond(fakeCall);
+        fakeCall.sendResponse();
       }
     }
     
@@ -1655,7 +1788,7 @@ public abstract class Server {
       Call fakeCall = new Call(0, RpcConstants.INVALID_RETRY_COUNT, null, this);
       fakeCall.setResponse(ByteBuffer.wrap(
           RECEIVED_HTTP_REQ_RESPONSE.getBytes()));
-      responder.doRespond(fakeCall);
+      fakeCall.sendResponse();
     }
 
     /** Reads the connection context following the connection header
@@ -1707,6 +1840,9 @@ public abstract class Server {
       authorizeConnection();
       // don't set until after authz because connection isn't established
       connectionContextRead = true;
+      if (user != null) {
+        connectionManager.incrUserConnections(user.getShortUserName());
+      }
     }
     
     /**
@@ -1795,7 +1931,7 @@ public abstract class Server {
         setupResponse(authFailedResponse, call,
             RpcStatusProto.FATAL, wrse.getRpcErrorCodeProto(), null,
             ioe.getClass().getName(), ioe.getMessage());
-        responder.doRespond(call);
+        call.sendResponse();
         throw wrse;
       }
     }
@@ -2001,6 +2137,10 @@ public abstract class Server {
       }
     }
 
+    private void sendResponse(Call call) throws IOException {
+      responder.doRespond(call);
+    }
+
     /**
      * Get service class for connection
      * @return the serviceClass
@@ -2124,21 +2264,17 @@ public abstract class Server {
           }
           CurCall.set(null);
           synchronized (call.connection.responseQueue) {
-            // setupResponse() needs to be sync'ed together with 
-            // responder.doResponse() since setupResponse may use
-            // SASL to encrypt response data and SASL enforces
-            // its own message ordering.
-            setupResponse(buf, call, returnStatus, detailedErr, 
+            setupResponse(buf, call, returnStatus, detailedErr,
                 value, errorClass, error);
-            
-            // Discard the large buf and reset it back to smaller size 
-            // to free up heap
+
+            // Discard the large buf and reset it back to smaller size
+            // to free up heap.
             if (buf.size() > maxRespSize) {
               LOG.warn("Large response size " + buf.size() + " for call "
                   + call.toString());
               buf = new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
             }
-            responder.doRespond(call);
+            call.sendResponse();
           }
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
@@ -2255,6 +2391,10 @@ public abstract class Server {
         CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_KEY,
         CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_DEFAULT);
 
+    this.setLogSlowRPC(conf.getBoolean(
+        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC,
+        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));
+
     // Create the responder here
     responder = new Responder();
     
@@ -2330,7 +2470,7 @@ public abstract class Server {
    * @param error error message, if the call failed
    * @throws IOException
    */
-  private void setupResponse(ByteArrayOutputStream responseBuf,
+  private static void setupResponse(ByteArrayOutputStream responseBuf,
                              Call call, RpcStatusProto status, RpcErrorCodeProto erCode,
                              Writable rv, String errorClass, String error) 
   throws IOException {
@@ -2388,9 +2528,6 @@ public abstract class Server {
       out.writeInt(fullLength);
       header.writeDelimitedTo(out);
     }
-    if (call.connection.useWrap) {
-      wrapWithSasl(responseBuf, call);
-    }
     call.setResponse(ByteBuffer.wrap(responseBuf.toByteArray()));
   }
   
@@ -2418,18 +2555,14 @@ public abstract class Server {
     out.writeInt(OLD_VERSION_FATAL_STATUS);   // write FATAL_STATUS
     WritableUtils.writeString(out, errorClass);
     WritableUtils.writeString(out, error);
-
-    if (call.connection.useWrap) {
-      wrapWithSasl(response, call);
-    }
     call.setResponse(ByteBuffer.wrap(response.toByteArray()));
   }
   
   
-  private void wrapWithSasl(ByteArrayOutputStream response, Call call)
+  private static void wrapWithSasl(ByteArrayOutputStream response, Call call)
       throws IOException {
     if (call.connection.saslServer != null) {
-      byte[] token = response.toByteArray();
+      byte[] token = call.rpcResponse.array();
       // synchronization may be needed since there can be multiple Handler
       // threads using saslServer to wrap responses.
       synchronized (call.connection.saslServer) {
@@ -2573,7 +2706,30 @@ public abstract class Server {
   public int getNumOpenConnections() {
     return connectionManager.size();
   }
-  
+
+  /**
+   * Get the NumOpenConnections/User.
+   */
+  public String getNumOpenConnectionsPerUser() {
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      return mapper
+          .writeValueAsString(connectionManager.getUserToConnectionsMap());
+    } catch (IOException ignored) {
+    }
+    return null;
+  }
+
+  /**
+   * The number of RPC connections dropped due to
+   * too many connections.
+   * @return the number of dropped rpc connections
+   */
+  public long getNumDroppedConnections() {
+    return connectionManager.getDroppedConnections();
+
+  }
+
   /**
    * The number of rpc calls in the queue.
    * @return The number of rpc calls in the queue.
@@ -2683,14 +2839,19 @@ public abstract class Server {
   }
   
   private class ConnectionManager {
-    final private AtomicInteger count = new AtomicInteger();    
+    final private AtomicInteger count = new AtomicInteger();
+    final private AtomicLong droppedConnections = new AtomicLong();
     final private Set<Connection> connections;
+    /* Map to maintain the statistics per User */
+    final private Map<String, Integer> userToConnectionsMap;
+    final private Object userToConnectionsMapLock = new Object();
 
     final private Timer idleScanTimer;
     final private int idleScanThreshold;
     final private int idleScanInterval;
     final private int maxIdleTime;
     final private int maxIdleToClose;
+    final private int maxConnections;
     
     ConnectionManager() {
       this.idleScanTimer = new Timer(
@@ -2707,11 +2868,15 @@ public abstract class Server {
       this.maxIdleToClose = conf.getInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_KEY,
           CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_DEFAULT);
+      this.maxConnections = conf.getInt(
+          CommonConfigurationKeysPublic.IPC_SERVER_MAX_CONNECTIONS_KEY,
+          CommonConfigurationKeysPublic.IPC_SERVER_MAX_CONNECTIONS_DEFAULT);
       // create a set with concurrency -and- a thread-safe iterator, add 2
       // for listener and idle closer threads
       this.connections = Collections.newSetFromMap(
           new ConcurrentHashMap<Connection,Boolean>(
               maxQueueSize, 0.75f, readThreads+2));
+      this.userToConnectionsMap = new ConcurrentHashMap<>();
     }
 
     private boolean add(Connection connection) {
@@ -2729,9 +2894,51 @@ public abstract class Server {
       }
       return removed;
     }
-    
+
+    void incrUserConnections(String user) {
+      synchronized (userToConnectionsMapLock) {
+        Integer count = userToConnectionsMap.get(user);
+        if (count == null) {
+          count = 1;
+        } else {
+          count++;
+        }
+        userToConnectionsMap.put(user, count);
+      }
+    }
+
+    void decrUserConnections(String user) {
+      synchronized (userToConnectionsMapLock) {
+        Integer count = userToConnectionsMap.get(user);
+        if (count == null) {
+          return;
+        } else {
+          count--;
+        }
+        if (count == 0) {
+          userToConnectionsMap.remove(user);
+        } else {
+          userToConnectionsMap.put(user, count);
+        }
+      }
+    }
+
+    Map<String, Integer> getUserToConnectionsMap() {
+      return userToConnectionsMap;
+    }
+
+
+    long getDroppedConnections() {
+      return droppedConnections.get();
+    }
+
     int size() {
       return count.get();
+    }
+
+    boolean isFull() {
+      // The check is disabled when maxConnections <= 0.
+      return ((maxConnections > 0) && (size() >= maxConnections));
     }
 
     Connection[] toArray() {
@@ -2739,6 +2946,9 @@ public abstract class Server {
     }
 
     Connection register(SocketChannel channel) {
+      if (isFull()) {
+        return null;
+      }
       Connection connection = new Connection(channel, Time.now());
       add(connection);
       if (LOG.isDebugEnabled()) {
@@ -2760,6 +2970,10 @@ public abstract class Server {
         // only close if actually removed to avoid double-closing due
         // to possible races
         connection.close();
+        // Remove authorized users only
+        if (connection.user != null && connection.connectionContextRead) {
+          decrUserConnections(connection.user.getShortUserName());
+        }
       }
       return exists;
     }

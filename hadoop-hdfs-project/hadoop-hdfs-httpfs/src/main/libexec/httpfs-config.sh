@@ -56,7 +56,10 @@ print "Setting HTTPFS_HOME:          ${HTTPFS_HOME}"
 if [ -e "${HTTPFS_HOME}/bin/httpfs-env.sh" ]; then
   print "Sourcing:                    ${HTTPFS_HOME}/bin/httpfs-env.sh"
   source ${HTTPFS_HOME}/bin/httpfs-env.sh
-  grep "^ *export " ${HTTPFS_HOME}/bin/httpfs-env.sh | sed 's/ *export/  setting/'
+  if [ "${HTTPFS_SILENT}" != "true" ]; then
+    grep "^ *export " "${HTTPFS_HOME}/bin/httpfs-env.sh" |
+      sed 's/ *export/  setting/'
+  fi
 fi
 
 # verify that the sourced env file didn't change HTTPFS_HOME
@@ -81,7 +84,10 @@ httpfs_config=${HTTPFS_CONFIG}
 if [ -e "${HTTPFS_CONFIG}/httpfs-env.sh" ]; then
   print "Sourcing:                    ${HTTPFS_CONFIG}/httpfs-env.sh"
   source ${HTTPFS_CONFIG}/httpfs-env.sh
-  grep "^ *export " ${HTTPFS_CONFIG}/httpfs-env.sh | sed 's/ *export/  setting/'
+  if [ "${HTTPFS_SILENT}" != "true" ]; then
+    grep "^ *export " "${HTTPFS_CONFIG}/httpfs-env.sh" |
+      sed 's/ *export/  setting/'
+  fi
 fi
 
 # verify that the sourced env file didn't change HTTPFS_HOME
@@ -150,6 +156,40 @@ else
   print "Using   HTTPFS_SSL_ENABLED: ${HTTPFS_SSL_ENABLED}"
 fi
 
+if [ "${HTTPFS_SSL_CLIENT_AUTH}" = "" ]; then
+  export HTTPFS_SSL_CLIENT_AUTH="false"
+  print "Setting HTTPFS_SSL_CLIENT_AUTH: ${HTTPFS_SSL_CLIENT_AUTH}"
+else
+  print "Using   HTTPFS_SSL_CLIENT_AUTH: ${HTTPFS_SSL_CLIENT_AUTH}"
+fi
+
+if [ "${HTTPFS_SSL_ENABLED_PROTOCOLS}" = "" ]; then
+  export HTTPFS_SSL_ENABLED_PROTOCOLS="TLSv1,TLSv1.1,TLSv1.2,SSLv2Hello"
+  print "Setting HTTPFS_SSL_ENABLED_PROTOCOLS: ${HTTPFS_SSL_ENABLED_PROTOCOLS}"
+else
+  print "Using   HTTPFS_SSL_ENABLED_PROTOCOLS: ${HTTPFS_SSL_ENABLED_PROTOCOLS}"
+fi
+
+if [ "${HTTPFS_SSL_CIPHERS}" = "" ]; then
+  export HTTPFS_SSL_CIPHERS="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+  HTTPFS_SSL_CIPHERS+=",TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+  HTTPFS_SSL_CIPHERS+=",TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"
+  HTTPFS_SSL_CIPHERS+=",TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+  HTTPFS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384"
+  HTTPFS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_256_CBC_SHA"
+  HTTPFS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256"
+  HTTPFS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_128_CBC_SHA"
+  HTTPFS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA"
+  HTTPFS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_256_CBC_SHA256"
+  HTTPFS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_256_CBC_SHA"
+  HTTPFS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_128_CBC_SHA256"
+  HTTPFS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_128_CBC_SHA"
+  HTTPFS_SSL_CIPHERS+=",TLS_RSA_WITH_3DES_EDE_CBC_SHA"
+  print "Setting HTTPFS_SSL_CIPHERS: ${HTTPFS_SSL_CIPHERS}"
+else
+  print "Using   HTTPFS_SSL_CIPHERS: ${HTTPFS_SSL_CIPHERS}"
+fi
+
 if [ "${HTTPFS_SSL_KEYSTORE_FILE}" = "" ]; then
   export HTTPFS_SSL_KEYSTORE_FILE=${HOME}/.keystore
   print "Setting HTTPFS_SSL_KEYSTORE_FILE:     ${HTTPFS_SSL_KEYSTORE_FILE}"
@@ -161,7 +201,14 @@ if [ "${HTTPFS_SSL_KEYSTORE_PASS}" = "" ]; then
   export HTTPFS_SSL_KEYSTORE_PASS=password
   print "Setting HTTPFS_SSL_KEYSTORE_PASS:     ${HTTPFS_SSL_KEYSTORE_PASS}"
 else
-  print "Using   HTTPFS_SSL_KEYSTORE_PASS:     ${HTTPFS_SSL_KEYSTORE_PASS}"
+  print "Using   HTTPFS_SSL_KEYSTORE_PASS:     *REDACTED*"
+fi
+
+if [ "${HTTPFS_MAX_HTTP_HEADER_SIZE}" = "" ]; then
+  export HTTPFS_MAX_HTTP_HEADER_SIZE=65536
+  print "Setting HTTPFS_MAX_HTTP_HEADER_SIZE:     ${HTTPFS_MAX_HTTP_HEADER_SIZE}"
+else
+  print "Using   HTTPFS_MAX_HTTP_HEADER_SIZE:     ${HTTPFS_MAX_HTTP_HEADER_SIZE}"
 fi
 
 if [ "${CATALINA_BASE}" = "" ]; then

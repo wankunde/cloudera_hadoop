@@ -1,7 +1,7 @@
 From 6d04aa402c59a6fa2dfd5eebf380878a0c581d09 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 11 Feb 2013 10:40:22 -0800
-Subject: [PATCH 032/924] MR1: CLOUDERA-BUILD. JT HA:  job is not recovered
+Subject: [PATCH 0032/2639] MR1: CLOUDERA-BUILD. JT HA:  job is not recovered
  when jt transitions to active then to standby and
  then to active
 

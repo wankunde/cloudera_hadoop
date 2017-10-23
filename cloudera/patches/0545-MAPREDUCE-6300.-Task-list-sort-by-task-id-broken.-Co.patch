@@ -1,7 +1,7 @@
 From aa646b9f6259182b8da0ab320bc62543a39cf13d Mon Sep 17 00:00:00 2001
 From: Akira Ajisaka <aajisaka@apache.org>
 Date: Thu, 16 Apr 2015 10:04:09 -0500
-Subject: [PATCH 545/924] MAPREDUCE-6300. Task list sort by task id broken.
+Subject: [PATCH 0545/2639] MAPREDUCE-6300. Task list sort by task id broken.
  Contributed by Siqi Li.
 
 (cherry picked from commit 1fa8075794894b3e0053d251788277fb88e85533)

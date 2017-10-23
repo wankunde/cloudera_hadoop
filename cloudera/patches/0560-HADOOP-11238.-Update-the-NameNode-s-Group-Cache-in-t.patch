@@ -1,9 +1,9 @@
 From 804c1b7294efe91d21f124bafbf1825267729472 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 12 Dec 2014 16:30:52 -0800
-Subject: [PATCH 560/924] HADOOP-11238. Update the NameNode's Group Cache in
- the background when possible (Chris Li via Colin P.
- McCabe) (cherry picked from commit
+Subject: [PATCH 0560/2639] HADOOP-11238. Update the NameNode's Group Cache in
+ the background when possible (Chris Li via Colin
+ P. McCabe) (cherry picked from commit
  e5a692519956aefb3a540ed0137b63cf598ac10d)
 
 (cherry picked from commit b521d91c0f5b6d114630b6727f6a01db56dba4f1)

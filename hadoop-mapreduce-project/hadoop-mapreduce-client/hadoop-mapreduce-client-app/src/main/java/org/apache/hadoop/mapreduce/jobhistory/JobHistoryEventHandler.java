@@ -49,6 +49,7 @@ import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -435,10 +436,10 @@ public class JobHistoryEventHandler extends AbstractService
    * This should be the first call to history for a job
    * 
    * @param jobId the jobId.
-   * @param forcedJobStateOnShutDown
+   * @param amStartedEvent
    * @throws IOException
    */
-  protected void setupEventWriter(JobId jobId, String forcedJobStateOnShutDown)
+  protected void setupEventWriter(JobId jobId, AMStartedEvent amStartedEvent)
       throws IOException {
     if (stagingDirPath == null) {
       LOG.error("Log Directory is null, returning");
@@ -478,16 +479,16 @@ public class JobHistoryEventHandler extends AbstractService
       if (conf != null) {
         // TODO Ideally this should be written out to the job dir
         // (.staging/jobid/files - RecoveryService will need to be patched)
-        FSDataOutputStream jobFileOut = null;
-        try {
-          if (logDirConfPath != null) {
-            jobFileOut = stagingDirFS.create(logDirConfPath, true);
-            conf.writeXml(jobFileOut);
-            jobFileOut.close();
+        if (logDirConfPath != null) {
+          Configuration redactedConf = new Configuration(conf);
+          MRJobConfUtil.redact(redactedConf);
+          try (FSDataOutputStream jobFileOut = stagingDirFS
+              .create(logDirConfPath, true)) {
+            redactedConf.writeXml(jobFileOut);
+          } catch (IOException e) {
+            LOG.info("Failed to write the job configuration file", e);
+            throw e;
           }
-        } catch (IOException e) {
-          LOG.info("Failed to write the job configuration file", e);
-          throw e;
         }
       }
     }
@@ -498,8 +499,13 @@ public class JobHistoryEventHandler extends AbstractService
     }
 
     MetaInfo fi = new MetaInfo(historyFile, logDirConfPath, writer,
-        user, jobName, jobId, forcedJobStateOnShutDown, queueName);
+        user, jobName, jobId, amStartedEvent.getForcedJobStateOnShutDown(),
+        queueName);
     fi.getJobSummary().setJobId(jobId);
+    fi.getJobSummary().setJobLaunchTime(amStartedEvent.getStartTime());
+    fi.getJobSummary().setJobSubmitTime(amStartedEvent.getSubmitTime());
+    fi.getJobIndexInfo().setJobStartTime(amStartedEvent.getStartTime());
+    fi.getJobIndexInfo().setSubmitTime(amStartedEvent.getSubmitTime());
     fileMap.put(jobId, fi);
   }
 
@@ -550,8 +556,7 @@ public class JobHistoryEventHandler extends AbstractService
         try {
           AMStartedEvent amStartedEvent =
               (AMStartedEvent) event.getHistoryEvent();
-          setupEventWriter(event.getJobID(),
-              amStartedEvent.getForcedJobStateOnShutDown());
+          setupEventWriter(event.getJobID(), amStartedEvent);
         } catch (IOException ioe) {
           LOG.error("Error JobHistoryEventHandler in handleEvent: " + event,
               ioe);
@@ -819,7 +824,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("FINISHED_MAPS", jfe.getFinishedMaps());
         tEvent.addEventInfo("FINISHED_REDUCES", jfe.getFinishedReduces());
         tEvent.addEventInfo("MAP_COUNTERS_GROUPS",
-                countersToJSON(jfe.getTotalCounters()));
+                countersToJSON(jfe.getMapCounters()));
         tEvent.addEventInfo("REDUCE_COUNTERS_GROUPS",
                 countersToJSON(jfe.getReduceCounters()));
         tEvent.addEventInfo("TOTAL_COUNTERS_GROUPS",
@@ -997,6 +1002,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("NODE_MANAGER_HTTP_PORT",
                 ase.getNodeManagerHttpPort());
         tEvent.addEventInfo("START_TIME", ase.getStartTime());
+        tEvent.addEventInfo("SUBMIT_TIME", ase.getSubmitTime());
         tEntity.addEvent(tEvent);
         tEntity.setEntityId(jobId.toString());
         tEntity.setEntityType(MAPREDUCE_JOB_ENTITY_TYPE);

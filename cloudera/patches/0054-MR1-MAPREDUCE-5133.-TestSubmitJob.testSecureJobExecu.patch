@@ -1,7 +1,7 @@
 From 20290a2638ec2e1a23e8744b07ec6a9c6ec3b56d Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 17 Apr 2013 23:18:24 +0000
-Subject: [PATCH 054/924] MR1: MAPREDUCE-5133.
+Subject: [PATCH 0054/2639] MR1: MAPREDUCE-5133.
  TestSubmitJob.testSecureJobExecution is flaky due
  to job dir deletion race. (sandyr via tucu)
 

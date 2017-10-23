@@ -1,9 +1,9 @@
 From 6fcd5fbae26446fdeb654d4c13e36bc8267de680 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Wed, 18 Feb 2015 11:47:45 -0800
-Subject: [PATCH 590/924] HDFS-7772. Document hdfs balancer -exclude/-include
- option in HDFSCommands.html. Contributed by Xiaoyu
- Yao.
+Subject: [PATCH 0590/2639] HDFS-7772. Document hdfs balancer
+ -exclude/-include option in HDFSCommands.html.
+ Contributed by Xiaoyu Yao.
 
 (cherry picked from commit b1b1e05e18c830ace9ad27d2c115196f79e8d0ad)
 ---

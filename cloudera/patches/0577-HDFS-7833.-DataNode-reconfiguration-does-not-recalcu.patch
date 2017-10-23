@@ -1,10 +1,10 @@
 From c43a53405e98f172d967663a02b02162a5d7e67d Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Wed, 6 May 2015 21:11:30 -0700
-Subject: [PATCH 577/924] HDFS-7833. DataNode reconfiguration does not
+Subject: [PATCH 0577/2639] HDFS-7833. DataNode reconfiguration does not
  recalculate valid volumes required, based on
- configured failed volumes tolerated. Contributed by
- Lei (Eddy) Xu.
+ configured failed volumes tolerated. Contributed
+ by Lei (Eddy) Xu.
 
 (cherry picked from commit 6633a8474d7e92fa028ede8fd6c6e41b6c5887f5)
 (cherry picked from commit 276e2d3390f1463be723d0d190fceb86621fb138)

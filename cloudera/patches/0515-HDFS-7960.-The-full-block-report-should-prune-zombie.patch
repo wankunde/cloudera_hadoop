@@ -1,11 +1,12 @@
 From 4821506ee87ba05a361c353f404b4d7f3ba861f8 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Mon, 23 Mar 2015 22:00:34 -0700
-Subject: [PATCH 515/924] HDFS-7960. The full block report should prune zombie
- storages even if they're not empty. Contributed by
- Colin McCabe and Eddy Xu. (cherry picked from
- commit 2f46ee50bd4efc82ba3d30bd36f7637ea9d9714e)
- (cherry picked from commit
+Subject: [PATCH 0515/2639] HDFS-7960. The full block report should prune
+ zombie storages even if they're not empty.
+ Contributed by Colin McCabe and Eddy Xu. (cherry
+ picked from commit
+ 2f46ee50bd4efc82ba3d30bd36f7637ea9d9714e) (cherry
+ picked from commit
  50ee8f4e67a66aa77c5359182f61f3e951844db6)
 
  Conflicts:

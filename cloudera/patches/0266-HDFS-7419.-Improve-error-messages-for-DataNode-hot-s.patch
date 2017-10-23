@@ -1,7 +1,7 @@
 From 08e5e63582ceb077e11dd8dd7f1d0421b6acd8af Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 24 Nov 2014 10:51:18 -0800
-Subject: [PATCH 266/924] HDFS-7419. Improve error messages for DataNode hot
+Subject: [PATCH 0266/2639] HDFS-7419. Improve error messages for DataNode hot
  swap drive feature (Lei Xu via Colin P. Mccabe)
  (cherry picked from commit
  f636f9d9439742d7ebaaf21f7e22652403572c61) (cherry

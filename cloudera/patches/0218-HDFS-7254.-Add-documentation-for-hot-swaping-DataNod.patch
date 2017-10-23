@@ -1,7 +1,7 @@
 From c9543812d4984d67a2fcf346a7b88d1a580285b3 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 22 Oct 2014 13:27:51 -0700
-Subject: [PATCH 218/924] HDFS-7254. Add documentation for hot swaping
+Subject: [PATCH 0218/2639] HDFS-7254. Add documentation for hot swaping
  DataNode drives (Lei Xu via Colin P. McCabe)
  (cherry picked from commit
  66e8187ea1dbc6230ab2c633e4f609a7068b75db)

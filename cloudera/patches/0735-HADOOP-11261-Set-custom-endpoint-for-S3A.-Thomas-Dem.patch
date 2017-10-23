@@ -1,7 +1,7 @@
-From 2791ca096ad68526809b40d5558e1dbc3706c8c9 Mon Sep 17 00:00:00 2001
+From e8aef429229c715be8eae245b2f4c4521d25717b Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Fri, 16 Jan 2015 10:15:22 +0000
-Subject: [PATCH 735/924] HADOOP-11261 Set custom endpoint for S3A. (Thomas
+Subject: [PATCH 0735/2639] HADOOP-11261 Set custom endpoint for S3A. (Thomas
  Demoor via stevel)
 
 (cherry picked from commit 000ca83ea3aeb3687625c857bcc0762fd2887db2)

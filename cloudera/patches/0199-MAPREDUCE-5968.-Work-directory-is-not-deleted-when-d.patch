@@ -1,7 +1,7 @@
 From 83c60a426695ea1829896acfc3fa371ef1076f51 Mon Sep 17 00:00:00 2001
 From: Zhihai Xu <zxu@cloudera.com>
 Date: Tue, 5 Aug 2014 12:36:09 -0700
-Subject: [PATCH 199/924] MAPREDUCE-5968. Work directory is not deleted when
+Subject: [PATCH 0199/2639] MAPREDUCE-5968. Work directory is not deleted when
  downloadCacheObject throws IOException
 
 (cherry picked from commit 50a40e8cf8fdadf4adeb71291bb75883a3801c24)

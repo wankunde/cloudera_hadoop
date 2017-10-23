@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -65,6 +66,9 @@ public class RMContextImpl implements RMContext {
 
   private RMActiveServiceContext activeServiceContext;
 
+  private Configuration yarnConfiguration;
+
+  private ResourceManager resourceManager;
   /**
    * Default constructor. To be used in conjunction with setter methods for
    * individual fields.
@@ -118,7 +122,7 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
-  public ConcurrentMap<String, RMNode> getInactiveRMNodes() {
+  public ConcurrentMap<NodeId, RMNode> getInactiveRMNodes() {
     return activeServiceContext.getInactiveRMNodes();
   }
 
@@ -399,4 +403,21 @@ public class RMContextImpl implements RMContext {
     this.activeServiceContext = activeServiceContext;
   }
 
+  @Override
+  public Configuration getYarnConfiguration() {
+    return this.yarnConfiguration;
+  }
+
+  public void setYarnConfiguration(Configuration yarnConfiguration) {
+    this.yarnConfiguration=yarnConfiguration;
+  }
+
+  @Override
+  public ResourceManager getResourceManager() {
+    return resourceManager;
+  }
+
+  public void setResourceManager(ResourceManager rm) {
+    this.resourceManager = rm;
+  }
 }

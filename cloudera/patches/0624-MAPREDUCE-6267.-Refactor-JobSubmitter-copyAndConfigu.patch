@@ -1,7 +1,7 @@
 From 2c1e6238f40c78ad3403bfbff8f9a402ae27e13e Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 4 Mar 2015 14:42:07 -0800
-Subject: [PATCH 624/924] MAPREDUCE-6267. Refactor
+Subject: [PATCH 0624/2639] MAPREDUCE-6267. Refactor
  JobSubmitter#copyAndConfigureFiles into it's own
  class. (Chris Trezzo via kasha)
 

@@ -1,7 +1,7 @@
 From c99289dca339eeb936c3614859b67e3c4c379993 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Fri, 10 Oct 2014 15:05:52 -0700
-Subject: [PATCH 317/924] HADOOP-11188. hadoop-azure: automatically expand
+Subject: [PATCH 0317/2639] HADOOP-11188. hadoop-azure: automatically expand
  page blobs when they become full. Contributed by
  Eric Hanson.
 

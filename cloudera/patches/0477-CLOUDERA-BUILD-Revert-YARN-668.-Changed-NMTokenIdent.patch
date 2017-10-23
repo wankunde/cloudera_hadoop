@@ -1,10 +1,10 @@
 From 7b6fe04e456adb617055c2d7f0b7f2a55abaf251 Mon Sep 17 00:00:00 2001
 From: Anubhav Dhoot <adhoot@cloudera.com>
 Date: Fri, 6 Mar 2015 16:23:26 -0800
-Subject: [PATCH 477/924] CLOUDERA-BUILD Revert "YARN-668. Changed
+Subject: [PATCH 0477/2639] CLOUDERA-BUILD Revert "YARN-668. Changed
  NMTokenIdentifier/AMRMTokenIdentifier/ContainerTokenIdentifier
- to use protobuf object as the payload. Contributed
- by Junping Du."
+ to use protobuf object as the payload.
+ Contributed by Junping Du."
 
 This reverts commit cb08ed148449d4432d0006e1538d4088d3ff3806.
 

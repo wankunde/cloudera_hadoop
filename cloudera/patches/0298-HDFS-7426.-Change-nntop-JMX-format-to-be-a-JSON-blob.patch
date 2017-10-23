@@ -1,7 +1,7 @@
 From a1980e4b73fa02743542c665df896b337221c652 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Fri, 12 Dec 2014 17:04:33 -0800
-Subject: [PATCH 298/924] HDFS-7426. Change nntop JMX format to be a JSON
+Subject: [PATCH 0298/2639] HDFS-7426. Change nntop JMX format to be a JSON
  blob.
 
 (cherry picked from commit fa7b9248e415c04bb555772f44fadaf8d9f34974)

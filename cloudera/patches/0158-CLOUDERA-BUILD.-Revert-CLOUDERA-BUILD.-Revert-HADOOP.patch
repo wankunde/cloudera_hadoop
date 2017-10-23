@@ -1,7 +1,7 @@
 From 2942e012a72c70080f1e7455a30f3897731f49a1 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Thu, 13 Jun 2013 19:41:23 -0700
-Subject: [PATCH 158/924] CLOUDERA-BUILD. Revert "CLOUDERA-BUILD. Revert
+Subject: [PATCH 0158/2639] CLOUDERA-BUILD. Revert "CLOUDERA-BUILD. Revert
  "HADOOP-8912. Merging changes 1397437 and 1397438
  from trunk"" 		IOW. Reapply HADOOP-8912
 

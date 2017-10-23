@@ -1,7 +1,7 @@
 From d6475b0c62d2cd90d99afc928ce072662368e038 Mon Sep 17 00:00:00 2001
 From: Suresh Srinivas <suresh@apache.org>
 Date: Mon, 7 Jan 2013 01:34:20 +0000
-Subject: [PATCH 097/924] MR1: MAPREDUCE-4914. TestMiniMRDFSSort fails with
+Subject: [PATCH 0097/2639] MR1: MAPREDUCE-4914. TestMiniMRDFSSort fails with
  openJDK7. Contributed by Brandon Li.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1429638 13f79535-47bb-0310-9956-ffa450edef68

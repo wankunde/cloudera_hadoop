@@ -55,6 +55,9 @@ WebHDFS REST API
     * {{{List a Directory}<<<LISTSTATUS>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.listStatus)
 
+    * {{{Iteratively List a Directory}<<<LISTSTATUS_BATCH>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.listStatusIterator)
+
     * {{{Get Content Summary of a Directory}<<<GETCONTENTSUMMARY>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getContentSummary)
 
@@ -63,6 +66,9 @@ WebHDFS REST API
 
     * {{{Get Home Directory}<<<GETHOMEDIRECTORY>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getHomeDirectory)
+
+    * {{{Get Trash Root}<<<GETTRASHROOT>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getTrashRoot)
 
     * {{{Get Delegation Token}<<<GETDELEGATIONTOKEN>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getDelegationToken)
@@ -591,6 +597,145 @@ Content-Length: 427
   See also:
    {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.listStatus
 
+** {Iteratively List a Directory}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS_BATCH&startAfter=<CHILD>"
++---------------------------------
+
+  The client receives a response with a {{{DirectoryListing JSON Schema}<<<DirectoryListing>>> JSON object}}, which contains a {{{FileStatuses JSON Schema}<<<FileStatuses>>> JSON object}}, as well as iteration information:
+
++---------------------------------
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Expires: Tue, 30 Aug 2016 16:42:16 GMT
+Date: Tue, 30 Aug 2016 16:42:16 GMT
+Pragma: no-cache
+Expires: Tue, 30 Aug 2016 16:42:16 GMT
+Date: Tue, 30 Aug 2016 16:42:16 GMT
+Pragma: no-cache
+Content-Type: application/json
+X-FRAME-OPTIONS: SAMEORIGIN
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
+
+{
+  "DirectoryListing": {
+    "partialListing": {
+      "FileStatuses": {
+        "FileStatus": [
+          {
+            "accessTime": 0,
+            "blockSize": 0,
+            "childrenNum": 0,
+            "fileId": 16387,
+            "group": "supergroup",
+            "length": 0,
+            "modificationTime": 1473305882563,
+            "owner": "andrew",
+            "pathSuffix": "bardir",
+            "permission": "755",
+            "replication": 0,
+            "storagePolicy": 0,
+            "type": "DIRECTORY"
+          },
+          {
+            "accessTime": 1473305896945,
+            "blockSize": 1024,
+            "childrenNum": 0,
+            "fileId": 16388,
+            "group": "supergroup",
+            "length": 0,
+            "modificationTime": 1473305896965,
+            "owner": "andrew",
+            "pathSuffix": "bazfile",
+            "permission": "644",
+            "replication": 3,
+            "storagePolicy": 0,
+            "type": "FILE"
+          }
+        ]
+      }
+    },
+  "remainingEntries": 2
+  }
+}
++---------------------------------
+
+  If <<<remainingEntries>>> is non-zero, there are additional entries in the directory.
+  To query the next batch, set the <<<startAfter>>> parameter to the <<<pathSuffix>>> of the last item returned in the current batch. For example:
+
++---------------------------------
+curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS_BATCH&startAfter=bazfile"
++---------------------------------
+
+  Which will return the next batch of directory entries:
+
++---------------------------------
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Expires: Tue, 30 Aug 2016 16:46:23 GMT
+Date: Tue, 30 Aug 2016 16:46:23 GMT
+Pragma: no-cache
+Expires: Tue, 30 Aug 2016 16:46:23 GMT
+Date: Tue, 30 Aug 2016 16:46:23 GMT
+Pragma: no-cache
+Content-Type: application/json
+X-FRAME-OPTIONS: SAMEORIGIN
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
+
+{
+  "DirectoryListing": {
+    "partialListing": {
+      "FileStatuses": {
+        "FileStatus": [
+          {
+            "accessTime": 0,
+            "blockSize": 0,
+            "childrenNum": 0,
+            "fileId": 16386,
+            "group": "supergroup",
+            "length": 0,
+            "modificationTime": 1473305878951,
+            "owner": "andrew",
+            "pathSuffix": "foodir",
+            "permission": "755",
+            "replication": 0,
+            "storagePolicy": 0,
+            "type": "DIRECTORY"
+          },
+          {
+            "accessTime": 1473305902864,
+            "blockSize": 1024,
+            "childrenNum": 0,
+            "fileId": 16389,
+            "group": "supergroup",
+            "length": 0,
+            "modificationTime": 1473305902878,
+            "owner": "andrew",
+            "pathSuffix": "quxfile",
+            "permission": "644",
+            "replication": 3,
+            "storagePolicy": 0,
+            "type": "FILE"
+          }
+        ]
+      }
+    },
+    "remainingEntries": 0
+  }
+}
++---------------------------------
+
+  Batch size is controlled by the <<<dfs.ls.limit>>> option on the NameNode.
+
+  []
+
+  See also:
+    {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.listStatusIterator
 
 * {Other File System Operations}
 
@@ -689,6 +834,42 @@ Transfer-Encoding: chunked
 
   See also:
    {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getHomeDirectory
+
+
+** {Get Trash Root}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i "http://<HOST>:<PORT>/webhdfs/v1/?op=GETTRASHROOT"
++---------------------------------
+
+  The client receives a response with a {{{Path JSON Schema}<<<Path>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"Path": "/user/username/.Trash"}
++---------------------------------
+
+  If the path is an encrypted zone path and user has permission of the path, the client receives a response like this:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"Path": "/PATH/.Trash/username"}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getTrashRoot
+
+  For more details about trash root in an encrypted zone, please refer to {{{./TransparentEncryption.html#Rename_and_Trash_considerations}Transparent Encryption Guide}}.
 
 
 ** {Set Permission}
@@ -919,6 +1100,7 @@ Transfer-Encoding: chunked
         ], 
         "group": "supergroup", 
         "owner": "hadoop", 
+        "permission":"775",
         "stickyBit": false
     }
 }
@@ -1797,6 +1979,44 @@ var fileStatusProperties =
   {{{../../api/org/apache/hadoop/fs/FileStatus.html}FileStatus}}
 
 
+** {DirectoryListing JSON Schema}
+
+  A <<<DirectoryListing>>> JSON object represents a batch of directory entries while iteratively listing a directory. It contains a <<<FileStatuses>>> JSON object as well as iteration information.
+
++---------------------------------
+{
+  "name"      : "DirectoryListing",
+  "properties":
+  {
+    "DirectoryListing":
+    {
+      "type"      : "object",
+      "properties":
+      {
+        "partialListing":
+        {
+          "description": "A partial directory listing",
+          "type"       : "object", // A FileStatuses object
+          "required"   : true
+        },
+        "remainingEntries":
+        {
+          "description": "Number of remaining entries",
+          "type"       : "integer",
+          "required"   : true
+        }
+      }
+    }
+  }
+}
++---------------------------------
+
+  See also:
+  {{{FileStatuses JSON Schema}<<<FileStatuses>>> JSON object}},
+  {{{Iteratively List a Directory}<<<LISTSTATUS_BATCH>>>}},
+  {{{../../api/org/apache/hadoop/fs/FileStatus.html}FileStatus}}
+
+
 ** {Long JSON Schema}
 
 +---------------------------------
@@ -2205,9 +2425,9 @@ var tokenProperties =
 *----------------+-------------------------------------------------------------------+
 || Default Value | null (an invalid value) |
 *----------------+-------------------------------------------------------------------+
-|| Valid Values  | Strings matching regex pattern \"[rwx-]\{3\}\" |
+|| Valid Values  | Strings matching regex pattern  \"[r-][w-][x-] \" |
 *----------------+-------------------------------------------------------------------+
-|| Syntax        | \"[rwx-]\{3\}\" |
+|| Syntax        | \"[r-][w-][x-] \"  |
 *----------------+-------------------------------------------------------------------+
 
   See also:

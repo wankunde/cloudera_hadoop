@@ -1,7 +1,7 @@
 From b5a9aeddbdb54140768660e3ec0498987684e66d Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Thu, 18 Dec 2014 23:28:18 +0000
-Subject: [PATCH 354/924] YARN-2964. RM prematurely cancels tokens for jobs
+Subject: [PATCH 0354/2639] YARN-2964. RM prematurely cancels tokens for jobs
  that submit jobs (oozie). Contributed by Jian He
 
 (cherry picked from commit 0402bada1989258ecbfdc437cb339322a1f55a97)

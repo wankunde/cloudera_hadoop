@@ -18,14 +18,19 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import javax.crypto.SecretKey;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -39,6 +44,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.conf.HAUtil;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -58,7 +65,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
-import org.apache.hadoop.yarn.state.SingleArcTransition;
+import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 
@@ -84,11 +91,17 @@ public abstract class RMStateStore extends AbstractService {
   protected static final String VERSION_NODE = "RMVersionNode";
   protected static final String EPOCH_NODE = "EpochNode";
   private ResourceManager resourceManager;
+  private final ReadLock readLock;
+  private final WriteLock writeLock;
 
   public static final Log LOG = LogFactory.getLog(RMStateStore.class);
 
-  private enum RMStateStoreState {
-    DEFAULT
+  /**
+   * The enum defines state of RMStateStore.
+   */
+  public enum RMStateStoreState {
+    ACTIVE,
+    FENCED
   };
 
   private static final StateMachineFactory<RMStateStore,
@@ -99,31 +112,81 @@ public abstract class RMStateStore extends AbstractService {
                                                     RMStateStoreState,
                                                     RMStateStoreEventType,
                                                     RMStateStoreEvent>(
-      RMStateStoreState.DEFAULT)
-      .addTransition(RMStateStoreState.DEFAULT, RMStateStoreState.DEFAULT,
+      RMStateStoreState.ACTIVE)
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
           RMStateStoreEventType.STORE_APP, new StoreAppTransition())
-      .addTransition(RMStateStoreState.DEFAULT, RMStateStoreState.DEFAULT,
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
           RMStateStoreEventType.UPDATE_APP, new UpdateAppTransition())
-      .addTransition(RMStateStoreState.DEFAULT, RMStateStoreState.DEFAULT,
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
           RMStateStoreEventType.REMOVE_APP, new RemoveAppTransition())
-      .addTransition(RMStateStoreState.DEFAULT, RMStateStoreState.DEFAULT,
-          RMStateStoreEventType.STORE_APP_ATTEMPT, new StoreAppAttemptTransition())
-      .addTransition(RMStateStoreState.DEFAULT, RMStateStoreState.DEFAULT,
-          RMStateStoreEventType.UPDATE_APP_ATTEMPT, new UpdateAppAttemptTransition());
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
+          RMStateStoreEventType.STORE_APP_ATTEMPT,
+          new StoreAppAttemptTransition())
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
+          RMStateStoreEventType.UPDATE_APP_ATTEMPT,
+          new UpdateAppAttemptTransition())
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
+          RMStateStoreEventType.STORE_MASTERKEY,
+          new StoreRMDTMasterKeyTransition())
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
+          RMStateStoreEventType.REMOVE_MASTERKEY,
+          new RemoveRMDTMasterKeyTransition())
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
+          RMStateStoreEventType.STORE_DELEGATION_TOKEN,
+          new StoreRMDTTransition())
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
+          RMStateStoreEventType.REMOVE_DELEGATION_TOKEN,
+          new RemoveRMDTTransition())
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
+          RMStateStoreEventType.UPDATE_DELEGATION_TOKEN,
+          new UpdateRMDTTransition())
+      .addTransition(RMStateStoreState.ACTIVE,
+          EnumSet.of(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED),
+          RMStateStoreEventType.UPDATE_AMRM_TOKEN,
+          new StoreOrUpdateAMRMTokenTransition())
+      .addTransition(RMStateStoreState.ACTIVE, RMStateStoreState.FENCED,
+          RMStateStoreEventType.FENCED)
+      .addTransition(RMStateStoreState.FENCED, RMStateStoreState.FENCED,
+          EnumSet.of(
+          RMStateStoreEventType.STORE_APP,
+          RMStateStoreEventType.UPDATE_APP,
+          RMStateStoreEventType.REMOVE_APP,
+          RMStateStoreEventType.STORE_APP_ATTEMPT,
+          RMStateStoreEventType.UPDATE_APP_ATTEMPT,
+          RMStateStoreEventType.FENCED,
+          RMStateStoreEventType.STORE_MASTERKEY,
+          RMStateStoreEventType.REMOVE_MASTERKEY,
+          RMStateStoreEventType.STORE_DELEGATION_TOKEN,
+          RMStateStoreEventType.REMOVE_DELEGATION_TOKEN,
+          RMStateStoreEventType.UPDATE_DELEGATION_TOKEN,
+          RMStateStoreEventType.UPDATE_AMRM_TOKEN));
 
   private final StateMachine<RMStateStoreState,
                              RMStateStoreEventType,
                              RMStateStoreEvent> stateMachine;
 
   private static class StoreAppTransition
-      implements SingleArcTransition<RMStateStore, RMStateStoreEvent> {
+      implements MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
     @Override
-    public void transition(RMStateStore store, RMStateStoreEvent event) {
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
       if (!(event instanceof RMStateStoreAppEvent)) {
         // should never happen
         LOG.error("Illegal event type: " + event.getClass());
-        return;
+        return RMStateStoreState.ACTIVE;
       }
+      boolean isFenced = false;
       ApplicationStateData appState =
           ((RMStateStoreAppEvent) event).getAppState();
       ApplicationId appId =
@@ -135,20 +198,24 @@ public abstract class RMStateStore extends AbstractService {
                RMAppEventType.APP_NEW_SAVED));
       } catch (Exception e) {
         LOG.error("Error storing app: " + appId, e);
-        store.notifyStoreOperationFailed(e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
       }
+      return finalState(isFenced);
     };
   }
 
   private static class UpdateAppTransition implements
-      SingleArcTransition<RMStateStore, RMStateStoreEvent> {
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
     @Override
-    public void transition(RMStateStore store, RMStateStoreEvent event) {
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
       if (!(event instanceof RMStateUpdateAppEvent)) {
         // should never happen
         LOG.error("Illegal event type: " + event.getClass());
-        return;
+        return RMStateStoreState.ACTIVE;
       }
+      boolean isFenced = false;
       ApplicationStateData appState =
           ((RMStateUpdateAppEvent) event).getAppState();
       ApplicationId appId =
@@ -157,23 +224,27 @@ public abstract class RMStateStore extends AbstractService {
       try {
         store.updateApplicationStateInternal(appId, appState);
         store.notifyApplication(new RMAppEvent(appId,
-               RMAppEventType.APP_UPDATE_SAVED));
+            RMAppEventType.APP_UPDATE_SAVED));
       } catch (Exception e) {
         LOG.error("Error updating app: " + appId, e);
-        store.notifyStoreOperationFailed(e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
       }
+      return finalState(isFenced);
     };
   }
 
   private static class RemoveAppTransition implements
-      SingleArcTransition<RMStateStore, RMStateStoreEvent> {
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
     @Override
-    public void transition(RMStateStore store, RMStateStoreEvent event) {
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
       if (!(event instanceof RMStateStoreRemoveAppEvent)) {
         // should never happen
         LOG.error("Illegal event type: " + event.getClass());
-        return;
+        return RMStateStoreState.ACTIVE;
       }
+      boolean isFenced = false;
       ApplicationStateData appState =
           ((RMStateStoreRemoveAppEvent) event).getAppState();
       ApplicationId appId =
@@ -183,20 +254,24 @@ public abstract class RMStateStore extends AbstractService {
         store.removeApplicationStateInternal(appState);
       } catch (Exception e) {
         LOG.error("Error removing app: " + appId, e);
-        store.notifyStoreOperationFailed(e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
       }
+      return finalState(isFenced);
     };
   }
 
   private static class StoreAppAttemptTransition implements
-      SingleArcTransition<RMStateStore, RMStateStoreEvent> {
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
     @Override
-    public void transition(RMStateStore store, RMStateStoreEvent event) {
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
       if (!(event instanceof RMStateStoreAppAttemptEvent)) {
         // should never happen
         LOG.error("Illegal event type: " + event.getClass());
-        return;
+        return RMStateStoreState.ACTIVE;
       }
+      boolean isFenced = false;
       ApplicationAttemptStateData attemptState =
           ((RMStateStoreAppAttemptEvent) event).getAppAttemptState();
       try {
@@ -210,20 +285,24 @@ public abstract class RMStateStore extends AbstractService {
                RMAppAttemptEventType.ATTEMPT_NEW_SAVED));
       } catch (Exception e) {
         LOG.error("Error storing appAttempt: " + attemptState.getAttemptId(), e);
-        store.notifyStoreOperationFailed(e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
       }
+      return finalState(isFenced);
     };
   }
 
   private static class UpdateAppAttemptTransition implements
-      SingleArcTransition<RMStateStore, RMStateStoreEvent> {
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
     @Override
-    public void transition(RMStateStore store, RMStateStoreEvent event) {
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
       if (!(event instanceof RMStateUpdateAppAttemptEvent)) {
         // should never happen
         LOG.error("Illegal event type: " + event.getClass());
-        return;
+        return RMStateStoreState.ACTIVE;
       }
+      boolean isFenced = false;
       ApplicationAttemptStateData attemptState =
           ((RMStateUpdateAppAttemptEvent) event).getAppAttemptState();
       try {
@@ -237,13 +316,173 @@ public abstract class RMStateStore extends AbstractService {
                RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
       } catch (Exception e) {
         LOG.error("Error updating appAttempt: " + attemptState.getAttemptId(), e);
-        store.notifyStoreOperationFailed(e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
       }
+      return finalState(isFenced);
     };
+  }
+
+  private static class StoreRMDTTransition implements
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
+    @Override
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
+      if (!(event instanceof RMStateStoreRMDTEvent)) {
+        // should never happen
+        LOG.error("Illegal event type: " + event.getClass());
+        return RMStateStoreState.ACTIVE;
+      }
+      boolean isFenced = false;
+      RMStateStoreRMDTEvent dtEvent = (RMStateStoreRMDTEvent) event;
+      try {
+        LOG.info("Storing RMDelegationToken and SequenceNumber");
+        store.storeRMDelegationTokenState(
+            dtEvent.getRmDTIdentifier(), dtEvent.getRenewDate());
+      } catch (Exception e) {
+        LOG.error("Error While Storing RMDelegationToken and SequenceNumber ",
+            e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
+      }
+      return finalState(isFenced);
+    }
+  }
+
+  private static class RemoveRMDTTransition implements
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
+    @Override
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
+      if (!(event instanceof RMStateStoreRMDTEvent)) {
+        // should never happen
+        LOG.error("Illegal event type: " + event.getClass());
+        return RMStateStoreState.ACTIVE;
+      }
+      boolean isFenced = false;
+      RMStateStoreRMDTEvent dtEvent = (RMStateStoreRMDTEvent) event;
+      try {
+        LOG.info("Removing RMDelegationToken and SequenceNumber");
+        store.removeRMDelegationTokenState(dtEvent.getRmDTIdentifier());
+      } catch (Exception e) {
+        LOG.error("Error While Removing RMDelegationToken and SequenceNumber ",
+            e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
+      }
+      return finalState(isFenced);
+    }
+  }
+
+  private static class UpdateRMDTTransition implements
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
+    @Override
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
+      if (!(event instanceof RMStateStoreRMDTEvent)) {
+        // should never happen
+        LOG.error("Illegal event type: " + event.getClass());
+        return RMStateStoreState.ACTIVE;
+      }
+      boolean isFenced = false;
+      RMStateStoreRMDTEvent dtEvent = (RMStateStoreRMDTEvent) event;
+      try {
+        LOG.info("Updating RMDelegationToken and SequenceNumber");
+        store.updateRMDelegationTokenState(
+            dtEvent.getRmDTIdentifier(), dtEvent.getRenewDate());
+      } catch (Exception e) {
+        LOG.error("Error While Updating RMDelegationToken and SequenceNumber ",
+            e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
+      }
+      return finalState(isFenced);
+    }
+  }
+
+  private static class StoreRMDTMasterKeyTransition implements
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
+    @Override
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
+      if (!(event instanceof RMStateStoreRMDTMasterKeyEvent)) {
+        // should never happen
+        LOG.error("Illegal event type: " + event.getClass());
+        return RMStateStoreState.ACTIVE;
+      }
+      boolean isFenced = false;
+      RMStateStoreRMDTMasterKeyEvent dtEvent =
+          (RMStateStoreRMDTMasterKeyEvent) event;
+      try {
+        LOG.info("Storing RMDTMasterKey.");
+        store.storeRMDTMasterKeyState(dtEvent.getDelegationKey());
+      } catch (Exception e) {
+        LOG.error("Error While Storing RMDTMasterKey.", e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
+      }
+      return finalState(isFenced);
+    }
+  }
+
+  private static class RemoveRMDTMasterKeyTransition implements
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
+    @Override
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
+      if (!(event instanceof RMStateStoreRMDTMasterKeyEvent)) {
+        // should never happen
+        LOG.error("Illegal event type: " + event.getClass());
+        return RMStateStoreState.ACTIVE;
+      }
+      boolean isFenced = false;
+      RMStateStoreRMDTMasterKeyEvent dtEvent =
+          (RMStateStoreRMDTMasterKeyEvent) event;
+      try {
+        LOG.info("Removing RMDTMasterKey.");
+        store.removeRMDTMasterKeyState(dtEvent.getDelegationKey());
+      } catch (Exception e) {
+        LOG.error("Error While Removing RMDTMasterKey.", e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
+      }
+      return finalState(isFenced);
+    }
+  }
+
+  private static class StoreOrUpdateAMRMTokenTransition implements
+      MultipleArcTransition<RMStateStore, RMStateStoreEvent,
+          RMStateStoreState> {
+    @Override
+    public RMStateStoreState transition(RMStateStore store,
+        RMStateStoreEvent event) {
+      if (!(event instanceof RMStateStoreAMRMTokenEvent)) {
+        // should never happen
+        LOG.error("Illegal event type: " + event.getClass());
+        return RMStateStoreState.ACTIVE;
+      }
+      RMStateStoreAMRMTokenEvent amrmEvent = (RMStateStoreAMRMTokenEvent) event;
+      boolean isFenced = false;
+      try {
+        LOG.info("Updating AMRMToken");
+        store.storeOrUpdateAMRMTokenSecretManagerState(
+            amrmEvent.getAmrmTokenSecretManagerState(), amrmEvent.isUpdate());
+      } catch (Exception e) {
+        LOG.error("Error storing info for AMRMTokenSecretManager", e);
+        isFenced = store.notifyStoreOperationFailedInternal(e);
+      }
+      return finalState(isFenced);
+    }
+  }
+
+  private static RMStateStoreState finalState(boolean isFenced) {
+    return isFenced ? RMStateStoreState.FENCED : RMStateStoreState.ACTIVE;
   }
 
   public RMStateStore() {
     super(RMStateStore.class.getName());
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    this.readLock = lock.readLock();
+    this.writeLock = lock.writeLock();
     stateMachine = stateMachineFactory.make(this);
   }
 
@@ -352,7 +591,7 @@ public abstract class RMStateStore extends AbstractService {
    * 1) Versioning scheme: major.minor. For e.g. 1.0, 1.1, 1.2...1.25, 2.0 etc.
    * 2) Any incompatible change of state-store is a major upgrade, and any
    *    compatible change of state-store is a minor upgrade.
-   * 3) If theres's no version, treat it as 1.0.
+   * 3) If theres's no version, treat it as CURRENT_VERSION_INFO.
    * 4) Within a minor upgrade, say 1.1 to 1.2:
    *    overwrite the version info and proceed as normal.
    * 5) Within a major upgrade, say 1.2 to 2.0:
@@ -365,9 +604,9 @@ public abstract class RMStateStore extends AbstractService {
     if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
       return;
     }
-    // if there is no version info, treat it as 1.0;
+    // if there is no version info, treat it as CURRENT_VERSION_INFO;
     if (loadedVersion == null) {
-      loadedVersion = Version.newInstance(1, 0);
+      loadedVersion = getCurrentVersion();
     }
     if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
       LOG.info("Storing RM state version info " + getCurrentVersion());
@@ -416,7 +655,7 @@ public abstract class RMStateStore extends AbstractService {
    * RMAppStoredEvent will be sent on completion to notify the RMApp
    */
   @SuppressWarnings("unchecked")
-  public synchronized void storeNewApplication(RMApp app) {
+  public void storeNewApplication(RMApp app) {
     ApplicationSubmissionContext context = app
                                             .getApplicationSubmissionContext();
     assert context instanceof ApplicationSubmissionContextPBImpl;
@@ -427,9 +666,13 @@ public abstract class RMStateStore extends AbstractService {
   }
 
   @SuppressWarnings("unchecked")
-  public synchronized void updateApplicationState(
+  public void updateApplicationState(
       ApplicationStateData appState) {
     dispatcher.getEventHandler().handle(new RMStateUpdateAppEvent(appState));
+  }
+
+  public void updateFencedState() {
+    handleStoreEvent(new RMStateStoreEvent(RMStateStoreEventType.FENCED));
   }
 
   /**
@@ -450,7 +693,7 @@ public abstract class RMStateStore extends AbstractService {
    * This does not block the dispatcher threads
    * RMAppAttemptStoredEvent will be sent on completion to notify the RMAppAttempt
    */
-  public synchronized void storeNewApplicationAttempt(RMAppAttempt appAttempt) {
+  public void storeNewApplicationAttempt(RMAppAttempt appAttempt) {
     Credentials credentials = getCredentialsFromAppAttempt(appAttempt);
 
     AggregateAppResourceUsage resUsage =
@@ -468,7 +711,7 @@ public abstract class RMStateStore extends AbstractService {
   }
 
   @SuppressWarnings("unchecked")
-  public synchronized void updateApplicationAttemptState(
+  public void updateApplicationAttemptState(
       ApplicationAttemptStateData attemptState) {
     dispatcher.getEventHandler().handle(
       new RMStateUpdateAppAttemptEvent(attemptState));
@@ -491,13 +734,10 @@ public abstract class RMStateStore extends AbstractService {
    * RMDTSecretManager call this to store the state of a delegation token
    * and sequence number
    */
-  public synchronized void storeRMDelegationToken(
+  public void storeRMDelegationToken(
       RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate) {
-    try {
-      storeRMDelegationTokenState(rmDTIdentifier, renewDate);
-    } catch (Exception e) {
-      notifyStoreOperationFailed(e);
-    }
+    handleStoreEvent(new RMStateStoreRMDTEvent(rmDTIdentifier, renewDate,
+        RMStateStoreEventType.STORE_DELEGATION_TOKEN));
   }
 
   /**
@@ -512,13 +752,10 @@ public abstract class RMStateStore extends AbstractService {
   /**
    * RMDTSecretManager call this to remove the state of a delegation token
    */
-  public synchronized void removeRMDelegationToken(
+  public void removeRMDelegationToken(
       RMDelegationTokenIdentifier rmDTIdentifier) {
-    try {
-      removeRMDelegationTokenState(rmDTIdentifier);
-    } catch (Exception e) {
-      notifyStoreOperationFailed(e);
-    }
+    handleStoreEvent(new RMStateStoreRMDTEvent(rmDTIdentifier, null,
+        RMStateStoreEventType.REMOVE_DELEGATION_TOKEN));
   }
 
   /**
@@ -532,13 +769,10 @@ public abstract class RMStateStore extends AbstractService {
    * RMDTSecretManager call this to update the state of a delegation token
    * and sequence number
    */
-  public synchronized void updateRMDelegationToken(
+  public void updateRMDelegationToken(
       RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate) {
-    try {
-      updateRMDelegationTokenState(rmDTIdentifier, renewDate);
-    } catch (Exception e) {
-      notifyStoreOperationFailed(e);
-    }
+    handleStoreEvent(new RMStateStoreRMDTEvent(rmDTIdentifier, renewDate,
+        RMStateStoreEventType.UPDATE_DELEGATION_TOKEN));
   }
 
   /**
@@ -553,12 +787,9 @@ public abstract class RMStateStore extends AbstractService {
   /**
    * RMDTSecretManager call this to store the state of a master key
    */
-  public synchronized void storeRMDTMasterKey(DelegationKey delegationKey) {
-    try {
-      storeRMDTMasterKeyState(delegationKey);
-    } catch (Exception e) {
-      notifyStoreOperationFailed(e);
-    }
+  public void storeRMDTMasterKey(DelegationKey delegationKey) {
+    handleStoreEvent(new RMStateStoreRMDTMasterKeyEvent(delegationKey,
+        RMStateStoreEventType.STORE_MASTERKEY));
   }
 
   /**
@@ -572,12 +803,9 @@ public abstract class RMStateStore extends AbstractService {
   /**
    * RMDTSecretManager call this to remove the state of a master key
    */
-  public synchronized void removeRMDTMasterKey(DelegationKey delegationKey) {
-    try {
-      removeRMDTMasterKeyState(delegationKey);
-    } catch (Exception e) {
-      notifyStoreOperationFailed(e);
-    }
+  public void removeRMDTMasterKey(DelegationKey delegationKey) {
+    handleStoreEvent(new RMStateStoreRMDTMasterKeyEvent(delegationKey,
+        RMStateStoreEventType.REMOVE_MASTERKEY));
   }
 
   /**
@@ -592,9 +820,19 @@ public abstract class RMStateStore extends AbstractService {
    * Blocking API Derived classes must implement this method to store or update
    * the state of AMRMToken Master Key
    */
-  public abstract void storeOrUpdateAMRMTokenSecretManagerState(
-      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
-      boolean isUpdate);
+  protected abstract void storeOrUpdateAMRMTokenSecretManagerState(
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState, boolean isUpdate)
+      throws Exception;
+
+  /**
+   * Store or Update state of AMRMToken Master Key
+   */
+  public void storeOrUpdateAMRMTokenSecretManager(
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState, boolean isUpdate) {
+    handleStoreEvent(new RMStateStoreAMRMTokenEvent(
+        amrmTokenSecretManagerState, isUpdate,
+        RMStateStoreEventType.UPDATE_AMRM_TOKEN));
+  }
 
   /**
    * Non-blocking API
@@ -604,7 +842,7 @@ public abstract class RMStateStore extends AbstractService {
    * There is no notification of completion for this operation.
    */
   @SuppressWarnings("unchecked")
-  public synchronized void removeApplication(RMApp app) {
+  public void removeApplication(RMApp app) {
     ApplicationStateData appState =
         ApplicationStateData.newInstance(
             app.getSubmitTime(), app.getStartTime(),
@@ -643,32 +881,69 @@ public abstract class RMStateStore extends AbstractService {
     }
     return credentials;
   }
+  
+  @VisibleForTesting
+  protected boolean isFencedState() {
+    return (RMStateStoreState.FENCED == getRMStateStoreState());
+  }
 
   // Dispatcher related code
   protected void handleStoreEvent(RMStateStoreEvent event) {
+    this.writeLock.lock();
     try {
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Processing event of type " + event.getType());
+      }
+
+      final RMStateStoreState oldState = getRMStateStoreState();
+
       this.stateMachine.doTransition(event.getType(), event);
+
+      if (oldState != getRMStateStoreState()) {
+        LOG.info("RMStateStore state change from " + oldState + " to "
+            + getRMStateStoreState());
+      }
+
     } catch (InvalidStateTransitonException e) {
       LOG.error("Can't handle this event at current state", e);
+    } finally {
+      this.writeLock.unlock();
     }
   }
 
-  @SuppressWarnings("unchecked")
   /**
    * This method is called to notify the ResourceManager that the store
    * operation has failed.
    * @param failureCause the exception due to which the operation failed
    */
   protected void notifyStoreOperationFailed(Exception failureCause) {
-    if (failureCause instanceof StoreFencedException) {
-      Thread standByTransitionThread =
-          new Thread(new StandByTransitionThread());
-      standByTransitionThread.setName("StandByTransitionThread Handler");
-      standByTransitionThread.start();
+    if (isFencedState()) {
+      return;
+    }
+    if (notifyStoreOperationFailedInternal(failureCause)) {
+      updateFencedState();
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private boolean notifyStoreOperationFailedInternal(
+      Exception failureCause) {
+    boolean isFenced = false;
+    LOG.error("State store operation failed ", failureCause);
+
+    if (HAUtil.isHAEnabled(getConfig())) {
+      rmDispatcher.getEventHandler().handle(
+          new RMFatalEvent(RMFatalEventType.STATE_STORE_FENCED,
+              failureCause));
+      isFenced = true;
     } else {
       rmDispatcher.getEventHandler().handle(
-        new RMFatalEvent(RMFatalEventType.STATE_STORE_OP_FAILED, failureCause));
+          new RMFatalEvent(RMFatalEventType.STATE_STORE_OP_FAILED,
+              failureCause));
     }
+
+    return isFenced;
   }
  
   @SuppressWarnings("unchecked")
@@ -711,15 +986,25 @@ public abstract class RMStateStore extends AbstractService {
    */
   public abstract void deleteStore() throws Exception;
 
+  /**
+   * Derived classes must implement this method to remove application from the
+   * state store
+   * 
+   * @throws Exception
+   */
+  public abstract void removeApplication(ApplicationId removeAppId)
+      throws Exception;
+
   public void setResourceManager(ResourceManager rm) {
     this.resourceManager = rm;
   }
 
-  private class StandByTransitionThread implements Runnable {
-    @Override
-    public void run() {
-      LOG.info("RMStateStore has been fenced");
-      resourceManager.handleTransitionToStandBy();
+  public RMStateStoreState getRMStateStoreState() {
+    this.readLock.lock();
+    try {
+      return this.stateMachine.getCurrentState();
+    } finally {
+      this.readLock.unlock();
     }
   }
 }

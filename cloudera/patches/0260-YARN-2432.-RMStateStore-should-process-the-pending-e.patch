@@ -1,7 +1,7 @@
 From 26461602751021a23e01a39954498495f4dae06d Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Fri, 14 Nov 2014 17:24:09 -0800
-Subject: [PATCH 260/924] YARN-2432. RMStateStore should process the pending
+Subject: [PATCH 0260/2639] YARN-2432. RMStateStore should process the pending
  events before close. Contributed by Varun Saxena
  (cherry picked from commit
  9b860661a5754e829bd8c34ef092757421589bbe)

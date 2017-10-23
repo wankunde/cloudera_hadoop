@@ -1,7 +1,7 @@
 From edb27d419357629344a5131cad3f696cd9f1288c Mon Sep 17 00:00:00 2001
 From: Arun Suresh <asuresh@cloudera.com>
 Date: Tue, 30 Jun 2015 15:44:16 -0700
-Subject: [PATCH 619/924] CLOUDERA-BUILD: CDH-28850 : Newer version of
+Subject: [PATCH 0619/2639] CLOUDERA-BUILD: CDH-28850 : Newer version of
  metrics-core.jar, jackson-databind.jar etc
  detected. Harmonize jars.
 

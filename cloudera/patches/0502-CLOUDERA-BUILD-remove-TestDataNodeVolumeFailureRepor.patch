@@ -1,7 +1,7 @@
 From cc843017f9830ac9120039d977ce315c287dd81b Mon Sep 17 00:00:00 2001
 From: Lei Xu <lei@cloudera.com>
 Date: Mon, 16 Mar 2015 15:14:12 -0700
-Subject: [PATCH 502/924] CLOUDERA-BUILD: remove
+Subject: [PATCH 0502/2639] CLOUDERA-BUILD: remove
  TestDataNodeVolumeFailureReporting to fix Jenkins
  failure.
 

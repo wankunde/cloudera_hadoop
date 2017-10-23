@@ -1,9 +1,10 @@
 From 510406bcb4688ba21eb424b12a04939409c1e7e5 Mon Sep 17 00:00:00 2001
 From: Milan Desai <milan.desai@wandisco.com>
 Date: Wed, 5 Nov 2014 20:52:01 -0800
-Subject: [PATCH 383/924] HDFS-7336. Unused member DFSInputStream.buffersize.
- Contributed by Milan Desai. (cherry picked from
- commit 5c8b55856b684bb1e60644402ed5134727594610)
+Subject: [PATCH 0383/2639] HDFS-7336. Unused member
+ DFSInputStream.buffersize. Contributed by Milan
+ Desai. (cherry picked from commit
+ 5c8b55856b684bb1e60644402ed5134727594610)
 
 ---
  .../java/org/apache/hadoop/hdfs/DFSClient.java     |    2 +-

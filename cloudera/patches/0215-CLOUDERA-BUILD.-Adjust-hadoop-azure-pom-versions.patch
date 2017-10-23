@@ -1,7 +1,7 @@
 From 0513550f3d304a0cc2c51ce38a8a655396370dc5 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Tue, 27 Jan 2015 16:00:35 -0800
-Subject: [PATCH 215/924] CLOUDERA-BUILD. Adjust hadoop-azure pom versions
+Subject: [PATCH 0215/2639] CLOUDERA-BUILD. Adjust hadoop-azure pom versions
 
 ---
  hadoop-tools/hadoop-azure/pom.xml |    4 ++--

@@ -1,9 +1,9 @@
 From ef5246901b5da103ffdc69e1ea9909ef44460813 Mon Sep 17 00:00:00 2001
 From: Jing Zhao <jing9@apache.org>
 Date: Wed, 18 Mar 2015 18:51:14 -0700
-Subject: [PATCH 523/924] HDFS-7587. Edit log corruption can happen if append
- fails with a quota violation. Contributed by Jing
- Zhao.
+Subject: [PATCH 0523/2639] HDFS-7587. Edit log corruption can happen if
+ append fails with a quota violation. Contributed
+ by Jing Zhao.
 
 (cherry picked from commit c7c71cdba50cb7d8282622cd496cc913c80cff54)
 (cherry picked from commit 5a5b2446485531f12d37f3d4ca791672b9921872)

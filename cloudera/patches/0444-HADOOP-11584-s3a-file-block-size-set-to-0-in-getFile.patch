@@ -1,7 +1,7 @@
 From b5635015f9101326b2267c1e1873a33a03012e1e Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Sat, 21 Feb 2015 12:02:41 +0000
-Subject: [PATCH 444/924] HADOOP-11584 s3a file block size set to 0 in
+Subject: [PATCH 0444/2639] HADOOP-11584 s3a file block size set to 0 in
  getFileStatus. (Brahma Reddy Battula via stevel)
  (cherry picked from commit
  709ff99cff4124823bde631e272af7be9a22f83b)

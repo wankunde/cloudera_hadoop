@@ -64,6 +64,7 @@
       <item name="Secure Mode" href="hadoop-project-dist/hadoop-common/SecureMode.html"/>
       <item name="Service Level Authorization" href="hadoop-project-dist/hadoop-common/ServiceLevelAuth.html"/>
       <item name="HTTP Authentication" href="hadoop-project-dist/hadoop-common/HttpAuthentication.html"/>
+      <item name="Credential Provider API" href="hadoop-project-dist/hadoop-common/CredentialProviderAPI.html"/>
       <item name="Hadoop KMS" href="hadoop-kms/index.html"/>
       <item name="Tracing" href="hadoop-project-dist/hadoop-common/Tracing.html"/>
     </menu>
@@ -132,6 +133,10 @@
       <item name="Introduction" href="hadoop-yarn/hadoop-yarn-site/WebServicesIntro.html"/>
       <item name="Resource Manager" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html"/>
       <item name="Node Manager" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html"/>
+    </menu>
+
+    <menu name="Hadoop Compatible File Systems" inherit="top">
+      <item name="Amazon S3" href="hadoop-aws/tools/hadoop-aws/index.html"/>
     </menu>
     
     <menu name="Auth" inherit="top">

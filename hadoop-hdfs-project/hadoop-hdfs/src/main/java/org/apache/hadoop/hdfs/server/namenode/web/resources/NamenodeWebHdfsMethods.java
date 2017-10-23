@@ -53,10 +53,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsCreateModes;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -79,7 +82,6 @@ import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.Credentials;
@@ -219,7 +221,7 @@ public class NamenodeWebHdfsMethods {
     } 
 
     return (DatanodeDescriptor)bm.getDatanodeManager().getNetworkTopology(
-        ).chooseRandom(NodeBase.ROOT);
+        ).chooseRandom(NodeBase.ROOT, excludes);
   }
 
   /**
@@ -259,11 +261,11 @@ public class NamenodeWebHdfsMethods {
       final long blocksize, final String excludeDatanodes,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
     final DatanodeInfo dn;
-    try {
-      dn = chooseDatanode(namenode, path, op, openOffset, blocksize,
-          excludeDatanodes);
-    } catch (InvalidTopologyException ite) {
-      throw new IOException("Failed to find datanode, suggest to check cluster health.", ite);
+    dn = chooseDatanode(namenode, path, op, openOffset, blocksize,
+        excludeDatanodes);
+    if (dn == null) {
+      throw new IOException("Failed to find datanode, suggest to check cluster"
+          + " health. excludeDatanodes=" + excludeDatanodes);
     }
 
     final String delegationQuery;
@@ -319,6 +321,9 @@ public class NamenodeWebHdfsMethods {
           final GroupParam group,
       @QueryParam(PermissionParam.NAME) @DefaultValue(PermissionParam.DEFAULT)
           final PermissionParam permission,
+      @QueryParam(UnmaskedPermissionParam.NAME)
+      @DefaultValue(UnmaskedPermissionParam.DEFAULT)
+          final UnmaskedPermissionParam unmaskedPermission,
       @QueryParam(OverwriteParam.NAME) @DefaultValue(OverwriteParam.DEFAULT)
           final OverwriteParam overwrite,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
@@ -353,10 +358,11 @@ public class NamenodeWebHdfsMethods {
           final ExcludeDatanodesParam excludeDatanodes
       ) throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
-        owner, group, permission, overwrite, bufferSize, replication,
-        blockSize, modificationTime, accessTime, renameOptions, createParent,
-        delegationTokenArgument, aclPermission, xattrName, xattrValue,
-        xattrSetFlag, snapshotName, oldSnapshotName, excludeDatanodes);
+        owner, group, permission, unmaskedPermission, overwrite, bufferSize,
+        replication, blockSize, modificationTime, accessTime, renameOptions,
+        createParent, delegationTokenArgument, aclPermission, xattrName,
+        xattrValue, xattrSetFlag, snapshotName, oldSnapshotName,
+        excludeDatanodes);
   }
 
   /** Handle HTTP PUT request. */
@@ -383,6 +389,9 @@ public class NamenodeWebHdfsMethods {
           final GroupParam group,
       @QueryParam(PermissionParam.NAME) @DefaultValue(PermissionParam.DEFAULT)
           final PermissionParam permission,
+      @QueryParam(UnmaskedPermissionParam.NAME)
+      @DefaultValue(UnmaskedPermissionParam.DEFAULT)
+          final UnmaskedPermissionParam unmaskedPermission,
       @QueryParam(OverwriteParam.NAME) @DefaultValue(OverwriteParam.DEFAULT)
           final OverwriteParam overwrite,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
@@ -418,10 +427,10 @@ public class NamenodeWebHdfsMethods {
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
-        group, permission, overwrite, bufferSize, replication, blockSize,
-        modificationTime, accessTime, renameOptions, delegationTokenArgument,
-        aclPermission, xattrName, xattrValue, xattrSetFlag, snapshotName,
-        oldSnapshotName, excludeDatanodes);
+        group, permission, unmaskedPermission, overwrite, bufferSize,
+        replication, blockSize, modificationTime, accessTime, renameOptions,
+        delegationTokenArgument, aclPermission, xattrName, xattrValue,
+        xattrSetFlag, snapshotName, oldSnapshotName, excludeDatanodes);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -429,10 +438,11 @@ public class NamenodeWebHdfsMethods {
         try {
           return put(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, destination, owner, group,
-              permission, overwrite, bufferSize, replication, blockSize,
-              modificationTime, accessTime, renameOptions, createParent,
-              delegationTokenArgument, aclPermission, xattrName, xattrValue,
-              xattrSetFlag, snapshotName, oldSnapshotName, excludeDatanodes);
+              permission, unmaskedPermission, overwrite, bufferSize,
+              replication, blockSize, modificationTime, accessTime,
+              renameOptions, createParent, delegationTokenArgument,
+              aclPermission, xattrName, xattrValue, xattrSetFlag,
+              snapshotName, oldSnapshotName, excludeDatanodes);
         } finally {
           reset();
         }
@@ -451,6 +461,7 @@ public class NamenodeWebHdfsMethods {
       final OwnerParam owner,
       final GroupParam group,
       final PermissionParam permission,
+      final UnmaskedPermissionParam unmaskedPermission,
       final OverwriteParam overwrite,
       final BufferSizeParam bufferSize,
       final ReplicationParam replication,
@@ -478,20 +489,25 @@ public class NamenodeWebHdfsMethods {
     {
       final URI uri = redirectURI(namenode, ugi, delegation, username,
           doAsUser, fullpath, op.getValue(), -1L, blockSize.getValue(conf),
-          exclDatanodes.getValue(), permission, overwrite, bufferSize,
-          replication, blockSize);
+          exclDatanodes.getValue(), permission, unmaskedPermission, overwrite,
+          bufferSize, replication, blockSize);
       return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     } 
     case MKDIRS:
     {
-      final boolean b = np.mkdirs(fullpath, permission.getFsPermission(), true);
+      FsPermission masked = unmaskedPermission.getValue() == null ?
+          permission.getDirFsPermission() :
+          FsCreateModes.create(permission.getDirFsPermission(),
+              unmaskedPermission.getDirFsPermission());
+      final boolean b = np.mkdirs(fullpath, masked, true);
       final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case CREATESYMLINK:
     {
       np.createSymlink(destination.getValue(), fullpath,
-          PermissionParam.getDefaultFsPermission(), createParent.getValue());
+          PermissionParam.getDefaultSymLinkFsPermission(),
+          createParent.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case RENAME:
@@ -524,7 +540,7 @@ public class NamenodeWebHdfsMethods {
     }
     case SETPERMISSION:
     {
-      np.setPermission(fullpath, permission.getFsPermission());
+      np.setPermission(fullpath, permission.getDirFsPermission());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case SETTIMES:
@@ -725,11 +741,13 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
-          final TokenServiceParam tokenService
+          final TokenServiceParam tokenService,
+      @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
+          final StartAfterParam startAfter
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
         renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes, fsAction,
-        tokenKind, tokenService);
+        tokenKind, tokenService, startAfter);
   }
 
   /** Handle HTTP GET request. */
@@ -766,12 +784,14 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
-          final TokenServiceParam tokenService
+          final TokenServiceParam tokenService,
+      @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
+          final StartAfterParam startAfter
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
-        tokenKind, tokenService);
+        tokenKind, tokenService, startAfter);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -780,7 +800,7 @@ public class NamenodeWebHdfsMethods {
           return get(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, offset, length, renewer, bufferSize,
               xattrNames, xattrEncoding, excludeDatanodes, fsAction, tokenKind,
-              tokenService);
+              tokenService, startAfter);
         } finally {
           reset();
         }
@@ -804,9 +824,12 @@ public class NamenodeWebHdfsMethods {
       final ExcludeDatanodesParam excludeDatanodes,
       final FsActionParam fsAction,
       final TokenKindParam tokenKind,
-      final TokenServiceParam tokenService
+      final TokenServiceParam tokenService,
+      final StartAfterParam startAfter
       ) throws IOException, URISyntaxException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
+    final Configuration conf = (Configuration) context
+        .getAttribute(JspHelper.CURRENT_CONF);
     final NamenodeProtocols np = getRPCServer(namenode);
 
     switch(op.getValue()) {
@@ -873,11 +896,10 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString(token);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
-    case GETHOMEDIRECTORY:
-    {
-      final String js = JsonUtil.toJsonString(
-          org.apache.hadoop.fs.Path.class.getSimpleName(),
-          WebHdfsFileSystem.getHomeDirectoryString(ugi));
+    case GETHOMEDIRECTORY: {
+      final String js = JsonUtil.toJsonString("Path",
+          FileSystem.get(conf != null ? conf : new Configuration())
+              .getHomeDirectory().toUri().getPath());
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETACLSTATUS: {
@@ -914,9 +936,31 @@ public class NamenodeWebHdfsMethods {
       np.checkAccess(fullpath, FsAction.getFsAction(fsAction.getValue()));
       return Response.ok().build();
     }
+    case GETTRASHROOT: {
+      final String trashPath = getTrashRoot(fullpath, conf);
+      final String jsonStr = JsonUtil.toJsonString("Path", trashPath);
+      return Response.ok(jsonStr).type(MediaType.APPLICATION_JSON).build();
+    }
+    case LISTSTATUS_BATCH:
+    {
+      byte[] start = HdfsFileStatus.EMPTY_NAME;
+      if (startAfter != null && startAfter.getValue() != null) {
+        start = startAfter.getValue().getBytes(Charsets.UTF_8);
+      }
+      final DirectoryListing listing = getDirectoryListing(np, fullpath, start);
+      final String js = JsonUtil.toJsonString(listing);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
+  }
+
+  private static String getTrashRoot(String fullPath,
+      Configuration conf) throws IOException {
+    FileSystem fs = FileSystem.get(conf != null ? conf : new Configuration());
+    return fs.getTrashRoot(
+        new org.apache.hadoop.fs.Path(fullPath)).toUri().getPath();
   }
 
   private static DirectoryListing getDirectoryListing(final NamenodeProtocols np,

@@ -1,7 +1,7 @@
 From 7ab22ebba58464ca12c460a0dc8824dae9dd8323 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 3 Oct 2014 13:28:24 -0700
-Subject: [PATCH 630/924] HDFS-7055. Add tracing to DFSInputStream (cmccabe)
+Subject: [PATCH 0630/2639] HDFS-7055. Add tracing to DFSInputStream (cmccabe)
 
 (cherry picked from commit 7f6ed7fe365166e8075359f1d0ad035fa876c70f)
 (cherry picked from commit b335df9a9b632f87e7bbd29b1e56baf1ce1d91d8)

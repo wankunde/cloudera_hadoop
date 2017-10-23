@@ -80,10 +80,8 @@ public class ImageServlet extends HttpServlet {
   private static final String STORAGEINFO_PARAM = "storageInfo";
   private static final String LATEST_FSIMAGE_VALUE = "latest";
   private static final String IMAGE_FILE_TYPE = "imageFile";
+  private static final String IS_BOOTSTRAP_STANDBY = "bootstrapstandby";
 
-  private static final Set<Long> currentlyDownloadingCheckpoints =
-    Collections.synchronizedSet(new HashSet<Long>());
-  
   @Override
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
@@ -155,8 +153,10 @@ public class ImageServlet extends HttpServlet {
               // detected by the client side as an inaccurate length header.
             }
             // send file
+            DataTransferThrottler throttler = parsedParams.isBootstrapStandby ?
+                getThrottlerForBootstrapStandby(conf) : getThrottler(conf);
             TransferFsImage.copyFileToStream(response.getOutputStream(),
-               file, fis, getThrottler(conf));
+               file, fis, throttler);
           } finally {
             IOUtils.closeStream(fis);
           }
@@ -213,8 +213,8 @@ public class ImageServlet extends HttpServlet {
    * @param conf configuration
    * @return a data transfer throttler
    */
-  public final static DataTransferThrottler getThrottler(Configuration conf) {
-    long transferBandwidth = 
+  public static DataTransferThrottler getThrottler(Configuration conf) {
+    long transferBandwidth =
       conf.getLong(DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY,
                    DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_DEFAULT);
     DataTransferThrottler throttler = null;
@@ -223,7 +223,20 @@ public class ImageServlet extends HttpServlet {
     }
     return throttler;
   }
-  
+
+  private static DataTransferThrottler getThrottlerForBootstrapStandby(
+      Configuration conf) {
+    long transferBandwidth =
+        conf.getLong(
+            DFSConfigKeys.DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY,
+            DFSConfigKeys.DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_DEFAULT);
+    DataTransferThrottler throttler = null;
+    if (transferBandwidth > 0) {
+      throttler = new DataTransferThrottler(transferBandwidth);
+    }
+    return throttler;
+  }
+
   @VisibleForTesting
   static boolean isValidRequestor(ServletContext context, String remoteUser,
       Configuration conf) throws IOException {
@@ -297,13 +310,14 @@ public class ImageServlet extends HttpServlet {
   }
 
   static String getParamStringForImage(NameNodeFile nnf, long txid,
-      StorageInfo remoteStorageInfo) {
+      StorageInfo remoteStorageInfo, boolean isBootstrapStandby) {
     final String imageType = nnf == null ? "" : "&" + IMAGE_FILE_TYPE + "="
         + nnf.name();
     return "getimage=1&" + TXID_PARAM + "=" + txid
       + imageType
-      + "&" + STORAGEINFO_PARAM + "=" +
-      remoteStorageInfo.toColonSeparatedString();
+      + "&" + STORAGEINFO_PARAM + "="
+      + remoteStorageInfo.toColonSeparatedString() + "&"
+      + IS_BOOTSTRAP_STANDBY + "=" + isBootstrapStandby;
   }
 
   static String getParamStringForLog(RemoteEditLog log,
@@ -321,6 +335,7 @@ public class ImageServlet extends HttpServlet {
     private long startTxId, endTxId, txId;
     private String storageInfoString;
     private boolean fetchLatest;
+    private boolean isBootstrapStandby;
 
     /**
      * @param request the object from which this servlet reads the url contents
@@ -332,7 +347,7 @@ public class ImageServlet extends HttpServlet {
                            ) throws IOException {
       @SuppressWarnings("unchecked")
       Map<String, String[]> pmap = request.getParameterMap();
-      isGetImage = isGetEdit = fetchLatest = false;
+      isGetImage = isGetEdit = fetchLatest = isBootstrapStandby = false;
 
       for (Map.Entry<String, String[]> entry : pmap.entrySet()) {
         String key = entry.getKey();
@@ -344,6 +359,10 @@ public class ImageServlet extends HttpServlet {
             String imageType = ServletUtil.getParameter(request, IMAGE_FILE_TYPE);
             nnf = imageType == null ? NameNodeFile.IMAGE : NameNodeFile
                 .valueOf(imageType);
+            String bootstrapStandby = ServletUtil.getParameter(request,
+                IS_BOOTSTRAP_STANDBY);
+            isBootstrapStandby = bootstrapStandby != null &&
+                Boolean.parseBoolean(bootstrapStandby);
           } catch (NumberFormatException nfe) {
             if (request.getParameter(TXID_PARAM).equals(LATEST_FSIMAGE_VALUE)) {
               fetchLatest = true;
@@ -467,17 +486,20 @@ public class ImageServlet extends HttpServlet {
 
               final NameNodeFile nnf = parsedParams.getNameNodeFile();
 
-              if (!currentlyDownloadingCheckpoints.add(txid)) {
+              if (!nnImage.addToCheckpointing(txid)) {
                 response.sendError(HttpServletResponse.SC_CONFLICT,
-                    "Another checkpointer is already in the process of uploading a"
-                        + " checkpoint made at transaction ID " + txid);
+                    "Either current namenode is checkpointing or another"
+                        + " checkpointer is already in the process of "
+                        + "uploading a checkpoint made at transaction ID "
+                        + txid);
                 return null;
               }
               try {
                 if (nnImage.getStorage().findImageFile(nnf, txid) != null) {
                   response.sendError(HttpServletResponse.SC_CONFLICT,
-                      "Another checkpointer already uploaded an checkpoint "
-                          + "for txid " + txid);
+                      "Either current namenode has checkpointed or "
+                          + "another checkpointer already uploaded an "
+                          + "checkpoint for txid " + txid);
                   return null;
                 }
 
@@ -502,7 +524,7 @@ public class ImageServlet extends HttpServlet {
                   stream.close();
                 }
               } finally {
-                currentlyDownloadingCheckpoints.remove(txid);
+                nnImage.removeFromCheckpointing(txid);
               }
               return null;
             }

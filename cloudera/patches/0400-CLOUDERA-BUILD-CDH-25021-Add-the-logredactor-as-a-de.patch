@@ -1,10 +1,11 @@
 From ce52ced3360fdd37bdefbc8d2004f810cafd65ae Mon Sep 17 00:00:00 2001
 From: Mike Yoder <myoder@cloudera.com>
 Date: Wed, 18 Feb 2015 12:03:32 -0800
-Subject: [PATCH 400/924] CLOUDERA-BUILD CDH-25021 Add the logredactor as a
+Subject: [PATCH 0400/2639] CLOUDERA-BUILD CDH-25021 Add the logredactor as a
  dependency, but optional so that that downstream
- projects don't get it. This way packaging will get
- it, but it won't show up in everyone's classpath.
+ projects don't get it. This way packaging will
+ get it, but it won't show up in everyone's
+ classpath.
 
 ---
  hadoop-common-project/hadoop-common/pom.xml |   10 ++++++++++

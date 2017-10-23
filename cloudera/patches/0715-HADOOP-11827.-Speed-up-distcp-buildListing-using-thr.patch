@@ -1,7 +1,7 @@
 From f816f81a2ea70b9ce7265cdfd56d984b0aba3287 Mon Sep 17 00:00:00 2001
 From: Ravi Prakash <raviprak@altiscale.com>
 Date: Tue, 21 Apr 2015 16:43:02 -0700
-Subject: [PATCH 715/924] HADOOP-11827. Speed-up distcp buildListing() using
+Subject: [PATCH 0715/2639] HADOOP-11827. Speed-up distcp buildListing() using
  threadpool (Zoran Dimitrijevic via raviprak)
 
 (cherry picked from commit cfba355052df15f8eb6cc9b8e90e2d8492bec7d7)

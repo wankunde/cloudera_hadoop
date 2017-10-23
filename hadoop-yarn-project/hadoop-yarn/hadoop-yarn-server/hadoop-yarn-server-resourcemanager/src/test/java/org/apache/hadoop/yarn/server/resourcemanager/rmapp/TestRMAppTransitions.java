@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
@@ -30,8 +31,10 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -272,11 +275,10 @@ public class TestRMAppTransitions {
     // applicationId will not be used because RMStateStore is mocked,
     // but applicationId is still set for safety
     submissionContext.setApplicationId(applicationId);
-
-    RMApp application =
-        new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
-          submissionContext, scheduler, masterService,
-          System.currentTimeMillis(), "YARN", null, null);
+    RMApp application = new RMAppImpl(applicationId, rmContext, conf, name,
+        user, queue, submissionContext, scheduler, masterService,
+        System.currentTimeMillis(), "YARN", null,
+        new ArrayList<ResourceRequest>());
 
     testAppStartState(applicationId, user, name, queue, application);
     this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(),
@@ -287,7 +289,7 @@ public class TestRMAppTransitions {
   // Test expected newly created app state
   private static void testAppStartState(ApplicationId applicationId, 
       String user, String name, String queue, RMApp application) {
-    Assert.assertTrue("application start time is not greater then 0", 
+    Assert.assertTrue("application start time is not greater than 0",
         application.getStartTime() > 0);
     Assert.assertTrue("application start time is before currentTime", 
         application.getStartTime() <= System.currentTimeMillis());
@@ -312,7 +314,7 @@ public class TestRMAppTransitions {
 
   // test to make sure times are set when app finishes
   private static void assertStartTimeSet(RMApp application) {
-    Assert.assertTrue("application start time is not greater then 0", 
+    Assert.assertTrue("application start time is not greater than 0",
         application.getStartTime() > 0);
     Assert.assertTrue("application start time is before currentTime", 
         application.getStartTime() <= System.currentTimeMillis());
@@ -331,9 +333,9 @@ public class TestRMAppTransitions {
   // test to make sure times are set when app finishes
   private void assertTimesAtFinish(RMApp application) {
     assertStartTimeSet(application);
-    Assert.assertTrue("application finish time is not greater then 0",
+    Assert.assertTrue("application finish time is not greater than 0",
         (application.getFinishTime() > 0));
-    Assert.assertTrue("application finish time is not >= then start time",
+    Assert.assertTrue("application finish time is not >= than start time",
         (application.getFinishTime() >= application.getStartTime()));
   }
 
@@ -386,6 +388,7 @@ public class TestRMAppTransitions {
     application.getCurrentAppAttempt().handle(
         new RMAppAttemptEvent(application.getCurrentAppAttempt().getAppAttemptId(),
             RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
+    rmDispatcher.await();
   }
 
   protected RMApp testCreateAppNewSaving(
@@ -999,9 +1002,9 @@ public class TestRMAppTransitions {
             submissionContext.getQueue(), submissionContext, scheduler, null,
             appState.getSubmitTime(), submissionContext.getApplicationType(),
             submissionContext.getApplicationTags(),
-            BuilderUtils.newResourceRequest(
+            Collections.singletonList(BuilderUtils.newResourceRequest(
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                submissionContext.getResource(), 1));
+                submissionContext.getResource(), 1)));
     Assert.assertEquals(RMAppState.NEW, application.getState());
 
     RMAppEvent recoverEvent =

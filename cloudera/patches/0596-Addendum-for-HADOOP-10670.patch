@@ -1,7 +1,7 @@
 From 0fc2143a90ef121134968653479ba4ceadcc0a63 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Wed, 25 Mar 2015 12:29:44 -0700
-Subject: [PATCH 596/924] Addendum for HADOOP-10670.
+Subject: [PATCH 0596/2639] Addendum for HADOOP-10670.
 
 (cherry picked from commit c62840d5318136a61d2d3106321efc5d7d7a0ef8)
 ---

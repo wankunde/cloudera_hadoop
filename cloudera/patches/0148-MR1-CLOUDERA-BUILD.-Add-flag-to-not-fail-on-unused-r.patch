@@ -1,7 +1,7 @@
 From fb51e96385f6a0914e379df3e2b860bf60f55718 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Thu, 11 Sep 2014 15:33:14 -0700
-Subject: [PATCH 148/924] MR1: CLOUDERA-BUILD. Add flag to not fail on
+Subject: [PATCH 0148/2639] MR1: CLOUDERA-BUILD. Add flag to not fail on
  unused-result warning (CDH-20987)
 
 (cherry picked from commit 044201a3e5097bb85713f85c186c8b4d4e2016a1)

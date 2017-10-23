@@ -1,8 +1,8 @@
 From e7f75129ea53debd06b185bfcb7125131a5ee32d Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Mon, 17 Nov 2014 21:13:22 +0000
-Subject: [PATCH 262/924] YARN-2414. RM web UI: app page will crash if app is
- failed before any attempt has been created.
+Subject: [PATCH 0262/2639] YARN-2414. RM web UI: app page will crash if app
+ is failed before any attempt has been created.
  Contributed by Wangda Tan (cherry picked from
  commit 81c9d17af84ed87b9ded7057cb726a3855ddd32d)
 

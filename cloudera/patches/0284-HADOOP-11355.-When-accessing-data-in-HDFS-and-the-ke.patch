@@ -1,7 +1,7 @@
 From cafab90e6c968202466edaa195aedc224edd6838 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Fri, 5 Dec 2014 12:01:23 -0800
-Subject: [PATCH 284/924] HADOOP-11355. When accessing data in HDFS and the
+Subject: [PATCH 0284/2639] HADOOP-11355. When accessing data in HDFS and the
  key has been deleted, a Null Pointer Exception is
  shown. Contributed by Arun Suresh.
 

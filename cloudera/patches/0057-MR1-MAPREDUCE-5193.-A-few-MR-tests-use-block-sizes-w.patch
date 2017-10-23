@@ -1,9 +1,9 @@
 From 901c0b2dbe5becd326ddfe7d3081954cc7a13f70 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <andrew.wang@cloudera.com>
 Date: Thu, 2 May 2013 14:33:59 -0700
-Subject: [PATCH 057/924] MR1: MAPREDUCE-5193. A few MR tests use block sizes
- which are smaller than the default minimum block
- size. Contributed by Andrew Wang.
+Subject: [PATCH 0057/2639] MR1: MAPREDUCE-5193. A few MR tests use block
+ sizes which are smaller than the default minimum
+ block size. Contributed by Andrew Wang.
 
 Reason: Broken test
 Author: Andrew Wang

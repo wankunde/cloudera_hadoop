@@ -1,7 +1,7 @@
 From 414e72d4c5abaef5da622166022fc46791c6444b Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 17 Jul 2014 17:44:55 +0000
-Subject: [PATCH 326/924] Import initial code for MAPREDUCE-2841 (native
+Subject: [PATCH 0326/2639] Import initial code for MAPREDUCE-2841 (native
  output collector)
 
 Contributed by:

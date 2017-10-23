@@ -1,9 +1,9 @@
 From 9f50b223c165f10b997e3e8b922908fd3b436481 Mon Sep 17 00:00:00 2001
 From: Arpit Agarwal <arp@apache.org>
 Date: Mon, 30 Mar 2015 15:25:16 -0700
-Subject: [PATCH 559/924] HDFS-7645. Rolling upgrade is restoring blocks from
- trash multiple times (Contributed by Vinayakumar B
- and Keisuke Ogiwara)
+Subject: [PATCH 0559/2639] HDFS-7645. Rolling upgrade is restoring blocks
+ from trash multiple times (Contributed by
+ Vinayakumar B and Keisuke Ogiwara)
 
 (cherry picked from commit abf3ad988ddf07450fccb7ca8f4bb4dd688c118a)
 

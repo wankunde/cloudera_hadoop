@@ -1,7 +1,7 @@
 From 212e93edf5cc4048751d1c17b57f5e9b04953d8c Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 18 Dec 2014 19:39:04 -0800
-Subject: [PATCH 409/924] HADOOP-11430. Add GenericTestUtils#disableLog,
+Subject: [PATCH 0409/2639] HADOOP-11430. Add GenericTestUtils#disableLog,
  GenericTestUtils#setLogLevel (cmccabe)
 
 (cherry picked from commit 6635ccd21766faf8f6a15d937dc8919a9075c988)

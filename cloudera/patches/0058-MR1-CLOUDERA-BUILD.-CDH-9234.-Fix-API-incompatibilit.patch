@@ -1,7 +1,7 @@
 From ae2804fa3db4eaaa89e8d49483d4ea2a8199d399 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Thu, 9 May 2013 15:23:59 -0700
-Subject: [PATCH 058/924] MR1: CLOUDERA-BUILD. CDH-9234. Fix API
+Subject: [PATCH 0058/2639] MR1: CLOUDERA-BUILD. CDH-9234. Fix API
  incompatibility in
  mapredue.lib.jobcontrol.ControlledJob (cherry
  picked from commit

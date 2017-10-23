@@ -1,7 +1,7 @@
 From fbc0444ad35a2f7b9bbfe5fa59afad720925e228 Mon Sep 17 00:00:00 2001
 From: Arun Suresh <asuresh@cloudera.com>
 Date: Wed, 26 Nov 2014 10:37:48 -0800
-Subject: [PATCH 272/924] CLOUDERA-BUILD. CDH-23265 Ensure ssl-server.xml is
+Subject: [PATCH 0272/2639] CLOUDERA-BUILD. CDH-23265 Ensure ssl-server.xml is
  also copied to server.xml for tomcat backward
  compatibility
 

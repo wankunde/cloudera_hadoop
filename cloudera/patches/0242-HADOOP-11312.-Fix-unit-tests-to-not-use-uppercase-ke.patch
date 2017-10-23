@@ -1,7 +1,7 @@
 From 5bc350f92edb5a623a7698436f936b5d610294ed Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 18 Nov 2014 10:47:46 -0800
-Subject: [PATCH 242/924] HADOOP-11312. Fix unit tests to not use uppercase
+Subject: [PATCH 0242/2639] HADOOP-11312. Fix unit tests to not use uppercase
  key names.
 
 (cherry picked from commit bcd402ae380ead1234bfdfc53f485d3fb1391288)

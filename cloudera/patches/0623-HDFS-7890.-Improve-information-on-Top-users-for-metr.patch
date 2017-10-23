@@ -1,7 +1,7 @@
 From 8fc8d8f80a0ae8e9943b83e7df3e22518ef252e5 Mon Sep 17 00:00:00 2001
 From: Vinayakumar B <vinayakumarb@apache.org>
 Date: Mon, 30 Mar 2015 10:02:48 +0530
-Subject: [PATCH 623/924] HDFS-7890. Improve information on Top users for
+Subject: [PATCH 0623/2639] HDFS-7890. Improve information on Top users for
  metrics in RollingWindowsManager and lower log
  level (Contributed by J.Andreina)
 

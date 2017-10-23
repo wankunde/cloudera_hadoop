@@ -1,9 +1,9 @@
 From 28d24a04a10d27b1da376edf2a443cb5c765f3c3 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 23 Apr 2015 18:59:52 -0700
-Subject: [PATCH 537/924] HADOOP-11802. DomainSocketWatcher thread terminates
- sometimes after there is an I/O error during
- requestShortCircuitShm (cmccabe)
+Subject: [PATCH 0537/2639] HADOOP-11802. DomainSocketWatcher thread
+ terminates sometimes after there is an I/O error
+ during requestShortCircuitShm (cmccabe)
 
 (cherry picked from commit a0e0a63209b5eb17dca5cc503be36aa52defeabd)
 (cherry picked from commit 788b76761d5dfadf688406d50169e95401fe5d33)

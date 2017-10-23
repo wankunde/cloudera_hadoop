@@ -1,7 +1,7 @@
 From e5b7c8c95a4fba9bc54c94adf9cfb82a16c21c28 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Mon, 3 Nov 2014 15:55:22 -0800
-Subject: [PATCH 225/924] MAPREDUCE-6147. Support
+Subject: [PATCH 0225/2639] MAPREDUCE-6147. Support
  mapreduce.input.fileinputformat.split.maxsize.
  (Zhihai Xu via kasha)
 

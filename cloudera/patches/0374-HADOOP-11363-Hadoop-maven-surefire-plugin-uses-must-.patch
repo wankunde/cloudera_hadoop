@@ -1,8 +1,8 @@
 From bba7768876a51fb48d4cb051f01e3b924ca32c4b Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Tue, 9 Dec 2014 11:04:59 +0000
-Subject: [PATCH 374/924] HADOOP-11363 Hadoop maven surefire-plugin uses must
- set heap size.
+Subject: [PATCH 0374/2639] HADOOP-11363 Hadoop maven surefire-plugin uses
+ must set heap size.
 
 (cherry picked from commit a7be36384ae3aa1eed4b08154cb63710110b466d)
 ---

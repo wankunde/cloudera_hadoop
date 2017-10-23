@@ -1,9 +1,9 @@
 From 328ce92d6a4a1e118d755dd1328f5e9dbe7e6937 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 24 Feb 2015 16:11:34 -0800
-Subject: [PATCH 467/924] HDFS-7668. Backport "Convert site documentation from
- apt to markdown" to branch-2 (Masatake Iwasaki via
- Colin P. McCabe)
+Subject: [PATCH 0467/2639] HDFS-7668. Backport "Convert site documentation
+ from apt to markdown" to branch-2 (Masatake
+ Iwasaki via Colin P. McCabe)
 
 (backported from commit 2f1e5dc6288972004b5bed335c4a8d038aaedcf4)
 

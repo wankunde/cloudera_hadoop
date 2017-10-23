@@ -1,7 +1,7 @@
 From 95829110335c47937c4f0dc9b2635ba9d5216e99 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Fri, 13 Mar 2015 14:36:34 -0500
-Subject: [PATCH 689/924] HDFS-7435. PB encoding of block reports is very
+Subject: [PATCH 0689/2639] HDFS-7435. PB encoding of block reports is very
  inefficient. Contributed by Daryn Sharp.
 
 (cherry picked from commit d324164a51a43d72c02567248bd9f0f12b244a40)

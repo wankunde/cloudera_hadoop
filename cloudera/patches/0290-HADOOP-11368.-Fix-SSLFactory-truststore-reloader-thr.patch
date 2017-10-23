@@ -1,7 +1,7 @@
 From 6e444c43d932847ebd7ab4005a84283ce8034d50 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 9 Dec 2014 10:46:50 -0800
-Subject: [PATCH 290/924] HADOOP-11368. Fix SSLFactory truststore reloader
+Subject: [PATCH 0290/2639] HADOOP-11368. Fix SSLFactory truststore reloader
  thread leak in KMSClientProvider. Contributed by
  Arun Suresh.
 

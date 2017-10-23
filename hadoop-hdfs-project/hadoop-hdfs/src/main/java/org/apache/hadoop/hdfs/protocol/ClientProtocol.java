@@ -42,8 +42,10 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -203,7 +205,8 @@ public interface ClientProtocol {
    * Append to the end of the file. 
    * @param src path of the file being created.
    * @param clientName name of the current client.
-   * @return information about the last partial block if any.
+   * @return wrapper with information about the last partial block and file
+   *    status if any
    * @throws AccessControlException if permission to append file is 
    * denied by the system. As usually on the client side the exception will 
    * be wrapped into {@link org.apache.hadoop.ipc.RemoteException}.
@@ -224,7 +227,7 @@ public interface ClientProtocol {
    * @throws UnsupportedOperationException if append is not supported
    */
   @AtMostOnce
-  public LocatedBlock append(String src, String clientName)
+  public LastBlockWithStatus append(String src, String clientName)
       throws AccessControlException, DSQuotaExceededException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
       SnapshotAccessControlException, IOException;
@@ -356,6 +359,8 @@ public interface ClientProtocol {
    * @param fileId the id uniquely identifying a file
    * @param favoredNodes the list of nodes where the client wants the blocks.
    *          Nodes are identified by either host name or address.
+   * @param addBlockFlags flags to advise the behavior of allocating and placing
+   *                      a new block.
    *
    * @return LocatedBlock allocated block information.
    *
@@ -371,7 +376,7 @@ public interface ClientProtocol {
   @Idempotent
   public LocatedBlock addBlock(String src, String clientName,
       ExtendedBlock previous, DatanodeInfo[] excludeNodes, long fileId, 
-      String[] favoredNodes)
+      String[] favoredNodes, EnumSet<AddBlockFlag> addBlockFlags)
       throws AccessControlException, FileNotFoundException,
       NotReplicatedYetException, SafeModeException, UnresolvedLinkException,
       IOException;
@@ -1320,6 +1325,30 @@ public interface ClientProtocol {
       long prevId) throws IOException;
 
   /**
+   * Used to implement re-encryption of encryption zones.
+   *
+   * @param zone the encryption zone to re-encrypt.
+   * @param action the action for the re-encryption.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void reencryptEncryptionZone(String zone, ReencryptAction action)
+      throws IOException;
+
+  /**
+   * Used to implement cursor-based batched listing of
+   * {@ZoneReencryptionStatus}s.
+   *
+   * @param prevId ID of the last item in the previous batch. If there is no
+   *               previous batch, a negative value can be used.
+   * @return Batch of encryption zones.
+   * @throws IOException
+   */
+  @Idempotent
+  BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(long prevId)
+      throws IOException;
+
+  /**
    * Set xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
@@ -1413,4 +1442,16 @@ public interface ClientProtocol {
    */
   @Idempotent
   public EventBatchList getEditsFromTxid(long txid) throws IOException;
+
+  /**
+   * List open files in the system in batches. INode id is the cursor and the
+   * open files returned in a batch will have their INode ids greater than
+   * the cursor INode id. Open files can only be requested by super user and
+   * the the list across batches are not atomic.
+   *
+   * @param prevId the cursor INode id.
+   * @throws IOException
+   */
+  @Idempotent
+  BatchedEntries<OpenFileEntry> listOpenFiles(long prevId) throws IOException;
 }

@@ -1,7 +1,7 @@
 From bdeeeb6869ea17511f1d63e09479789604a1e524 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Fri, 16 Jan 2015 00:21:38 +0800
-Subject: [PATCH 636/924] HDFS-7189. Add trace spans for DFSClient metadata
+Subject: [PATCH 0636/2639] HDFS-7189. Add trace spans for DFSClient metadata
  operations. (Colin P. McCabe via yliu)
 
 (cherry picked from commit bdbf13ac46b72ae07ba86b8a3672cc8a9d064afc)

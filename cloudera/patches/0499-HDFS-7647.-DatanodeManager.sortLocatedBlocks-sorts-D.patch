@@ -1,7 +1,7 @@
 From 00e1af4bd007c01d17081487d5ef08a31ae95ad6 Mon Sep 17 00:00:00 2001
 From: Arpit Agarwal <arp@apache.org>
 Date: Mon, 9 Feb 2015 12:17:40 -0800
-Subject: [PATCH 499/924] HDFS-7647. DatanodeManager.sortLocatedBlocks sorts
+Subject: [PATCH 0499/2639] HDFS-7647. DatanodeManager.sortLocatedBlocks sorts
  DatanodeInfos but not StorageIDs. (Contributed by
  Milan Desai)
 

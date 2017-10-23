@@ -1,7 +1,7 @@
 From 99d9508016e38f541f729edc8eaef98b0e3ce822 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Wed, 3 Jul 2013 15:57:20 -0700
-Subject: [PATCH 090/924] MR1: MAPREDUCE-5364. Deadlock between
+Subject: [PATCH 0090/2639] MR1: MAPREDUCE-5364. Deadlock between
  RenewalTimerTask methods cancel() and run().
  (kkambatl via tucu) (cherry picked from commit
  14d67b8de24078559e2a1d5444e23731a3a6829c)

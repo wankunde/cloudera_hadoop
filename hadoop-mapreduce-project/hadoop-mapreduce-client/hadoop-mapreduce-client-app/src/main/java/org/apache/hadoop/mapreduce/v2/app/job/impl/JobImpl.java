@@ -103,9 +103,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptCompletedEvent
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptFetchFailureEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobUpdatedNodesEvent;
-import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
-import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptTooManyFetchFailureEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskRecoverEvent;
@@ -1342,7 +1341,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           if (TaskType.MAP == id.getTaskId().getTaskType()) {
             // reschedule only map tasks because their outputs maybe unusable
             LOG.info(mesg + ". AttemptId:" + id);
-            eventHandler.handle(new TaskAttemptKillEvent(id, mesg));
+            // Kill the attempt and indicate that next map attempt should be
+            // rescheduled (i.e. considered as a fast fail map).
+            eventHandler.handle(new TaskAttemptKillEvent(id, mesg, true));
           }
         }
       }
@@ -1638,7 +1639,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     @Override
     public void transition(JobImpl job, JobEvent event) {
       JobStartEvent jse = (JobStartEvent) event;
-      if (jse.getRecoveredJobStartTime() != 0) {
+      if (jse.getRecoveredJobStartTime() != -1L) {
         job.startTime = jse.getRecoveredJobStartTime();
       } else {
         job.startTime = job.clock.getTime();
@@ -1924,8 +1925,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             && failureRate >= job.getMaxAllowedFetchFailuresFraction()) {
           LOG.info("Too many fetch-failures for output of task attempt: " + 
               mapId + " ... raising fetch failure to map");
-          job.eventHandler.handle(new TaskAttemptEvent(mapId, 
-              TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE));
+          job.eventHandler.handle(new TaskAttemptTooManyFetchFailureEvent(mapId,
+              fetchfailureEvent.getReduce(), fetchfailureEvent.getHost()));
           job.fetchFailuresMapping.remove(mapId);
         }
       }

@@ -1,7 +1,7 @@
 From 829c281ef5057020b8e77855fd828267c87cf129 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Wed, 22 Oct 2014 14:38:47 -0700
-Subject: [PATCH 209/924] HDFS-6824. Additional user documentation for HDFS
+Subject: [PATCH 0209/2639] HDFS-6824. Additional user documentation for HDFS
  encryption.
 
 (cherry picked from commit a36399e09c8c92911df08f78a4b88528b6dd513f)

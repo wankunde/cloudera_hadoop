@@ -1,7 +1,7 @@
 From 073fffec79bc0271bd1631057a585f9ef08fbd0a Mon Sep 17 00:00:00 2001
 From: Gilad Wolff <gilad@cloudera.com>
 Date: Tue, 21 Jan 2014 14:35:48 -0800
-Subject: [PATCH 135/924] MR1: CLOUDERA-BUILD. Preliminary version of
+Subject: [PATCH 0135/2639] MR1: CLOUDERA-BUILD. Preliminary version of
  MAPREDUCE-5707.
  ApplicationClientProtocolPBClientImpl (and
  JobClient) does not allow to set rpcTimeout

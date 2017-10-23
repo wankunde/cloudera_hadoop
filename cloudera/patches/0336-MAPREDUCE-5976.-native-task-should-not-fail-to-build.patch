@@ -1,7 +1,7 @@
 From 587b04bacf70bc601b0fbda592bbb6b2a060d107 Mon Sep 17 00:00:00 2001
 From: Sean Zhong <seanzhong@apache.org>
 Date: Wed, 6 Aug 2014 07:32:49 +0000
-Subject: [PATCH 336/924] MAPREDUCE-5976. native-task: should not fail to
+Subject: [PATCH 0336/2639] MAPREDUCE-5976. native-task: should not fail to
  build if snappy is missing (Manu Zhang)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1616115 13f79535-47bb-0310-9956-ffa450edef68

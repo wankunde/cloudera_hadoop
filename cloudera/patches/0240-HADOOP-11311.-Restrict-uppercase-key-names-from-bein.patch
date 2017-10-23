@@ -1,7 +1,7 @@
 From a1aa5bb590be4640462e216d3ed964bc7aa59e19 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Mon, 17 Nov 2014 13:59:46 -0800
-Subject: [PATCH 240/924] HADOOP-11311. Restrict uppercase key names from
+Subject: [PATCH 0240/2639] HADOOP-11311. Restrict uppercase key names from
  being created with JCEKS.
 
 (cherry picked from commit 48d62fad80aaa13ee1a26fca14437722ed46da25)

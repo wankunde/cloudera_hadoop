@@ -1,7 +1,7 @@
 From f13a103c41eaeab358d475206d4c060e4efdb73b Mon Sep 17 00:00:00 2001
 From: Allen Wittenauer <aw@apache.org>
 Date: Tue, 27 Jan 2015 14:31:27 -0800
-Subject: [PATCH 565/924] HDFS-7566. Remove obsolete entries from
+Subject: [PATCH 0565/2639] HDFS-7566. Remove obsolete entries from
  hdfs-default.xml (Ray Chiang via aw)
 
 (cherry picked from commit 0a05ae1782488597cbf8667866f98f0df341abc0)

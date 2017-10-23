@@ -1,9 +1,9 @@
 From c1d0a700677d86a6a10a83b70b10f5998930d50a Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@cloudera.com>
 Date: Fri, 31 Jul 2015 08:58:22 +0530
-Subject: [PATCH 720/924] HDFS-8821. Explain message "Operation category X is
- not supported in state standby". Contributed by
- Gautam Gopalakrishnan.
+Subject: [PATCH 0720/2639] HDFS-8821. Explain message "Operation category X
+ is not supported in state standby". Contributed
+ by Gautam Gopalakrishnan.
 
 (cherry picked from commit c5caa25b8f2953e2b7a9d2c9dcbdbf1fed95c10b)
 

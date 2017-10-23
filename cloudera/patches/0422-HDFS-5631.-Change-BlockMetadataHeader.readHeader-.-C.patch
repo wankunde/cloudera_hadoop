@@ -1,12 +1,12 @@
 From 009e28016f076629b9b5e563e5e88045828062fd Mon Sep 17 00:00:00 2001
 From: Tsz-Wo Nicholas Sze <szetszwo@hortonworks.com>
 Date: Mon, 2 Feb 2015 12:59:22 -0800
-Subject: [PATCH 422/924] HDFS-5631. Change
+Subject: [PATCH 0422/2639] HDFS-5631. Change
  BlockMetadataHeader.readHeader(..), ChunkChecksum
  class and constructor to public; and fix
  FsDatasetSpi to use generic type instead of
- FsVolumeImpl.  Contributed by David Powell and Joe
- Pallas
+ FsVolumeImpl.  Contributed by David Powell and
+ Joe Pallas
 
 (cherry picked from commit e43b1428b4dfceca6fe64f2d1bab9e2a9bc1b8aa)
 

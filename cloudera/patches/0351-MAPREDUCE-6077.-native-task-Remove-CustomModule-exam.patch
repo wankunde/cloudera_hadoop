@@ -1,7 +1,7 @@
 From ce9ea930896a7d67b9e4f3bfaa63895b234c5b01 Mon Sep 17 00:00:00 2001
 From: Sean Zhong <clockfly@gmail.com>
 Date: Sat, 6 Sep 2014 11:46:07 +0800
-Subject: [PATCH 351/924] MAPREDUCE-6077. native-task: Remove CustomModule
+Subject: [PATCH 0351/2639] MAPREDUCE-6077. native-task: Remove CustomModule
  examples in nativetask (seanzhong)
 
 (cherry picked from commit 52a8b4db92a35598006103c59a2ff93afc5312ee)

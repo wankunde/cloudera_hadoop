@@ -1,7 +1,7 @@
 From 1a9920fdbd1d248b211900dee24133fdd3dadd88 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <karthik@kambatla.com>
 Date: Fri, 14 Feb 2014 15:46:33 -0800
-Subject: [PATCH 129/924] MR1: CLOUDERA-BUILD. Update version to
+Subject: [PATCH 0129/2639] MR1: CLOUDERA-BUILD. Update version to
  2.3.0-mr1-cdh5.0.0-SNAPSHOT
 
 (cherry picked from commit 526a8f43dedb63692745aedd44e9326f2adc7c94)

@@ -1,7 +1,7 @@
 From 6f9d941a77ca0557f7f9fdaeb916a2f2c903477e Mon Sep 17 00:00:00 2001
 From: Tsuyoshi Ozawa <ozawa@apache.org>
 Date: Fri, 23 Jan 2015 16:04:18 +0900
-Subject: [PATCH 357/924] YARN-3082. Non thread safe access to
+Subject: [PATCH 0357/2639] YARN-3082. Non thread safe access to
  systemCredentials in NodeHeartbeatResponse
  processing. Contributed by Anubhav Dhoot.
 

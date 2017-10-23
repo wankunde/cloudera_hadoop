@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
@@ -38,13 +37,11 @@ import com.google.inject.Inject;
 public class MetricsOverviewTable extends HtmlBlock {
   private static final long BYTES_IN_MB = 1024 * 1024;
 
-  private final RMContext rmContext;
   private final ResourceManager rm;
 
   @Inject
-  MetricsOverviewTable(RMContext context, ResourceManager rm, ViewContext ctx) {
+  MetricsOverviewTable(ResourceManager rm, ViewContext ctx) {
     super(ctx);
-    this.rmContext = context;
     this.rm = rm;
   }
 
@@ -55,8 +52,7 @@ public class MetricsOverviewTable extends HtmlBlock {
     //CSS in the correct spot
     html.style(".metrics {margin-bottom:5px}"); 
     
-    ClusterMetricsInfo clusterMetrics = 
-        new ClusterMetricsInfo(this.rm, this.rmContext);
+    ClusterMetricsInfo clusterMetrics = new ClusterMetricsInfo(this.rm);
     
     DIV<Hamlet> div = html.div().$class("metrics");
     
@@ -75,11 +71,6 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default")._("VCores Used")._().
         th().$class("ui-state-default")._("VCores Total")._().
         th().$class("ui-state-default")._("VCores Reserved")._().
-        th().$class("ui-state-default")._("Active Nodes")._().
-        th().$class("ui-state-default")._("Decommissioned Nodes")._().
-        th().$class("ui-state-default")._("Lost Nodes")._().
-        th().$class("ui-state-default")._("Unhealthy Nodes")._().
-        th().$class("ui-state-default")._("Rebooted Nodes")._().
       _().
     _().
     tbody().$class("ui-widget-content").
@@ -100,17 +91,35 @@ public class MetricsOverviewTable extends HtmlBlock {
         td(String.valueOf(clusterMetrics.getAllocatedVirtualCores())).
         td(String.valueOf(clusterMetrics.getTotalVirtualCores())).
         td(String.valueOf(clusterMetrics.getReservedVirtualCores())).
+      _().
+    _()._();
+
+    div.h3("Cluster Nodes Metrics").
+    table("#nodemetricsoverview").
+    thead().$class("ui-widget-header").
+      tr().
+        th().$class("ui-state-default")._("Active Nodes")._().
+        th().$class("ui-state-default")._("Decommissioning Nodes")._().
+        th().$class("ui-state-default")._("Decommissioned Nodes")._().
+        th().$class("ui-state-default")._("Lost Nodes")._().
+        th().$class("ui-state-default")._("Unhealthy Nodes")._().
+        th().$class("ui-state-default")._("Rebooted Nodes")._().
+      _().
+    _().
+    tbody().$class("ui-widget-content").
+      tr().
         td().a(url("nodes"),String.valueOf(clusterMetrics.getActiveNodes()))._().
+        td().a(url("nodes/decommissioning"), String.valueOf(clusterMetrics.getDecommissioningNodes()))._().
         td().a(url("nodes/decommissioned"),String.valueOf(clusterMetrics.getDecommissionedNodes()))._().
         td().a(url("nodes/lost"),String.valueOf(clusterMetrics.getLostNodes()))._().
         td().a(url("nodes/unhealthy"),String.valueOf(clusterMetrics.getUnhealthyNodes()))._().
         td().a(url("nodes/rebooted"),String.valueOf(clusterMetrics.getRebootedNodes()))._().
       _().
     _()._();
-    
+
     String user = request().getRemoteUser();
     if (user != null) {
-      UserMetricsInfo userMetrics = new UserMetricsInfo(this.rm, this.rmContext, user);
+      UserMetricsInfo userMetrics = new UserMetricsInfo(this.rm, user);
       if (userMetrics.metricsAvailable()) {
         div.h3("User Metrics for " + user).
         table("#usermetricsoverview").

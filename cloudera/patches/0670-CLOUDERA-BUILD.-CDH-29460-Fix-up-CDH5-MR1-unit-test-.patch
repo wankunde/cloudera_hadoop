@@ -1,9 +1,9 @@
 From 1b7632d47da1c2a4f5601c0a911344c63e957ff5 Mon Sep 17 00:00:00 2001
 From: Zhihai Xu <zxu@cloudera.com>
 Date: Tue, 21 Jul 2015 14:47:05 -0700
-Subject: [PATCH 670/924] CLOUDERA-BUILD. CDH-29460 Fix up CDH5 MR1 unit test
- jobs:TestWebUIAuthorization, TestMapredSystemDir
- and TestFileInputFormat
+Subject: [PATCH 0670/2639] CLOUDERA-BUILD. CDH-29460 Fix up CDH5 MR1 unit
+ test jobs:TestWebUIAuthorization,
+ TestMapredSystemDir and TestFileInputFormat
 
 (cherry picked from commit 10b85c06d697be56adc31cbdc0a2bac59eebfc31)
 ---

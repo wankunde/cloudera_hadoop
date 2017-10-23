@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.RemotePeerFactory;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -60,8 +61,12 @@ import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
@@ -102,17 +107,21 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class NamenodeFsck implements DataEncryptionKeyFactory {
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
-  
+
   // return string marking fsck status
   public static final String CORRUPT_STATUS = "is CORRUPT";
   public static final String HEALTHY_STATUS = "is HEALTHY";
+  public static final String DECOMMISSIONING_STATUS = "is DECOMMISSIONING";
+  public static final String DECOMMISSIONED_STATUS = "is DECOMMISSIONED";
+  public static final String ENTERING_MAINTENANCE_STATUS =
+      "is ENTERING MAINTENANCE";
+  public static final String IN_MAINTENANCE_STATUS = "is IN MAINTENANCE";
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
-  
+
   private final NameNode namenode;
   private final NetworkTopology networktopology;
   private final int totalDatanodes;
-  private final short minReplication;
   private final InetAddress remoteAddress;
 
   private String lostFound = null;
@@ -124,6 +133,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   private boolean showLocations = false;
   private boolean showRacks = false;
   private boolean showCorruptFileBlocks = false;
+  private boolean showMaintenanceState = false;
 
   /**
    * True if we encountered an internal error during FSCK, such as not being
@@ -131,21 +141,23 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    */
   private boolean internalError = false;
 
-  /** 
+  /**
    * True if the user specified the -move option.
    *
    * Whe this option is in effect, we will copy salvaged blocks into the lost
    * and found. */
   private boolean doMove = false;
 
-  /** 
+  /**
    * True if the user specified the -delete option.
    *
    * Whe this option is in effect, we will delete corrupted files.
    */
   private boolean doDelete = false;
 
-  private String path = "/";
+  String path = "/";
+
+  private String blockIds = null;
 
   // We return back N files that are corrupt; the list of files returned is
   // ordered by block id; to allow continuation support, pass in the last block
@@ -167,19 +179,17 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    * @param pmap key=value[] map passed to the http servlet as url parameters
    * @param out output stream to write the fsck output
    * @param totalDatanodes number of live datanodes
-   * @param minReplication minimum replication
    * @param remoteAddress source address of the fsck request
    */
   NamenodeFsck(Configuration conf, NameNode namenode,
-      NetworkTopology networktopology, 
+      NetworkTopology networktopology,
       Map<String,String[]> pmap, PrintWriter out,
-      int totalDatanodes, short minReplication, InetAddress remoteAddress) {
+      int totalDatanodes, InetAddress remoteAddress) {
     this.conf = conf;
     this.namenode = namenode;
     this.networktopology = networktopology;
     this.out = out;
     this.totalDatanodes = totalDatanodes;
-    this.minReplication = minReplication;
     this.remoteAddress = remoteAddress;
     this.bpPolicy = BlockPlacementPolicy.getInstance(conf, null,
         networktopology,
@@ -201,12 +211,94 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       else if (key.equals("openforwrite")) {this.showOpenFiles = true; }
       else if (key.equals("listcorruptfileblocks")) {
         this.showCorruptFileBlocks = true;
-      }
-      else if (key.equals("startblockafter")) {
+      } else if (key.equals("maintenance")) {
+        this.showMaintenanceState = true;
+      } else if (key.equals("startblockafter")) {
         this.currentCookie[0] = pmap.get("startblockafter")[0];
       } else if (key.equals("includeSnapshots")) {
         this.snapshottableDirs = new ArrayList<String>();
+      } else if (key.equals("blockId")) {
+        this.blockIds = pmap.get("blockId")[0];
       }
+    }
+  }
+
+  /**
+   * Check block information given a blockId number
+   *
+  */
+  public void blockIdCK(String blockId) {
+
+    if(blockId == null) {
+      out.println("Please provide valid blockId!");
+      return;
+    }
+
+    BlockManager bm = namenode.getNamesystem().getBlockManager();
+    try {
+      //get blockInfo
+      Block block = new Block(Block.getBlockId(blockId));
+      //find which file this block belongs to
+      BlockInfo blockInfo = bm.getStoredBlock(block);
+      if(blockInfo == null) {
+        out.println("Block "+ blockId +" " + NONEXISTENT_STATUS);
+        LOG.warn("Block "+ blockId + " " + NONEXISTENT_STATUS);
+        return;
+      }
+      BlockCollection bc = bm.getBlockCollection(blockInfo);
+      INode iNode = (INode) bc;
+      NumberReplicas numberReplicas= bm.countNodes(blockInfo);
+      out.println("Block Id: " + blockId);
+      out.println("Block belongs to: "+iNode.getFullPathName());
+      out.println("No. of Expected Replica: " + bc.getBlockReplication());
+      out.println("No. of live Replica: " + numberReplicas.liveReplicas());
+      out.println("No. of excess Replica: " + numberReplicas.excessReplicas());
+      out.println("No. of stale Replica: " + numberReplicas.replicasOnStaleNodes());
+      out.println("No. of decommissioned Replica: "
+          + numberReplicas.decommissioned());
+      out.println("No. of decommissioning Replica: "
+          + numberReplicas.decommissioning());
+      if (this.showMaintenanceState) {
+        out.println("No. of entering maintenance Replica: "
+            + numberReplicas.liveEnteringMaintenanceReplicas());
+        out.println("No. of in maintenance Replica: "
+            + numberReplicas.maintenanceNotForReadReplicas());
+      }
+      out.println("No. of corrupted Replica: " +
+          numberReplicas.corruptReplicas());
+      //record datanodes that have corrupted block replica
+      Collection<DatanodeDescriptor> corruptionRecord = null;
+      if (bm.getCorruptReplicas(block) != null) {
+        corruptionRecord = bm.getCorruptReplicas(block);
+      }
+
+      //report block replicas status on datanodes
+      for(int idx = (blockInfo.numNodes()-1); idx >= 0; idx--) {
+        DatanodeDescriptor dn = blockInfo.getDatanode(idx);
+        out.print("Block replica on datanode/rack: " + dn.getHostName() +
+            dn.getNetworkLocation() + " ");
+        if (corruptionRecord != null && corruptionRecord.contains(dn)) {
+          out.print(CORRUPT_STATUS+"\t ReasonCode: "+
+            bm.getCorruptReason(block,dn));
+        } else if (dn.isDecommissioned() ){
+          out.print(DECOMMISSIONED_STATUS);
+        } else if (dn.isDecommissionInProgress()) {
+          out.print(DECOMMISSIONING_STATUS);
+        } else if (this.showMaintenanceState && dn.isEnteringMaintenance()) {
+          out.print(ENTERING_MAINTENANCE_STATUS);
+        } else if (this.showMaintenanceState && dn.isInMaintenance()) {
+          out.print(IN_MAINTENANCE_STATUS);
+        } else {
+          out.print(HEALTHY_STATUS);
+        }
+        out.print("\n");
+      }
+    } catch (Exception e){
+      String errMsg = "Fsck on blockId '" + blockId;
+      LOG.warn(errMsg, e);
+      out.println(e.getMessage());
+      out.print("\n\n" + errMsg);
+      LOG.warn("Error in looking up block", e);
     }
   }
 
@@ -216,6 +308,29 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   public void fsck() {
     final long startTime = Time.now();
     try {
+      if(blockIds != null) {
+        String[] blocks = blockIds.split(" ");
+        StringBuilder sb = new StringBuilder();
+        sb.append("FSCK started by " +
+            UserGroupInformation.getCurrentUser() + " from " +
+            remoteAddress + " at " + new Date());
+        out.println(sb.toString());
+        sb.append(" for blockIds: \n");
+        for (String blk: blocks) {
+          if(blk == null || !blk.contains(Block.BLOCK_FILE_PREFIX)) {
+            out.println("Incorrect blockId format: " + blk);
+            continue;
+          }
+          out.print("\n");
+          blockIdCK(blk);
+          sb.append(blk + "\n");
+        }
+        LOG.info(sb.toString());
+        namenode.getNamesystem().logFsckEvent("/", remoteAddress);
+        out.flush();
+        return;
+      }
+
       String msg = "FSCK started by " + UserGroupInformation.getCurrentUser()
           + " from " + remoteAddress + " for path " + path + " at " + new Date();
       LOG.info(msg);
@@ -223,8 +338,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       namenode.getNamesystem().logFsckEvent(path, remoteAddress);
 
       if (snapshottableDirs != null) {
-        SnapshottableDirectoryStatus[] snapshotDirs = namenode.getRpcServer()
-            .getSnapshottableDirListing();
+        SnapshottableDirectoryStatus[] snapshotDirs =
+            namenode.getRpcServer().getSnapshottableDirListing();
         if (snapshotDirs != null) {
           for (SnapshottableDirectoryStatus dir : snapshotDirs) {
             snapshottableDirs.add(dir.getFullPath().toString());
@@ -239,7 +354,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           listCorruptFileBlocks();
           return;
         }
-        
+
         Result res = new Result(conf);
 
         check(path, file, res);
@@ -260,7 +375,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
         // DFSck client scans for the string HEALTHY/CORRUPT to check the status
         // of file system and return appropriate code. Changing the output
-        // string might break testcases. Also note this must be the last line 
+        // string might break testcases. Also note this must be the last line
         // of the report.
         if (res.isHealthy()) {
           out.print("\n\nThe filesystem under path '" + path + "' " + HEALTHY_STATUS);
@@ -284,9 +399,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   }
 
   private void listCorruptFileBlocks() throws IOException {
-    Collection<FSNamesystem.CorruptFileBlockInfo> corruptFiles = namenode.
-      getNamesystem().listCorruptFileBlocks(path, currentCookie);
-    int numCorruptFiles = corruptFiles.size();
+    final List<String> corrputBlocksFiles = namenode.getNamesystem()
+        .listCorruptFileBlocksWithSnapshot(path, snapshottableDirs,
+            currentCookie);
+    int numCorruptFiles = corrputBlocksFiles.size();
     String filler;
     if (numCorruptFiles > 0) {
       filler = Integer.toString(numCorruptFiles);
@@ -296,14 +412,14 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       filler = "no more";
     }
     out.println("Cookie:\t" + currentCookie[0]);
-    for (FSNamesystem.CorruptFileBlockInfo c : corruptFiles) {
-      out.println(c.toString());
+    for (String s : corrputBlocksFiles) {
+      out.println(s);
     }
     out.println("\n\nThe filesystem under path '" + path + "' has " + filler
         + " CORRUPT files");
     out.println();
   }
-  
+
   @VisibleForTesting
   void check(String parent, HdfsFileStatus file, Result res) throws IOException {
     String path = file.getFullName(parent);
@@ -347,14 +463,19 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       return;
     }
     long fileLen = file.getLen();
-    // Get block locations without updating the file access time 
+    // Get block locations without updating the file access time
     // and without block access tokens
-    LocatedBlocks blocks;
+    LocatedBlocks blocks = null;
+    FSNamesystem fsn = namenode.getNamesystem();
+    fsn.readLock();
     try {
-      blocks = namenode.getNamesystem().getBlockLocations(path, 0,
-          fileLen, false, false, false);
+      blocks = fsn.getBlockLocations(
+          fsn.getPermissionChecker(), path, 0, fileLen, false, false)
+          .blocks;
     } catch (FileNotFoundException fnfe) {
       blocks = null;
+    } finally {
+      fsn.readUnlock();
     }
     if (blocks == null) { // the file is deleted
       return;
@@ -379,7 +500,14 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } else {
       out.print('.');
     }
-    if (res.totalFiles % 100 == 0) { out.println(); out.flush(); }
+    if (res.totalFiles % 100 == 0) {
+      out.println();
+      // checkError here will attempt to flush the stream, or report an error
+      // if the stream has encountered an error or been closed by the client
+      if (out.checkError()) {
+        throw new IOException("fsck encountered an error in its output stream");
+      }
+    }
     int missing = 0;
     int corrupt = 0;
     long missize = 0;
@@ -387,16 +515,48 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     int misReplicatedPerFile = 0;
     StringBuilder report = new StringBuilder();
     int i = 0;
+    final LocatedBlock lastBlock = blocks.getLastLocatedBlock();
     for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
       ExtendedBlock block = lBlk.getBlock();
+      if (!blocks.isLastBlockComplete() && lastBlock != null &&
+          lastBlock.getBlock().equals(block)) {
+        // this is the last block and this is not complete. ignore it since
+        // it is under construction
+        continue;
+      }
       boolean isCorrupt = lBlk.isCorrupt();
       String blkName = block.toString();
       DatanodeInfo[] locs = lBlk.getLocations();
-      NumberReplicas numberReplicas = namenode.getNamesystem().getBlockManager().countNodes(block.getLocalBlock());
+      NumberReplicas numberReplicas = namenode.getNamesystem()
+              .getBlockManager().countNodes(namenode.getNamesystem()
+                      .getBlockManager().getStoredBlock(block.getLocalBlock()));
+      int decommissionedReplicas = numberReplicas.decommissioned();;
+      int decommissioningReplicas = numberReplicas.decommissioning();
+      int enteringMaintenanceReplicas =
+          numberReplicas.liveEnteringMaintenanceReplicas();
+      int inMaintenanceReplicas =
+          numberReplicas.maintenanceNotForReadReplicas();
+      res.decommissionedReplicas +=  decommissionedReplicas;
+      res.decommissioningReplicas += decommissioningReplicas;
+      if (this.showMaintenanceState) {
+        res.enteringMaintenanceReplicas += enteringMaintenanceReplicas;
+        res.inMaintenanceReplicas += inMaintenanceReplicas;
+      }
+
+      // count total replicas
       int liveReplicas = numberReplicas.liveReplicas();
-      res.totalReplicas += liveReplicas;
+      int totalReplicas = liveReplicas + decommissionedReplicas
+          + decommissioningReplicas
+          + enteringMaintenanceReplicas
+          + inMaintenanceReplicas;
+      res.totalReplicas += totalReplicas;
+
+      // count expected replicas
       short targetFileReplication = file.getReplication();
       res.numExpectedReplicas += targetFileReplication;
+      if(totalReplicas < res.minReplication){
+        res.numUnderMinReplicatedBlocks++;
+      }
       if (liveReplicas > targetFileReplication) {
         res.excessiveReplicas += (liveReplicas - targetFileReplication);
         res.numOverReplicatedBlocks += 1;
@@ -405,26 +565,31 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       if (isCorrupt) {
         corrupt++;
         res.corruptBlocks++;
-        out.print("\n" + path + ": CORRUPT blockpool " + block.getBlockPoolId() + 
+        out.print("\n" + path + ": CORRUPT blockpool " + block.getBlockPoolId() +
             " block " + block.getBlockName()+"\n");
       }
-      if (liveReplicas >= minReplication)
+      if (totalReplicas >= res.minReplication)
         res.numMinReplicatedBlocks++;
-      if (liveReplicas < targetFileReplication && liveReplicas > 0) {
-        res.missingReplicas += (targetFileReplication - liveReplicas);
+      if (totalReplicas < targetFileReplication && totalReplicas > 0) {
+        res.missingReplicas += (targetFileReplication - totalReplicas);
         res.numUnderReplicatedBlocks += 1;
         underReplicatedPerFile++;
         if (!showFiles) {
           out.print("\n" + path + ": ");
         }
-        out.println(" Under replicated " + block +
-                    ". Target Replicas is " +
-                    targetFileReplication + " but found " +
-                    liveReplicas + " replica(s).");
+        out.println(" Under replicated " + block + ". Target Replicas is "
+            + targetFileReplication + " but found "
+            + liveReplicas+ " live replica(s), "
+            + decommissionedReplicas + " decommissioned replica(s), "
+            + decommissioningReplicas + " decommissioning replica(s)"
+            + (this.showMaintenanceState ? (enteringMaintenanceReplicas
+            + ", entering maintenance replica(s) and " + inMaintenanceReplicas
+            + " in maintenance replica(s).") : "."));
       }
-      // verify block placement policy
+
+      // count mis replicated blocks
       BlockPlacementStatus blockPlacementStatus = bpPolicy
-          .verifyBlockPlacement(path, lBlk, targetFileReplication);
+          .verifyBlockPlacement(lBlk.getLocations(), targetFileReplication);
       if (!blockPlacementStatus.isPlacementPolicySatisfied()) {
         res.numMisReplicatedBlocks++;
         misReplicatedPerFile++;
@@ -433,11 +598,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             out.println();
           out.print(path + ": ");
         }
-        out.println(" Replica placement policy is violated for " + 
+        out.println(" Replica placement policy is violated for " +
                     block + ". " + blockPlacementStatus.getErrorDescription());
       }
       report.append(i + ". " + blkName + " len=" + block.getNumBytes());
-      if (liveReplicas == 0) {
+      if (totalReplicas == 0) {
         report.append(" MISSING!");
         res.addMissing(block.toString(), block.getNumBytes());
         missing++;
@@ -504,7 +669,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       return false;
     }
   }
-  
+
   private void copyBlocksToLostFound(String parent, HdfsFileStatus file,
         LocatedBlocks blocks) throws IOException {
     final DFSClient dfs = new DFSClient(NameNode.getAddress(conf), conf);
@@ -549,7 +714,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           }
           chain++;
         }
-        
+
         // copy the block. It's a pity it's not abstracted from DFSInputStream ...
         try {
           copyBlock(dfs, lblock, fos);
@@ -567,7 +732,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         LOG.warn("Fsck: there were errors copying the remains of the " +
           "corrupted file " + fullName + " to /lost+found");
       } else {
-        LOG.info("Fsck: copied the remains of the corrupted file " + 
+        LOG.info("Fsck: copied the remains of the corrupted file " +
           fullName + " to /lost+found");
       }
     } catch (Exception e) {
@@ -578,7 +743,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       dfs.close();
     }
   }
-      
+
   /*
    * XXX (ab) Bulk of this method is copied verbatim from {@link DFSClient}, which is
    * bad. Both places should be refactored to provide a method to copy blocks
@@ -589,12 +754,12 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     int failures = 0;
     InetSocketAddress targetAddr = null;
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
-    BlockReader blockReader = null; 
-    ExtendedBlock block = lblock.getBlock(); 
+    BlockReader blockReader = null;
+    ExtendedBlock block = lblock.getBlock();
 
     while (blockReader == null) {
       DatanodeInfo chosenNode;
-      
+
       try {
         chosenNode = bestNode(dfs, lblock.getLocations(), deadNodes);
         targetAddr = NetUtils.createSocketAddr(chosenNode.getXferAddr());
@@ -619,7 +784,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             setBlock(block).
             setBlockToken(lblock.getBlockToken()).
             setStartOffset(0).
-            setLength(-1).
+            setLength(block.getNumBytes()).
             setVerifyChecksum(true).
             setClientName("fsck").
             setDatanodeInfo(chosenNode).
@@ -640,7 +805,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                   s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
                   peer = TcpPeerServer.peerFromSocketAndKey(
                         dfs.getSaslDataTransferClient(), s, NamenodeFsck.this,
-                        blockToken, datanodeId);
+                        blockToken, datanodeId, HdfsServerConstants.READ_TIMEOUT);
                 } finally {
                   if (peer == null) {
                     IOUtils.closeQuietly(s);
@@ -666,7 +831,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         bytesRead += cnt;
       }
       if ( bytesRead != block.getNumBytes() ) {
-        throw new IOException("Recorded block size is " + block.getNumBytes() + 
+        throw new IOException("Recorded block size is " + block.getNumBytes() +
                               ", but datanode returned " +bytesRead+" bytes");
       }
     } catch (Exception e) {
@@ -703,12 +868,12 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } while (deadNodes.contains(chosenNode));
     return chosenNode;
   }
-  
+
   private void lostFoundInit(DFSClient dfs) {
     lfInited = true;
     try {
       String lfName = "/lost+found";
-      
+
       final HdfsFileStatus lfStatus = dfs.getFileInfo(lfName);
       if (lfStatus == null) { // not exists
         lfInitedOk = dfs.mkdirs(lfName, null, true);
@@ -742,6 +907,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     long corruptBlocks = 0L;
     long excessiveReplicas = 0L;
     long missingReplicas = 0L;
+    long decommissionedReplicas = 0L;
+    long decommissioningReplicas = 0L;
+    long enteringMaintenanceReplicas = 0L;
+    long inMaintenanceReplicas = 0L;
+    long numUnderMinReplicatedBlocks=0L;
     long numOverReplicatedBlocks = 0L;
     long numUnderReplicatedBlocks = 0L;
     long numMisReplicatedBlocks = 0L;  // blocks that do not satisfy block placement policy
@@ -758,32 +928,35 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     long totalReplicas = 0L;
 
     final short replication;
-    
+    final int minReplication;
+
     Result(Configuration conf) {
-      this.replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 
+      this.replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
                                             DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+      this.minReplication = (short)conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY,
+                                            DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_DEFAULT);
     }
-    
+
     /**
      * DFS is considered healthy if there are no missing blocks.
      */
     boolean isHealthy() {
       return ((missingIds.size() == 0) && (corruptBlocks == 0));
     }
-    
+
     /** Add a missing block name, plus its size. */
     void addMissing(String id, long size) {
       missingIds.add(id);
       missingSize += size;
     }
-    
+
     /** Return the actual replication factor. */
     float getReplicationFactor() {
       if (totalBlocks == 0)
         return 0.0f;
       return (float) (totalReplicas) / (float) totalBlocks;
     }
-    
+
     @Override
     public String toString() {
       StringBuilder res = new StringBuilder();
@@ -809,15 +982,28 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         res.append(" (Total open file blocks (not validated): ").append(
             totalOpenFilesBlocks).append(")");
       }
-      if (corruptFiles > 0) {
-        res.append("\n  ********************************").append(
-            "\n  CORRUPT FILES:\t").append(corruptFiles);
-        if (missingSize > 0) {
-          res.append("\n  MISSING BLOCKS:\t").append(missingIds.size()).append(
-              "\n  MISSING SIZE:\t\t").append(missingSize).append(" B");
+      if (corruptFiles > 0 || numUnderMinReplicatedBlocks > 0) {
+        res.append("\n  ********************************");
+        if(numUnderMinReplicatedBlocks>0){
+          res.append("\n  UNDER MIN REPL'D BLOCKS:\t").append(numUnderMinReplicatedBlocks);
+          if(totalBlocks>0){
+            res.append(" (").append(
+                ((float) (numUnderMinReplicatedBlocks * 100) / (float) totalBlocks))
+                .append(" %)");
+          }
+          res.append("\n  ").append(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY + ":\t")
+             .append(minReplication);
         }
-        if (corruptBlocks > 0) {
-          res.append("\n  CORRUPT BLOCKS: \t").append(corruptBlocks);
+        if(corruptFiles>0) {
+          res.append(
+              "\n  CORRUPT FILES:\t").append(corruptFiles);
+          if (missingSize > 0) {
+            res.append("\n  MISSING BLOCKS:\t").append(missingIds.size()).append(
+                "\n  MISSING SIZE:\t\t").append(missingSize).append(" B");
+          }
+          if (corruptBlocks > 0) {
+            res.append("\n  CORRUPT BLOCKS: \t").append(corruptBlocks);
+          }
         }
         res.append("\n  ********************************");
       }
@@ -858,6 +1044,22 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         res.append(" (").append(
             ((float) (missingReplicas * 100) / (float) numExpectedReplicas)).append(
             " %)");
+      }
+      if (decommissionedReplicas > 0) {
+        res.append("\n DecommissionedReplicas:\t").append(
+            decommissionedReplicas);
+      }
+      if (decommissioningReplicas > 0) {
+        res.append("\n DecommissioningReplicas:\t").append(
+            decommissioningReplicas);
+      }
+      if (enteringMaintenanceReplicas > 0) {
+        res.append("\n EnteringMaintenanceReplicas:\t").append(
+            enteringMaintenanceReplicas);
+      }
+      if (inMaintenanceReplicas > 0) {
+        res.append("\n InMaintenanceReplicas:\t").append(
+            inMaintenanceReplicas);
       }
       return res.toString();
     }

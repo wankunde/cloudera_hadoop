@@ -1,7 +1,7 @@
 From 0d640b36a249a0ec76e5c6c3aae15d87eb0e59ec Mon Sep 17 00:00:00 2001
 From: Vinayakumar B <vinayakumarb@apache.org>
 Date: Wed, 22 Jul 2015 10:25:49 +0530
-Subject: [PATCH 695/924] HADOOP-12017. Hadoop archives command should use
+Subject: [PATCH 0695/2639] HADOOP-12017. Hadoop archives command should use
  configurable replication factor when closing
  (Contributed by Bibin A Chundatt)
 

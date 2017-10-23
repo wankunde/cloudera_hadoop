@@ -1,7 +1,7 @@
 From cfc8d5e1c297d6bfbd2471bae2093b5a6bb7249f Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Tue, 22 Jul 2014 19:55:03 +0000
-Subject: [PATCH 327/924] MAPREDUCE-5985. native-task: Fix build on macosx.
+Subject: [PATCH 0327/2639] MAPREDUCE-5985. native-task: Fix build on macosx.
  Contributed by Binglin Chang
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1612659 13f79535-47bb-0310-9956-ffa450edef68

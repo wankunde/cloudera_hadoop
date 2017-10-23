@@ -1,7 +1,7 @@
 From 532f99f5a35e3dd0fb9a0230e1711d184ae39d92 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@apache.org>
 Date: Fri, 5 Dec 2014 12:07:01 -0800
-Subject: [PATCH 307/924] YARN-2461. Fix PROCFS_USE_SMAPS_BASED_RSS_ENABLED
+Subject: [PATCH 0307/2639] YARN-2461. Fix PROCFS_USE_SMAPS_BASED_RSS_ENABLED
  property in YarnConfiguration. (rchiang via
  rkanter)
 

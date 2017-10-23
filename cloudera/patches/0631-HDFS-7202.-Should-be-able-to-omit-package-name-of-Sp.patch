@@ -1,9 +1,9 @@
 From 4bbdf750148e9e163137e51575cf1c78145fffc1 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 8 Oct 2014 17:55:46 -0700
-Subject: [PATCH 631/924] HDFS-7202. Should be able to omit package name of
- SpanReceiver on "hadoop trace -add" (iwasakims via
- cmccabe)
+Subject: [PATCH 0631/2639] HDFS-7202. Should be able to omit package name of
+ SpanReceiver on "hadoop trace -add" (iwasakims
+ via cmccabe)
 
 (cherry picked from commit d996235285e5047f731e3d3fc4c6e6214caa10aa)
 (cherry picked from commit f1feaae1dd036ab77fe50d392e6fbf560541020e)

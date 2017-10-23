@@ -1,7 +1,7 @@
 From 20627637a1bd604aef6061a093aea115c39df209 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Mon, 28 Oct 2013 14:52:19 -0700
-Subject: [PATCH 113/924] MR1: MAPREDUCE-5206. JT can show the same job
+Subject: [PATCH 0113/2639] MR1: MAPREDUCE-5206. JT can show the same job
  multiple times in Retired Jobs section
 
 Reason: Fixes a JT pseudo-leak reported in CDH-9823

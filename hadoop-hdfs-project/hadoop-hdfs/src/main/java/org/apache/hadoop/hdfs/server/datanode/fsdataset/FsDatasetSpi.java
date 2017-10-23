@@ -18,13 +18,16 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 
+import java.io.Closeable;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collection;
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +53,6 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.UnexpectedReplicaStateException;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -58,7 +60,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -92,8 +93,96 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
     }
   }
 
-  /** @return a list of volumes. */
-  public List<V> getVolumes();
+  /**
+   * It behaviors as an unmodifiable list of FsVolume. Individual FsVolume can
+   * be obtained by using {@link #get(int)}.
+   *
+   * This also holds the reference counts for these volumes. It releases all the
+   * reference counts in {@link #close()}.
+   */
+  class FsVolumeReferences implements Iterable<FsVolumeSpi>, Closeable {
+    private final List<FsVolumeReference> references;
+
+    public <S extends FsVolumeSpi> FsVolumeReferences(List<S> curVolumes) {
+      references = new ArrayList<>();
+      for (FsVolumeSpi v : curVolumes) {
+        try {
+          references.add(v.obtainReference());
+        } catch (ClosedChannelException e) {
+          // This volume has been closed.
+        }
+      }
+    }
+
+    private static class FsVolumeSpiIterator implements
+        Iterator<FsVolumeSpi> {
+      private final List<FsVolumeReference> references;
+      private int idx = 0;
+
+      FsVolumeSpiIterator(List<FsVolumeReference> refs) {
+        references = refs;
+      }
+
+      @Override
+      public boolean hasNext() {
+        return idx < references.size();
+      }
+
+      @Override
+      public FsVolumeSpi next() {
+        int refIdx = idx++;
+        return references.get(refIdx).getVolume();
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    }
+
+    @Override
+    public Iterator<FsVolumeSpi> iterator() {
+      return new FsVolumeSpiIterator(references);
+    }
+
+    /**
+     * Get the number of volumes.
+     */
+    public int size() {
+      return references.size();
+    }
+
+    /**
+     * Get the volume for a given index.
+     */
+    public FsVolumeSpi get(int index) {
+      return references.get(index).getVolume();
+    }
+
+    @Override
+    public void close() throws IOException {
+      IOException ioe = null;
+      for (FsVolumeReference ref : references) {
+        try {
+          ref.close();
+        } catch (IOException e) {
+          ioe = e;
+        }
+      }
+      references.clear();
+      if (ioe != null) {
+        throw ioe;
+      }
+    }
+  }
+
+  /**
+   * Returns a list of FsVolumes that hold reference counts.
+   *
+   * The caller must release the reference of each volume by calling
+   * {@link FsVolumeReferences#close()}.
+   */
+  public FsVolumeReferences getFsVolumeReferences();
 
   /**
    * Add a new volume to the FsDataset.<p/>
@@ -285,19 +374,21 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @return the storage uuid of the replica.
    * @throws IOException
    */
-  public String recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
+  Replica recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
       ) throws IOException;
   
   /**
    * Finalizes the block previously opened for writing using writeToBlock.
    * The block size is what is in the parameter b and it must match the amount
    *  of data written
+   * @param block Block to be finalized
+   * @param fsyncDir whether to sync the directory changes to durable device.
    * @throws IOException
    * @throws ReplicaNotFoundException if the replica can not be found when the
    * block is been finalized. For instance, the block resides on an HDFS volume
    * that has been removed.
    */
-  public void finalizeBlock(ExtendedBlock b) throws IOException;
+  void finalizeBlock(ExtendedBlock b, boolean fsyncDir) throws IOException;
 
   /**
    * Unfinalizes the block previously opened for writing using writeToBlock.
@@ -435,7 +526,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Update replica's generation stamp and length and finalize it.
    * @return the ID of storage that stores the block
    */
-  public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
+  Replica updateReplicaUnderRecovery(ExtendedBlock oldBlock,
       long recoveryId, long newLength) throws IOException;
 
   /**
@@ -546,9 +637,20 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Check whether the block was pinned
    */
   public boolean getPinning(ExtendedBlock block) throws IOException;
-
+  
   /**
    * Confirm whether the block is deleting
    */
   public boolean isDeletingBlock(String bpid, long blockId);
+
+  /**
+   * Moves a given block from one volume to another volume. This is used by disk
+   * balancer.
+   *
+   * @param block       - ExtendedBlock
+   * @param destination - Destination volume
+   * @return Old replica info
+   */
+  ReplicaInfo moveBlockAcrossVolumes(final ExtendedBlock block,
+      FsVolumeSpi destination) throws IOException;
 }

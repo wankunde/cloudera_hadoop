@@ -1,7 +1,7 @@
 From e1161ef4836f460f3ecc26bd2290c085991142e2 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 30 Oct 2014 17:31:23 -0700
-Subject: [PATCH 228/924] HDFS-7035. Make adding a new data directory to the
+Subject: [PATCH 0228/2639] HDFS-7035. Make adding a new data directory to the
  DataNode an atomic operation and improve error
  handling (Lei Xu via Colin P. McCabe) (cherry
  picked from commit

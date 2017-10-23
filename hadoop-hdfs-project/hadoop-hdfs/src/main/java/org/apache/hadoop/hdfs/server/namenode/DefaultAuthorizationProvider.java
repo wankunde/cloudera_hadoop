@@ -21,7 +21,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -29,9 +28,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.util.StringUtils;
 
-import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 
@@ -100,7 +97,7 @@ public class DefaultAuthorizationProvider
       int snapshotId) {
     INodeWithAdditionalFields inode = (INodeWithAdditionalFields) node;
     if (snapshotId != Snapshot.CURRENT_STATE_ID) {
-      return inode.getSnapshotINode(snapshotId).getAclFeature();
+      return inode.getSnapshotINode(snapshotId).getFsimageAclFeature();
     }
     return inode.getFeature(AclFeature.class);
   }
@@ -108,7 +105,7 @@ public class DefaultAuthorizationProvider
   @Override
   public void removeAclFeature(INodeAuthorizationInfo node) {
     INodeWithAdditionalFields inode = (INodeWithAdditionalFields) node;
-    AclFeature f = inode.getAclFeature();
+    AclFeature f = inode.getFsimageAclFeature();
     Preconditions.checkNotNull(f);
     inode.removeFeature(f);
   }
@@ -116,12 +113,32 @@ public class DefaultAuthorizationProvider
   @Override
   public void addAclFeature(INodeAuthorizationInfo node, AclFeature f) {
     INodeWithAdditionalFields inode = (INodeWithAdditionalFields) node;
-    AclFeature f1 = inode.getAclFeature();
+    AclFeature f1 = inode.getFsimageAclFeature();
     if (f1 != null) {
       throw new IllegalStateException("Duplicated ACLFeature");
     }
     inode.addFeature(f);
   }
+
+  /**
+   * Check whether exception e is due to an ancestor inode's not being
+   * directory.
+   */
+  private void checkAncestorType(INode[] inodes, int checkedAncestorIndex,
+      AccessControlException e) throws AccessControlException {
+    for (int i = 0; i <= checkedAncestorIndex; i++) {
+      if (inodes[i] == null) {
+        break;
+      }
+      if (!inodes[i].isDirectory()) {
+        throw new AccessControlException(
+            e.getMessage() + " (Ancestor " + inodes[i].getFullPathName()
+                + " is not a directory).");
+      }
+    }
+    throw e;
+  }
+
 
   @Override
   public void checkPermission(String user, Set<String> groups,
@@ -163,7 +180,9 @@ public class DefaultAuthorizationProvider
    */
   private void checkOwner(String user, INode inode, int snapshotId
   ) throws AccessControlException {
-    if (inode != null && user.equals(inode.getUserName(snapshotId))) {
+    // inode could be deleted after we list it from shell. No need to throw
+    // AccessControlException if it's null.
+    if (inode == null || user.equals(inode.getUserName(snapshotId))) {
       return;
     }
     throw new AccessControlException(
@@ -176,8 +195,13 @@ public class DefaultAuthorizationProvider
    */
   private void checkTraverse(String user, Set<String> groups, INode[] inodes,
       int last, int snapshotId) throws AccessControlException {
-    for (int j = 0; j <= last; j++) {
-      check(user, groups, inodes[j], snapshotId, FsAction.EXECUTE);
+    int j = 0;
+    try {
+      for (; j <= last; j++) {
+        check(user, groups, inodes[j], snapshotId, FsAction.EXECUTE);
+      }
+    } catch (AccessControlException e) {
+      checkAncestorType(inodes, j, e);
     }
   }
 
@@ -227,11 +251,9 @@ public class DefaultAuthorizationProvider
     FsPermission mode = inode.getFsPermission(snapshotId);
     AclFeature aclFeature = inode.getAclFeature(snapshotId);
     if (aclFeature != null) {
-      List<AclEntry> featureEntries = aclFeature.getEntries();
-      // It's possible that the inode has a default ACL but no access ACL.
-      if (featureEntries.get(0).getScope() == AclEntryScope.ACCESS) {
-        checkAccessAcl(user, groups, inode, snapshotId, access, mode,
-            featureEntries);
+      int firstEntry = aclFeature.getEntryAt(0);
+      if (AclEntryStatusFormat.getScope(firstEntry) == AclEntryScope.ACCESS) {
+        checkAccessAcl(user, groups, inode, snapshotId, access, mode, aclFeature);
         return;
       }
     }
@@ -278,12 +300,12 @@ public class DefaultAuthorizationProvider
    * @param snapshotId int snapshot ID
    * @param access FsAction requested permission
    * @param mode FsPermission mode from inode
-   * @param featureEntries List<AclEntry> ACL entries from AclFeature of inode
+   * @param aclFeature AclFeature of inode
    * @throws AccessControlException if the ACL denies permission
    */
   private void checkAccessAcl(String user, Set<String> groups, INode inode,
       int snapshotId,  FsAction access, FsPermission mode,
-      List<AclEntry> featureEntries) throws AccessControlException {
+      AclFeature aclFeature) throws AccessControlException {
     boolean foundMatch = false;
 
     // Use owner entry from permission bits if user is owner.
@@ -296,17 +318,19 @@ public class DefaultAuthorizationProvider
 
     // Check named user and group entries if user was not denied by owner entry.
     if (!foundMatch) {
-      for (AclEntry entry : featureEntries) {
-        if (entry.getScope() == AclEntryScope.DEFAULT) {
+      for (int pos = 0, entry; pos < aclFeature.getEntriesSize(); pos++) {
+        entry = aclFeature.getEntryAt(pos);
+        if (AclEntryStatusFormat.getScope(entry) == AclEntryScope.DEFAULT) {
           break;
         }
-        AclEntryType type = entry.getType();
-        String name = entry.getName();
+        AclEntryType type = AclEntryStatusFormat.getType(entry);
+        String name = AclEntryStatusFormat.getName(entry);
         if (type == AclEntryType.USER) {
           // Use named user entry with mask from permission bits applied if user
           // matches name.
           if (user.equals(name)) {
-            FsAction masked = entry.getPermission().and(mode.getGroupAction());
+            FsAction masked = AclEntryStatusFormat.getPermission(entry).and(
+                mode.getGroupAction());
             if (masked.implies(access)) {
               return;
             }
@@ -320,7 +344,8 @@ public class DefaultAuthorizationProvider
           // it doesn't matter which is chosen, so exit early after first match.
           String group = name == null ? inode.getGroupName(snapshotId) : name;
           if (groups.contains(group)) {
-            FsAction masked = entry.getPermission().and(mode.getGroupAction());
+            FsAction masked = AclEntryStatusFormat.getPermission(entry).and(
+                mode.getGroupAction());
             if (masked.implies(access)) {
               return;
             }
@@ -336,8 +361,7 @@ public class DefaultAuthorizationProvider
     }
 
     throw new AccessControlException(
-        toAccessControlString(user, inode, snapshotId, access, mode,
-            featureEntries));
+        toAccessControlString(user, inode, snapshotId, access, mode));
   }
 
   /**
@@ -359,8 +383,15 @@ public class DefaultAuthorizationProvider
       return;
     }
 
-    throw new AccessControlException("Permission denied by sticky bit setting:" 
-        + " user=" + user + ", inode=" + inode);
+    final String path = inode.getFullPathName();
+    throw new AccessControlException(String.format(
+            "Permission denied by sticky bit: user=%s, path=\"%s\":%s:%s:%s%s, " +
+            "parent=\"%s\":%s:%s:%s%s", user,
+            path, inode.getUserName(), inode.getGroupName(),
+            inode.isDirectory() ? "d" : "-", inode.getFsPermission().toString(),
+            path.substring(0, path.length() - inode.toString().length() - 1 ),
+            parent.getUserName(), parent.getGroupName(),
+            parent.isDirectory() ? "d" : "-", parent.getFsPermission().toString()));
   }
 
   /**
@@ -368,14 +399,6 @@ public class DefaultAuthorizationProvider
    */
   private String toAccessControlString(String user, INode inode, int snapshotId,
       FsAction access, FsPermission mode) {
-    return toAccessControlString(user, inode, snapshotId, access, mode, null);
-  }
-
-  /**
-   * @return a string for throwing {@link AccessControlException}
-   */
-  private String toAccessControlString(String user, INode inode, int snapshotId,
-      FsAction access, FsPermission mode, List<AclEntry> featureEntries) {
     StringBuilder sb = new StringBuilder("Permission denied: ")
         .append("user=").append(user).append(", ")
         .append("access=").append(access).append(", ")
@@ -384,9 +407,6 @@ public class DefaultAuthorizationProvider
         .append(inode.getGroupName(snapshotId)).append(':')
         .append(inode.isDirectory() ? 'd' : '-')
         .append(mode);
-    if (featureEntries != null) {
-      sb.append(':').append(StringUtils.join(",", featureEntries));
-    }
     return sb.toString();
   }
 

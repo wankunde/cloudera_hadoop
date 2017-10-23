@@ -1,7 +1,7 @@
 From d9331e800d510dac178ad012823553c3fb172329 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Fri, 13 Mar 2015 02:26:16 +0800
-Subject: [PATCH 550/924] HADOOP-11710. Make CryptoOutputStream behave like
+Subject: [PATCH 0550/2639] HADOOP-11710. Make CryptoOutputStream behave like
  DFSOutputStream wrt synchronization. (Sean Busbey
  via yliu)
 

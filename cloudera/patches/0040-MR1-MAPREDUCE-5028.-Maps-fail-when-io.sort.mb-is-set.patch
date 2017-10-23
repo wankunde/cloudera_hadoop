@@ -1,7 +1,7 @@
 From b5eab01efa2e4863c109828369d73a4cbf970298 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 6 Mar 2013 00:50:32 +0000
-Subject: [PATCH 040/924] MR1: MAPREDUCE-5028. Maps fail when io.sort.mb is
+Subject: [PATCH 0040/2639] MR1: MAPREDUCE-5028. Maps fail when io.sort.mb is
  set to high value. (kkambatl via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1453107 13f79535-47bb-0310-9956-ffa450edef68

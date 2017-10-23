@@ -1,7 +1,7 @@
 From f269d595705c3a4cd1c08b555990248f6814b7f9 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Thu, 13 Jun 2013 11:40:07 -0700
-Subject: [PATCH 075/924] MR1: CLOUDERA-BUILD. CDH-9432. HADOOP-8700 breaks
+Subject: [PATCH 0075/2639] MR1: CLOUDERA-BUILD. CDH-9432. HADOOP-8700 breaks
  MR1 (cherry picked from commit
  768379937cfcd9d15d2f1d2567e7b35696401ee3)
 
@@ -14,7 +14,7 @@ Subject: [PATCH 075/924] MR1: CLOUDERA-BUILD. CDH-9432. HADOOP-8700 breaks
  2 files changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/IFileInputStream.java b/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/IFileInputStream.java
-index 5495e4a..2febf25 100644
+index 5495e4a..2febf256 100644
 --- a/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/IFileInputStream.java
 +++ b/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/IFileInputStream.java
 @@ -83,7 +83,8 @@

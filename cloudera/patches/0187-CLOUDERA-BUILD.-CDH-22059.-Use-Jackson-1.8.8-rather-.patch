@@ -1,8 +1,8 @@
 From ba693eb89e05ff51ed126d662a161f27e0d168b4 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 1 Oct 2014 11:24:01 -0700
-Subject: [PATCH 187/924] CLOUDERA-BUILD. CDH-22059. Use Jackson 1.8.8 rather
- than Jackson 1.9.13
+Subject: [PATCH 0187/2639] CLOUDERA-BUILD. CDH-22059. Use Jackson 1.8.8
+ rather than Jackson 1.9.13
 
 Upgrading Jackson to 1.9.13 breaks Cloudera Manager and any other Hadoop
 clients that were depending on the previous version  of Jackson that

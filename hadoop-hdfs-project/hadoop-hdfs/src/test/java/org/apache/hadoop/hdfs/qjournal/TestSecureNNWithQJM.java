@@ -76,7 +76,7 @@ public class TestSecureNNWithQJM {
   private MiniJournalCluster mjc;
 
   @Rule
-  public Timeout timeout = new Timeout(30000);
+  public Timeout timeout = new Timeout(180000);
 
   @BeforeClass
   public static void init() throws Exception {
@@ -206,6 +206,7 @@ public class TestSecureNNWithQJM {
   private void startCluster() throws IOException {
     mjc = new MiniJournalCluster.Builder(conf)
       .build();
+    mjc.waitActive();
     conf.set(DFS_NAMENODE_EDITS_DIR_KEY,
       mjc.getQuorumJournalURI("myjournal").toString());
     cluster = new MiniDFSCluster.Builder(conf)

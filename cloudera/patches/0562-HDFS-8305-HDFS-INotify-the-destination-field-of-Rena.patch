@@ -1,7 +1,7 @@
 From 28bd55ffbbfe90b045b1081746f25edaf5d4c73e Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 5 May 2015 10:50:09 -0700
-Subject: [PATCH 562/924] HDFS-8305: HDFS INotify: the destination field of
+Subject: [PATCH 0562/2639] HDFS-8305: HDFS INotify: the destination field of
  RenameOp should always end with the file name
  (cmccabe)
 

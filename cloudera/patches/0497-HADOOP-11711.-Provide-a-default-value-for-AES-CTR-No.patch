@@ -1,7 +1,7 @@
 From e23325d8d91df1833f064b897ffa281394d61717 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Thu, 12 Mar 2015 21:40:58 -0700
-Subject: [PATCH 497/924] HADOOP-11711. Provide a default value for
+Subject: [PATCH 0497/2639] HADOOP-11711. Provide a default value for
  AES/CTR/NoPadding CryptoCodec classes.
 
 (cherry picked from commit 387f271c81f7b3bf53bddc5368d5f4486530c2e1)

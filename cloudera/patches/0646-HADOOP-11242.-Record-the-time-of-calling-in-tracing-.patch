@@ -1,8 +1,9 @@
 From 7c8ed8723ba46131b35c09a9157a25cce7f72f19 Mon Sep 17 00:00:00 2001
 From: Akira Ajisaka <aajisaka@apache.org>
 Date: Wed, 27 May 2015 18:04:40 +0900
-Subject: [PATCH 646/924] HADOOP-11242. Record the time of calling in tracing
- span of IPC server. Contributed by Mastake Iwasaki.
+Subject: [PATCH 0646/2639] HADOOP-11242. Record the time of calling in
+ tracing span of IPC server. Contributed by
+ Mastake Iwasaki.
 
 (cherry picked from commit bb1816328a36ec3f8c6bd9fdb950d9a4ec8388c8)
 (cherry picked from commit 9670762a82a3c63bdfe6cd4feb86025ad640a56e)

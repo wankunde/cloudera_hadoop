@@ -1,8 +1,8 @@
 From 3c78d9ee52b742073257caec31d6d0ad843cd66c Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Fri, 24 Oct 2014 10:50:16 -0700
-Subject: [PATCH 211/924] HDFS-7283. Bump DataNode OOM log from WARN to ERROR.
- Contributed by Stephen Chu.
+Subject: [PATCH 0211/2639] HDFS-7283. Bump DataNode OOM log from WARN to
+ ERROR. Contributed by Stephen Chu.
 
 (cherry picked from commit b3d8a642a938da9de680b479585a7c2014b8965c)
 (cherry picked from commit ad0972168701f5c4d69cdccbf68750f79fcaf745)

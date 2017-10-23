@@ -56,7 +56,10 @@ print "Setting KMS_HOME:          ${KMS_HOME}"
 if [ -e "${KMS_HOME}/bin/kms-env.sh" ]; then
   print "Sourcing:                    ${KMS_HOME}/bin/kms-env.sh"
   source ${KMS_HOME}/bin/kms-env.sh
-  grep "^ *export " ${KMS_HOME}/bin/kms-env.sh | sed 's/ *export/  setting/'
+  if [ "${KMS_SILENT}" != "true" ]; then
+    grep "^ *export " "${KMS_HOME}/bin/kms-env.sh" |
+      sed 's/ *export/  setting/'
+  fi
 fi
 
 # verify that the sourced env file didn't change KMS_HOME
@@ -81,7 +84,10 @@ kms_config=${KMS_CONFIG}
 if [ -e "${KMS_CONFIG}/kms-env.sh" ]; then
   print "Sourcing:                    ${KMS_CONFIG}/kms-env.sh"
   source ${KMS_CONFIG}/kms-env.sh
-  grep "^ *export " ${KMS_CONFIG}/kms-env.sh | sed 's/ *export/  setting/'
+  if [ "${KMS_SILENT}" != "true" ]; then
+    grep "^ *export " "${KMS_CONFIG}/kms-env.sh" |
+      sed 's/ *export/  setting/'
+  fi
 fi
 
 # verify that the sourced env file didn't change KMS_HOME
@@ -136,11 +142,73 @@ else
   print "Using   KMS_ADMIN_PORT:     ${KMS_ADMIN_PORT}"
 fi
 
+if [ "${KMS_PROTOCOL}" = "" ]; then
+  export KMS_PROTOCOL="HTTP/1.1"
+  print "Setting KMS_PROTOCOL:     ${KMS_PROTOCOL}"
+else
+  print "Using   KMS_PROTOCOL:     ${KMS_PROTOCOL}"
+fi
+
 if [ "${KMS_MAX_THREADS}" = "" ]; then
   export KMS_MAX_THREADS=1000
   print "Setting KMS_MAX_THREADS:     ${KMS_MAX_THREADS}"
 else
   print "Using   KMS_MAX_THREADS:     ${KMS_MAX_THREADS}"
+fi
+
+if [ "${KMS_ACCEPT_COUNT}" = "" ]; then
+  export KMS_ACCEPT_COUNT=500
+  print "Setting KMS_ACCEPT_COUNT:     ${KMS_ACCEPT_COUNT}"
+else
+  print "Using   KMS_ACCEPT_COUNT:     ${KMS_ACCEPT_COUNT}"
+fi
+
+if [ "${KMS_ACCEPTOR_THREAD_COUNT}" = "" ]; then
+  export KMS_ACCEPTOR_THREAD_COUNT=1
+  print "Setting KMS_ACCEPTOR_THREAD_COUNT:     ${KMS_ACCEPTOR_THREAD_COUNT}"
+else
+  print "Using   KMS_ACCEPTOR_THREAD_COUNT:     ${KMS_ACCEPTOR_THREAD_COUNT}"
+fi
+
+if [ "${KMS_MAX_HTTP_HEADER_SIZE}" = "" ]; then
+  export KMS_MAX_HTTP_HEADER_SIZE=65536
+  print "Setting KMS_MAX_HTTP_HEADER_SIZE:     ${KMS_MAX_HTTP_HEADER_SIZE}"
+else
+  print "Using   KMS_MAX_HTTP_HEADER_SIZE:     ${KMS_MAX_HTTP_HEADER_SIZE}"
+fi
+
+if [ "${KMS_SSL_CLIENT_AUTH}" = "" ]; then
+  export KMS_SSL_CLIENT_AUTH="false"
+  print "Setting KMS_SSL_CLIENT_AUTH:     ${KMS_SSL_CLIENT_AUTH}"
+else
+  print "Using   KMS_SSL_CLIENT_AUTH:     ${KMS_SSL_CLIENT_AUTH}"
+fi
+
+if [ "${KMS_SSL_ENABLED_PROTOCOLS}" = "" ]; then
+  export KMS_SSL_ENABLED_PROTOCOLS="TLSv1,TLSv1.1,TLSv1.2,SSLv2Hello"
+  print "Setting KMS_SSL_ENABLED_PROTOCOLS:     ${KMS_SSL_ENABLED_PROTOCOLS}"
+else
+  print "Using   KMS_SSL_ENABLED_PROTOCOLS:     ${KMS_SSL_ENABLED_PROTOCOLS}"
+fi
+
+if [ "${KMS_SSL_CIPHERS}" = "" ]; then
+  export KMS_SSL_CIPHERS="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+  KMS_SSL_CIPHERS+=",TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"
+  KMS_SSL_CIPHERS+=",TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_256_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_128_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_256_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_256_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_128_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_128_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_3DES_EDE_CBC_SHA"
+  print "Setting KMS_SSL_CIPHERS:           ${KMS_SSL_CIPHERS}"
+else
+  print "Using   KMS_SSL_CIPHERS:           ${KMS_SSL_CIPHERS}"
 fi
 
 if [ "${KMS_SSL_KEYSTORE_FILE}" = "" ]; then

@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.crypto.CryptoFSDataInputStream;
 import org.apache.hadoop.fs.crypto.CryptoFSDataOutputStream;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.LimitInputStream;
@@ -50,7 +49,7 @@ public class CryptoUtils {
 
   private static final Log LOG = LogFactory.getLog(CryptoUtils.class);
 
-  public static boolean isShuffleEncrypted(Configuration conf) {
+  public static boolean isEncryptedSpillEnabled(Configuration conf) {
     return conf.getBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA,
         MRJobConfig.DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA);
   }
@@ -58,30 +57,38 @@ public class CryptoUtils {
   /**
    * This method creates and initializes an IV (Initialization Vector)
    * 
-   * @param conf
-   * @return byte[]
-   * @throws IOException
+   * @param conf configuration
+   * @return byte[] initialization vector
+   * @throws IOException exception in case of error
    */
   public static byte[] createIV(Configuration conf) throws IOException {
     CryptoCodec cryptoCodec = CryptoCodec.getInstance(conf);
-    if (isShuffleEncrypted(conf)) {
+    if (isEncryptedSpillEnabled(conf)) {
       byte[] iv = new byte[cryptoCodec.getCipherSuite().getAlgorithmBlockSize()];
       cryptoCodec.generateSecureRandom(iv);
+      cryptoCodec.close();
       return iv;
     } else {
       return null;
     }
   }
 
-  public static int cryptoPadding(Configuration conf) {
+  public static int cryptoPadding(Configuration conf) throws IOException {
     // Sizeof(IV) + long(start-offset)
-    return isShuffleEncrypted(conf) ? CryptoCodec.getInstance(conf)
-        .getCipherSuite().getAlgorithmBlockSize() + 8 : 0;
+    if (!isEncryptedSpillEnabled(conf)) {
+      return 0;
+    }
+    final CryptoCodec cryptoCodec = CryptoCodec.getInstance(conf);
+    try {
+      return cryptoCodec.getCipherSuite().getAlgorithmBlockSize() + 8;
+    } finally {
+      cryptoCodec.close();
+    }
   }
 
   private static byte[] getEncryptionKey() throws IOException {
-    return TokenCache.getShuffleSecretKey(UserGroupInformation.getCurrentUser()
-        .getCredentials());
+    return TokenCache.getEncryptedSpillKey(UserGroupInformation.getCurrentUser()
+            .getCredentials());
   }
 
   private static int getBufferSize(Configuration conf) {
@@ -95,14 +102,34 @@ public class CryptoUtils {
    * "mapreduce.job.encrypted-intermediate-data.buffer.kb" Job configuration
    * variable.
    * 
-   * @param conf
-   * @param out
-   * @return FSDataOutputStream
-   * @throws IOException
+   * @param conf configuration
+   * @param out given output stream
+   * @return FSDataOutputStream encrypted output stream if encryption is
+   *         enabled; otherwise the given output stream itself
+   * @throws IOException exception in case of error
    */
   public static FSDataOutputStream wrapIfNecessary(Configuration conf,
       FSDataOutputStream out) throws IOException {
-    if (isShuffleEncrypted(conf)) {
+    return wrapIfNecessary(conf, out, true);
+  }
+
+  /**
+   * Wraps a given FSDataOutputStream with a CryptoOutputStream. The size of the
+   * data buffer required for the stream is specified by the
+   * "mapreduce.job.encrypted-intermediate-data.buffer.kb" Job configuration
+   * variable.
+   *
+   * @param conf configuration
+   * @param out given output stream
+   * @param closeOutputStream flag to indicate whether closing the wrapped
+   *        stream will close the given output stream
+   * @return FSDataOutputStream encrypted output stream if encryption is
+   *         enabled; otherwise the given output stream itself
+   * @throws IOException exception in case of error
+   */
+  public static FSDataOutputStream wrapIfNecessary(Configuration conf,
+      FSDataOutputStream out, boolean closeOutputStream) throws IOException {
+    if (isEncryptedSpillEnabled(conf)) {
       out.write(ByteBuffer.allocate(8).putLong(out.getPos()).array());
       byte[] iv = createIV(conf);
       out.write(iv);
@@ -111,7 +138,7 @@ public class CryptoUtils {
             + Base64.encodeBase64URLSafeString(iv) + "]");
       }
       return new CryptoFSDataOutputStream(out, CryptoCodec.getInstance(conf),
-          getBufferSize(conf), getEncryptionKey(), iv);
+          getBufferSize(conf), getEncryptionKey(), iv, closeOutputStream);
     } else {
       return out;
     }
@@ -129,15 +156,16 @@ public class CryptoUtils {
    * will ensure that the CryptoStream does not read past the provided length
    * from the given Input Stream.
    * 
-   * @param conf
-   * @param in
-   * @param length
-   * @return InputStream
-   * @throws IOException
+   * @param conf configuration
+   * @param in given input stream
+   * @param length maximum number of bytes to read from the input stream
+   * @return InputStream encrypted input stream if encryption is
+   *         enabled; otherwise the given input stream itself
+   * @throws IOException exception in case of error
    */
   public static InputStream wrapIfNecessary(Configuration conf, InputStream in,
       long length) throws IOException {
-    if (isShuffleEncrypted(conf)) {
+    if (isEncryptedSpillEnabled(conf)) {
       int bufferSize = getBufferSize(conf);
       if (length > -1) {
         in = new LimitInputStream(in, length);
@@ -167,14 +195,15 @@ public class CryptoUtils {
    * "mapreduce.job.encrypted-intermediate-data.buffer.kb" Job configuration
    * variable.
    * 
-   * @param conf
-   * @param in
-   * @return FSDataInputStream
-   * @throws IOException
+   * @param conf configuration
+   * @param in given input stream
+   * @return FSDataInputStream encrypted input stream if encryption is
+   *         enabled; otherwise the given input stream itself
+   * @throws IOException exception in case of error
    */
   public static FSDataInputStream wrapIfNecessary(Configuration conf,
       FSDataInputStream in) throws IOException {
-    if (isShuffleEncrypted(conf)) {
+    if (isEncryptedSpillEnabled(conf)) {
       CryptoCodec cryptoCodec = CryptoCodec.getInstance(conf);
       int bufferSize = getBufferSize(conf);
       // Not going to be used... but still has to be read...

@@ -18,6 +18,10 @@
 
 #include <stddef.h>
 
+/** Define a platform-independent constant instead of using PATH_MAX */
+
+#define EXECUTOR_PATH_MAX 4096
+
 /**
  * Ensure that the configuration file and all of the containing directories
  * are only writable by root. Otherwise, an attacker can change the 
@@ -33,15 +37,33 @@ int check_configuration_permissions(const char* file_name);
  */
 char *resolve_config_path(const char* file_name, const char *root);
 
-// read the given configuration file
-void read_config(const char* config_file);
+// Config data structures.
+struct confentry {
+  const char *key;
+  const char *value;
+};
+
+struct configuration {
+  int size;
+  struct confentry **confdetails;
+};
+
+// read the given configuration file into the specified config struct.
+void read_config(const char* config_file, struct configuration *cfg);
 
 //method exposed to get the configurations
-char *get_value(const char* key);
+char *get_value(const char* key, struct configuration *cfg);
 
 //function to return array of values pointing to the key. Values are
 //comma seperated strings.
-char ** get_values(const char* key);
+char ** get_values(const char* key, struct configuration *cfg);
+
+/**
+ * Function to return an array of values for a key, using the specified
+ delimiter.
+ */
+char ** get_values_delim(const char * key, struct configuration *cfg,
+    const char *delim);
 
 // Extracts array of values from the comma separated list of values.
 char ** extract_values(char *value);
@@ -52,7 +74,7 @@ char ** extract_values_delim(char *value, const char *delim);
 void free_values(char** values);
 
 //method to free allocated configuration
-void free_configurations();
+void free_configurations(struct configuration *cfg);
 
 /**
  * If str is a string of the form key=val, find 'key'
@@ -79,3 +101,12 @@ int get_kv_key(const char *input, char *out, size_t out_len);
  *                 0 on success
  */
 int get_kv_value(const char *input, char *out, size_t out_len);
+
+/**
+ * Trim whitespace from beginning and end.
+ *
+ * @param input    Input string that needs to be trimmed
+ *
+ * @return the trimmed string allocated with malloc. I has to be freed by the caller
+*/
+char* trim(char* input);

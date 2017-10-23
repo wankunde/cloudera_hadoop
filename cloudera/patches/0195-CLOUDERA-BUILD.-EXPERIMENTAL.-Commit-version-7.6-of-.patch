@@ -1,8 +1,8 @@
 From 0913eb8eb233a01dec817ec4ddaf6e6c8d720778 Mon Sep 17 00:00:00 2001
 From: "Aaron T. Myers" <atm@apache.org>
 Date: Wed, 24 Sep 2014 18:22:40 -0700
-Subject: [PATCH 195/924] CLOUDERA-BUILD. EXPERIMENTAL. Commit version 7.6 of
- HDFS-6826.
+Subject: [PATCH 0195/2639] CLOUDERA-BUILD. EXPERIMENTAL. Commit version 7.6
+ of HDFS-6826.
 
 (cherry picked from commit d0aad37f60c18c2ce136bfaa0b559f40d5cdf8a4)
 ---

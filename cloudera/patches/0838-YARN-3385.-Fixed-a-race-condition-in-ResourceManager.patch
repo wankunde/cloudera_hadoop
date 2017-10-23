@@ -1,10 +1,10 @@
-From 8862c30b3a1e8d5232afff4417fad2855c0d5b53 Mon Sep 17 00:00:00 2001
+From 88945c136fa4632653fcb9042443cd9bf25398be Mon Sep 17 00:00:00 2001
 From: Vinod Kumar Vavilapalli <vinodkv@apache.org>
 Date: Wed, 6 May 2015 17:51:17 -0700
-Subject: [PATCH 838/924] YARN-3385. Fixed a race-condition in
+Subject: [PATCH 0838/2639] YARN-3385. Fixed a race-condition in
  ResourceManager's ZooKeeper based state-store to
- avoid crashing on duplicate deletes. Contributed by
- Zhihai Xu.
+ avoid crashing on duplicate deletes. Contributed
+ by Zhihai Xu.
 
 (cherry picked from commit 4c7b9b6abe2452c9752a11214762be2e7665fb32)
 
@@ -14,7 +14,6 @@ Conflicts:
 	hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/recovery/TestZKRMStateStore.java
 
 Change-Id: I9a673dfd0e6695bb145bb6c3798dfefae44932b8
-(cherry picked from commit 88945c136fa4632653fcb9042443cd9bf25398be)
 ---
  .../resourcemanager/recovery/ZKRMStateStore.java   |   64 ++++++++++++++++----
  .../recovery/TestZKRMStateStore.java               |   40 ++++++++++++

@@ -28,6 +28,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -47,6 +50,7 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
@@ -115,10 +119,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String CONTAINER_TOKENS_PREV_MASTER_KEY =
       CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
 
+  private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
+
   private static final byte[] EMPTY_VALUE = new byte[0];
 
   private DB db;
   private boolean isNewlyCreated;
+  private Timer compactionTimer;
 
   public NMLeveldbStateStoreService() {
     super(NMLeveldbStateStoreService.class.getName());
@@ -130,6 +137,10 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   protected void closeStorage() throws IOException {
+    if (compactionTimer != null) {
+      compactionTimer.cancel();
+      compactionTimer = null;
+    }
     if (db != null) {
       db.close();
     }
@@ -852,8 +863,77 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
 
   @Override
+  public RecoveredLogDeleterState loadLogDeleterState() throws IOException {
+    RecoveredLogDeleterState state = new RecoveredLogDeleterState();
+    state.logDeleterMap = new HashMap<ApplicationId, LogDeleterProto>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(LOG_DELETER_KEY_PREFIX));
+      final int logDeleterKeyPrefixLength = LOG_DELETER_KEY_PREFIX.length();
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String fullKey = asString(entry.getKey());
+        if (!fullKey.startsWith(LOG_DELETER_KEY_PREFIX)) {
+          break;
+        }
+
+        String appIdStr = fullKey.substring(logDeleterKeyPrefixLength);
+        ApplicationId appId = null;
+        try {
+          appId = ConverterUtils.toApplicationId(appIdStr);
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Skipping unknown log deleter key " + fullKey);
+          continue;
+        }
+
+        LogDeleterProto proto = LogDeleterProto.parseFrom(entry.getValue());
+        state.logDeleterMap.put(appId, proto);
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+    return state;
+  }
+
+  @Override
+  public void storeLogDeleter(ApplicationId appId, LogDeleterProto proto)
+      throws IOException {
+    String key = getLogDeleterKey(appId);
+    try {
+      db.put(bytes(key), proto.toByteArray());
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeLogDeleter(ApplicationId appId) throws IOException {
+    String key = getLogDeleterKey(appId);
+    try {
+      db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private String getLogDeleterKey(ApplicationId appId) {
+    return LOG_DELETER_KEY_PREFIX + appId;
+  }
+
+  @Override
   protected void initStorage(Configuration conf)
       throws IOException {
+    db = openDatabase(conf);
+    checkVersion();
+    startCompactionTimer(conf);
+  }
+
+  protected DB openDatabase(Configuration conf) throws IOException {
     Path storeRoot = createStorageDir(conf);
     Options options = new Options();
     options.createIfMissing(false);
@@ -878,7 +958,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         throw e;
       }
     }
-    checkVersion();
+    return db;
   }
 
   private Path createStorageDir(Configuration conf) throws IOException {
@@ -894,6 +974,33 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     return root;
   }
 
+  private void startCompactionTimer(Configuration conf) {
+    long intervalMsec = conf.getLong(
+        YarnConfiguration.NM_RECOVERY_COMPACTION_INTERVAL_SECS,
+        YarnConfiguration.DEFAULT_NM_RECOVERY_COMPACTION_INTERVAL_SECS) * 1000;
+    if (intervalMsec > 0) {
+      compactionTimer = new Timer(
+          this.getClass().getSimpleName() + " compaction timer", true);
+      compactionTimer.schedule(new CompactionTimerTask(),
+          intervalMsec, intervalMsec);
+    }
+  }
+
+
+  private class CompactionTimerTask extends TimerTask {
+    @Override
+    public void run() {
+      long start = Time.monotonicNow();
+      LOG.info("Starting full compaction cycle");
+      try {
+        db.compactRange(null, null);
+      } catch (DBException e) {
+        LOG.error("Error compacting database", e);
+      }
+      long duration = Time.monotonicNow() - start;
+      LOG.info("Full compaction cycle completed in " + duration + " msec");
+    }
+  }
 
   private static class LeveldbLogger implements Logger {
     private static final Log LOG = LogFactory.getLog(LeveldbLogger.class);
@@ -907,9 +1014,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   Version loadVersion() throws IOException {
     byte[] data = db.get(bytes(DB_SCHEMA_VERSION_KEY));
-    // if version is not stored previously, treat it as 1.0.
+    // if version is not stored previously, treat it as CURRENT_VERSION_INFO.
     if (data == null || data.length == 0) {
-      return Version.newInstance(1, 0);
+      return getCurrentVersion();
     }
     Version version =
         new VersionPBImpl(VersionProto.parseFrom(data));
@@ -951,7 +1058,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
    *    throw exception and indicate user to use a separate upgrade tool to
    *    upgrade NM state or remove incompatible old state.
    */
-  private void checkVersion() throws IOException {
+  protected void checkVersion() throws IOException {
     Version loadedVersion = loadVersion();
     LOG.info("Loaded NM state version info " + loadedVersion);
     if (loadedVersion.equals(getCurrentVersion())) {
@@ -966,5 +1073,4 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             + getCurrentVersion() + ", but loading version " + loadedVersion);
     }
   }
-  
 }

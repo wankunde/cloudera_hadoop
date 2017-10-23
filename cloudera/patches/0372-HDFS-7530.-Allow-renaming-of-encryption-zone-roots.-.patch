@@ -1,8 +1,8 @@
 From a1ef4ccb619f317bfae2cb74cdc29e99d7c58829 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Thu, 18 Dec 2014 14:06:53 -0800
-Subject: [PATCH 372/924] HDFS-7530. Allow renaming of encryption zone roots.
- Contributed by Charles Lamb.
+Subject: [PATCH 0372/2639] HDFS-7530. Allow renaming of encryption zone
+ roots. Contributed by Charles Lamb.
 
 (cherry picked from commit b0b9084433d5e80131429e6e76858b099deb2dda)
 (cherry picked from commit 8d98d87745374090d83437705c928ab18c0b895a)

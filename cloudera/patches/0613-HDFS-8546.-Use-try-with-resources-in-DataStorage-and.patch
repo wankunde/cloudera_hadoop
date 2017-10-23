@@ -1,8 +1,8 @@
 From 20246265b1ec6e6774533987b04a15b85f1e64bb Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Thu, 25 Jun 2015 17:50:32 -0700
-Subject: [PATCH 613/924] HDFS-8546. Use try with resources in DataStorage and
- Storage.
+Subject: [PATCH 0613/2639] HDFS-8546. Use try with resources in DataStorage
+ and Storage.
 
 (cherry picked from commit 1403b84b122fb76ef2b085a728b5402c32499c1f)
 (cherry picked from commit 84fdd4a3a0c3e0e696f8818134e188e306948686)

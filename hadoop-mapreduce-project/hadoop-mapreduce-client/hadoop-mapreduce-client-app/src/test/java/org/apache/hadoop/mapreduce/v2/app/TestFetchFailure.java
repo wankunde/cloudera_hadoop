@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
@@ -45,6 +46,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptFetchFailureEv
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.junit.Assert;
 import org.junit.Test;
@@ -58,7 +60,7 @@ public class TestFetchFailure {
     // map -> reduce -> fetch-failure -> map retry is incompatible with
     // sequential, single-task-attempt approach in uber-AM, so disable:
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
-    Job job = app.submit(conf);
+    final Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     //all maps would be running
     Assert.assertEquals("Num tasks not correct",
@@ -79,8 +81,19 @@ public class TestFetchFailure {
     
     // wait for map success
     app.waitForState(mapTask, TaskState.SUCCEEDED);
-    
-    TaskAttemptCompletionEvent[] events = 
+
+    final int checkIntervalMillis = 10;
+    final int waitForMillis = 800;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        TaskAttemptCompletionEvent[] events = job
+            .getTaskAttemptCompletionEvents(0, 100);
+        return events.length >= 1;
+      }
+    }, checkIntervalMillis, waitForMillis);
+
+    TaskAttemptCompletionEvent[] events =
       job.getTaskAttemptCompletionEvents(0, 100);
     Assert.assertEquals("Num completion events not correct",
         1, events.length);
@@ -94,10 +107,10 @@ public class TestFetchFailure {
     app.waitForState(reduceAttempt, TaskAttemptState.RUNNING);
     
     //send 3 fetch failures from reduce to trigger map re execution
-    sendFetchFailure(app, reduceAttempt, mapAttempt1);
-    sendFetchFailure(app, reduceAttempt, mapAttempt1);
-    sendFetchFailure(app, reduceAttempt, mapAttempt1);
-    
+    sendFetchFailure(app, reduceAttempt, mapAttempt1, "host");
+    sendFetchFailure(app, reduceAttempt, mapAttempt1, "host");
+    sendFetchFailure(app, reduceAttempt, mapAttempt1, "host");
+
     //wait for map Task state move back to RUNNING
     app.waitForState(mapTask, TaskState.RUNNING);
     
@@ -215,9 +228,9 @@ public class TestFetchFailure {
     app.waitForState(reduceAttempt, TaskAttemptState.RUNNING);
 
     //send 3 fetch failures from reduce to trigger map re execution
-    sendFetchFailure(app, reduceAttempt, mapAttempt1);
-    sendFetchFailure(app, reduceAttempt, mapAttempt1);
-    sendFetchFailure(app, reduceAttempt, mapAttempt1);
+    sendFetchFailure(app, reduceAttempt, mapAttempt1, "host");
+    sendFetchFailure(app, reduceAttempt, mapAttempt1, "host");
+    sendFetchFailure(app, reduceAttempt, mapAttempt1, "host");
 
     //wait for map Task state move back to RUNNING
     app.waitForState(mapTask, TaskState.RUNNING);
@@ -324,8 +337,8 @@ public class TestFetchFailure {
     updateStatus(app, reduceAttempt3, Phase.SHUFFLE);
 
     //send 2 fetch failures from reduce to prepare for map re execution
-    sendFetchFailure(app, reduceAttempt, mapAttempt1);
-    sendFetchFailure(app, reduceAttempt, mapAttempt1);
+    sendFetchFailure(app, reduceAttempt, mapAttempt1, "host1");
+    sendFetchFailure(app, reduceAttempt2, mapAttempt1, "host2");
 
     //We should not re-launch the map task yet
     assertEquals(TaskState.SUCCEEDED, mapTask.getState());
@@ -333,7 +346,7 @@ public class TestFetchFailure {
     updateStatus(app, reduceAttempt3, Phase.REDUCE);
 
     //send 3rd fetch failures from reduce to trigger map re execution
-    sendFetchFailure(app, reduceAttempt, mapAttempt1);
+    sendFetchFailure(app, reduceAttempt3, mapAttempt1, "host3");
 
     //wait for map Task state move back to RUNNING
     app.waitForState(mapTask, TaskState.RUNNING);
@@ -341,6 +354,11 @@ public class TestFetchFailure {
     //map attempt must have become FAILED
     Assert.assertEquals("Map TaskAttempt state not correct",
         TaskAttemptState.FAILED, mapAttempt1.getState());
+
+    Assert.assertEquals(mapAttempt1.getDiagnostics().get(0),
+            "Too many fetch failures. Failing the attempt. "
+            + "Last failure reported by "
+            + reduceAttempt3.getID().toString() + " from host host3");
 
     Assert.assertEquals("Num attempts in Map Task not correct",
         2, mapTask.getAttempts().size());
@@ -410,7 +428,6 @@ public class TestFetchFailure {
     Assert.assertEquals("Unexpected map event", convertedEvents[2],
         mapEvents[0]);
   }
-  
 
   private void updateStatus(MRApp app, TaskAttempt attempt, Phase phase) {
     TaskAttemptStatusUpdateEvent.TaskAttemptStatus status = new TaskAttemptStatusUpdateEvent.TaskAttemptStatus();
@@ -430,11 +447,12 @@ public class TestFetchFailure {
   }
 
   private void sendFetchFailure(MRApp app, TaskAttempt reduceAttempt, 
-      TaskAttempt mapAttempt) {
+      TaskAttempt mapAttempt, String hostname) {
     app.getContext().getEventHandler().handle(
         new JobTaskAttemptFetchFailureEvent(
             reduceAttempt.getID(), 
-            Arrays.asList(new TaskAttemptId[] {mapAttempt.getID()})));
+            Arrays.asList(new TaskAttemptId[] {mapAttempt.getID()}),
+                hostname));
   }
   
   static class MRAppWithHistory extends MRApp {

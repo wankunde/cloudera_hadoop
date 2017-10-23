@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.util.NodeHealthScriptRunner;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -57,6 +59,7 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalRMInterface;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
@@ -174,14 +177,16 @@ public abstract class BaseContainerManagerTest {
     delSrvc.init(conf);
 
     exec = createContainerExecutor();
-    nodeHealthChecker = new NodeHealthCheckerService();
+    dirsHandler = new LocalDirsHandlerService();
+    nodeHealthChecker = new NodeHealthCheckerService(
+        NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
     nodeHealthChecker.init(conf);
-    dirsHandler = nodeHealthChecker.getDiskHandler();
     containerManager = createContainerManager(delSrvc);
     ((NMContext)context).setContainerManager(containerManager);
     nodeStatusUpdater.init(conf);
     containerManager.init(conf);
     nodeStatusUpdater.start();
+    ((NMContext)context).setNodeStatusUpdater(nodeStatusUpdater);
   }
 
   protected ContainerManagerImpl
@@ -236,7 +241,7 @@ public abstract class BaseContainerManagerTest {
       public void delete(String user, Path subDir, Path... baseDirs) {
         // Don't do any deletions.
         LOG.info("Psuedo delete: user - " + user + ", subDir - " + subDir
-            + ", baseDirs - " + baseDirs); 
+            + ", baseDirs - " + Arrays.asList(baseDirs));
       };
     };
   }

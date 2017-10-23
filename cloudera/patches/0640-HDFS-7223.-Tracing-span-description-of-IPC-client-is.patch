@@ -1,8 +1,8 @@
 From e992e9847d26c2e17585b072c8b167197dffac3a Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 23 Oct 2014 19:14:00 -0700
-Subject: [PATCH 640/924] HDFS-7223. Tracing span description of IPC client is
- too long (iwasakims via cmccabe)
+Subject: [PATCH 0640/2639] HDFS-7223. Tracing span description of IPC client
+ is too long (iwasakims via cmccabe)
 
 (cherry picked from commit 5b56ac4c72d69d1b3d6feec9d96c9d62eb02d28c)
 (cherry picked from commit caa658a015e22938c345451bd4de46b0e0f08507)

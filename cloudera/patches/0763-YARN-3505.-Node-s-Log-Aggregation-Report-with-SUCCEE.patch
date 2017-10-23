@@ -1,9 +1,9 @@
-From c1f2f3766d529d075c4c4437ac1b10fb6bbfe294 Mon Sep 17 00:00:00 2001
+From 0abe3071f01c76f203492d875ff980d694404090 Mon Sep 17 00:00:00 2001
 From: Junping Du <junping_du@apache.org>
 Date: Thu, 14 May 2015 10:57:36 -0700
-Subject: [PATCH 763/924] YARN-3505. Node's Log Aggregation Report with
- SUCCEED should not cached in RMApps. Contributed by
- Xuan Gong. (cherry picked from commit
+Subject: [PATCH 0763/2639] YARN-3505. Node's Log Aggregation Report with
+ SUCCEED should not cached in RMApps. Contributed
+ by Xuan Gong. (cherry picked from commit
  15ccd967ee3e7046a50522089f67ba01f36ec76a)
 
 (cherry picked from commit bc13c7d84bf4693c976ecdff7d69686705bf906c)
@@ -18,7 +18,6 @@ Conflicts:
 	hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/RMAppBlock.java
 
 Change-Id: I65178c9dcad1b6e759c5bc6abdcb34f134e35b01
-(cherry picked from commit 0abe3071f01c76f203492d875ff980d694404090)
 ---
  .../yarn/api/records/LogAggregationStatus.java     |    2 +
  .../apache/hadoop/yarn/conf/YarnConfiguration.java |   10 +

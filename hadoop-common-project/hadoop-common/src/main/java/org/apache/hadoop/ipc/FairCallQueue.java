@@ -77,21 +77,28 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
 
   /**
    * Create a FairCallQueue.
-   * @param capacity the maximum size of each sub-queue
+   * @param capacity the total size of all sub-queues
    * @param ns the prefix to use for configuration
    * @param conf the configuration to read from
-   * Notes: the FairCallQueue has no fixed capacity. Rather, it has a minimum
-   * capacity of `capacity` and a maximum capacity of `capacity * number_queues`
+   * Notes: Each sub-queue has a capacity of `capacity / numSubqueues`.
+   * The first or the highest priority sub-queue has an excess capacity
+   * of `capacity % numSubqueues`
    */
   public FairCallQueue(int capacity, String ns, Configuration conf) {
     int numQueues = parseNumQueues(ns, conf);
-    LOG.info("FairCallQueue is in use with " + numQueues + " queues.");
+    LOG.info("FairCallQueue is in use with " + numQueues +
+        " queues with total capacity of " + capacity);
 
     this.queues = new ArrayList<BlockingQueue<E>>(numQueues);
     this.overflowedCalls = new ArrayList<AtomicLong>(numQueues);
-
+    int queueCapacity = capacity / numQueues;
+    int capacityForFirstQueue = queueCapacity + (capacity % numQueues);
     for(int i=0; i < numQueues; i++) {
-      this.queues.add(new LinkedBlockingQueue<E>(capacity));
+      if (i == 0) {
+        this.queues.add(new LinkedBlockingQueue<E>(capacityForFirstQueue));
+      } else {
+        this.queues.add(new LinkedBlockingQueue<E>(queueCapacity));
+      }
       this.overflowedCalls.add(new AtomicLong(0));
     }
 
@@ -306,7 +313,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   @Override
   public int size() {
     int size = 0;
-    for (BlockingQueue q : this.queues) {
+    for (BlockingQueue<E> q : this.queues) {
       size += q.size();
     }
     return size;
@@ -352,7 +359,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   @Override
   public int remainingCapacity() {
     int sum = 0;
-    for (BlockingQueue q : this.queues) {
+    for (BlockingQueue<E> q : this.queues) {
       sum += q.remainingCapacity();
     }
     return sum;
@@ -368,7 +375,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
       new HashMap<String, MetricsProxy>();
 
     // Weakref for delegate, so we don't retain it forever if it can be GC'd
-    private WeakReference<FairCallQueue> delegate;
+    private WeakReference<FairCallQueue<? extends Schedulable>> delegate;
 
     // Keep track of how many objects we registered
     private int revisionNumber = 0;
@@ -387,14 +394,15 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
       return mp;
     }
 
-    public void setDelegate(FairCallQueue obj) {
-      this.delegate = new WeakReference<FairCallQueue>(obj);
+    public void setDelegate(FairCallQueue<? extends Schedulable> obj) {
+      this.delegate
+          = new WeakReference<FairCallQueue<? extends Schedulable>>(obj);
       this.revisionNumber++;
     }
 
     @Override
     public int[] getQueueSizes() {
-      FairCallQueue obj = this.delegate.get();
+      FairCallQueue<? extends Schedulable> obj = this.delegate.get();
       if (obj == null) {
         return new int[]{};
       }
@@ -404,7 +412,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
 
     @Override
     public long[] getOverflowedCalls() {
-      FairCallQueue obj = this.delegate.get();
+      FairCallQueue<? extends Schedulable> obj = this.delegate.get();
       if (obj == null) {
         return new long[]{};
       }

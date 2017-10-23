@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.Collections;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -35,30 +36,6 @@ import com.google.common.collect.Iterables;
  * the datanodes that store the block.
  */
 class BlocksMap {
-  private static class StorageIterator implements Iterator<DatanodeStorageInfo> {
-    private final BlockInfo blockInfo;
-    private int nextIdx = 0;
-      
-    StorageIterator(BlockInfo blkInfo) {
-      this.blockInfo = blkInfo;
-    }
-
-    @Override
-    public boolean hasNext() {
-      return blockInfo != null && nextIdx < blockInfo.getCapacity()
-              && blockInfo.getDatanode(nextIdx) != null;
-    }
-
-    @Override
-    public DatanodeStorageInfo next() {
-      return blockInfo.getStorageInfo(nextIdx++);
-    }
-
-    @Override
-    public void remove()  {
-      throw new UnsupportedOperationException("Sorry. can't remove.");
-    }
-  }
 
   /** Constant {@link LightWeightGSet} capacity. */
   private final int capacity;
@@ -127,7 +104,9 @@ class BlocksMap {
     blockInfo.setBlockCollection(null);
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
-      dn.removeBlock(blockInfo); // remove from the list and wipe the location
+      if (dn != null) {
+        removeBlock(dn, blockInfo); // remove from the list and wipe the location
+      }
     }
   }
   
@@ -141,7 +120,9 @@ class BlocksMap {
    * returns {@link Iterable} of the storages the block belongs to.
    */
   Iterable<DatanodeStorageInfo> getStorages(Block b) {
-    return getStorages(blocks.get(b));
+    BlockInfo block = blocks.get(b);
+    return block != null ? getStorages(block)
+           : Collections.<DatanodeStorageInfo>emptyList();
   }
 
   /**
@@ -165,12 +146,16 @@ class BlocksMap {
    * returns {@link Iterable} of the storages the block belongs to.
    */
   Iterable<DatanodeStorageInfo> getStorages(final BlockInfo storedBlock) {
-    return new Iterable<DatanodeStorageInfo>() {
-      @Override
-      public Iterator<DatanodeStorageInfo> iterator() {
-        return new StorageIterator(storedBlock);
-      }
-    };
+    if (storedBlock == null) {
+      return Collections.emptyList();
+    } else {
+      return new Iterable<DatanodeStorageInfo>() {
+        @Override
+        public Iterator<DatanodeStorageInfo> iterator() {
+          return storedBlock.getStorageInfos();
+        }
+      };
+    }
   }
 
   /** counts number of containing nodes. Better than using iterator. */
@@ -190,13 +175,23 @@ class BlocksMap {
       return false;
 
     // remove block from the data-node list and the node from the block info
-    boolean removed = node.removeBlock(info);
+    boolean removed = removeBlock(node, info);
 
     if (info.getDatanode(0) == null     // no datanodes left
               && info.isDeleted()) {  // does not belong to a file
       blocks.remove(b);  // remove block from the map
     }
     return removed;
+  }
+
+  /**
+   * Remove block from the list of blocks belonging to the data-node. Remove
+   * data-node from the block.
+   */
+  static boolean removeBlock(DatanodeDescriptor dn, BlockInfo b) {
+    final DatanodeStorageInfo s = b.findStorageInfo(dn);
+    // if block exists on this datanode
+    return s != null && s.removeBlock(b);
   }
 
   int size() {

@@ -1,11 +1,12 @@
 From 0aec5cfdbb7afe8024c32bed646961950956e06a Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Tue, 27 Jan 2015 13:31:22 -0800
-Subject: [PATCH 513/924] YARN-3011. Possible IllegalArgumentException in
- ResourceLocalizationService might lead NM to crash.
- Contributed by Varun Saxena (cherry picked from
- commit 4e15fc08411318e11152fcd5a4648ed1d6fbb480)
- (cherry picked from commit
+Subject: [PATCH 0513/2639] YARN-3011. Possible IllegalArgumentException in
+ ResourceLocalizationService might lead NM to
+ crash. Contributed by Varun Saxena (cherry picked
+ from commit
+ 4e15fc08411318e11152fcd5a4648ed1d6fbb480) (cherry
+ picked from commit
  8100c8a68c32978a177af9a3e6639f6de533886d)
 
 Conflicts:

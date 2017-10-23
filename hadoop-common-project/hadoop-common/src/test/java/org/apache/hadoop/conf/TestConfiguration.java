@@ -29,6 +29,7 @@ import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,13 +46,22 @@ import static org.junit.Assert.assertArrayEquals;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.alias.CredentialProvider;
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
+import org.apache.hadoop.test.GenericTestUtils;
+
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import static org.junit.Assert.fail;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 
 public class TestConfiguration extends TestCase {
 
@@ -67,6 +77,11 @@ public class TestConfiguration extends TestCase {
             IBM_JAVA?"<?xml version=\"1.0\" encoding=\"UTF-8\"?><configuration>":
   "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>";
 
+  private static final String SENSITIVE_CONFIG_KEYS =
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS;
+
+  private BufferedWriter out;
+
   @Override
   protected void setUp() throws Exception {
     super.setUp();
@@ -75,6 +90,9 @@ public class TestConfiguration extends TestCase {
   
   @Override
   protected void tearDown() throws Exception {
+    if(out != null) {
+      out.close();
+    }
     super.tearDown();
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
@@ -448,8 +466,6 @@ public class TestConfiguration extends TestCase {
     new File(new File(relConfig).getParent()).delete();
   }
 
-  BufferedWriter out;
-	
   public void testIntegerRanges() {
     Configuration conf = new Configuration();
     conf.set("first", "-100");
@@ -981,7 +997,19 @@ public class TestConfiguration extends TestCase {
       this.properties = properties;
     }
   }
-  
+
+  static class SingleJsonConfiguration {
+    private JsonProperty property;
+
+    public JsonProperty getProperty() {
+      return property;
+    }
+
+    public void setProperty(JsonProperty property) {
+      this.property = property;
+    }
+  }
+
   static class JsonProperty {
     String key;
     public String getKey() {
@@ -1012,7 +1040,14 @@ public class TestConfiguration extends TestCase {
     boolean isFinal;
     String resource;
   }
-  
+
+  private Configuration getActualConf(String xmlStr) {
+    Configuration ac = new Configuration(false);
+    InputStream in = new ByteArrayInputStream(xmlStr.getBytes());
+    ac.addResource(in);
+    return ac;
+  }
+
   public void testGetSetTrimmedNames() throws IOException {
     Configuration conf = new Configuration(false);
     conf.set(" name", "value");
@@ -1021,7 +1056,121 @@ public class TestConfiguration extends TestCase {
     assertEquals("value", conf.getRaw("  name  "));
   }
 
-  public void testDumpConfiguration () throws IOException {
+  public void testDumpProperty() throws IOException {
+    StringWriter outWriter = new StringWriter();
+    ObjectMapper mapper = new ObjectMapper();
+    String jsonStr = null;
+    String xmlStr = null;
+    try {
+      Configuration testConf = new Configuration(false);
+      out = new BufferedWriter(new FileWriter(CONFIG));
+      startConfig();
+      appendProperty("test.key1", "value1");
+      appendProperty("test.key2", "value2", true);
+      appendProperty("test.key3", "value3");
+      endConfig();
+      Path fileResource = new Path(CONFIG);
+      testConf.addResource(fileResource);
+      out.close();
+
+      // case 1: dump an existing property
+      // test json format
+      outWriter = new StringWriter();
+      Configuration.dumpConfiguration(testConf, "test.key2", outWriter);
+      jsonStr = outWriter.toString();
+      outWriter.close();
+      mapper = new ObjectMapper();
+      SingleJsonConfiguration jconf1 =
+          mapper.readValue(jsonStr, SingleJsonConfiguration.class);
+      JsonProperty jp1 = jconf1.getProperty();
+      assertEquals("test.key2", jp1.getKey());
+      assertEquals("value2", jp1.getValue());
+      assertEquals(true, jp1.isFinal);
+      assertEquals(fileResource.toUri().getPath(), jp1.getResource());
+
+      // test xml format
+      outWriter = new StringWriter();
+      testConf.writeXml("test.key2", outWriter);
+      xmlStr = outWriter.toString();
+      outWriter.close();
+      Configuration actualConf1 = getActualConf(xmlStr);
+      assertEquals(1, actualConf1.size());
+      assertEquals("value2", actualConf1.get("test.key2"));
+      assertTrue(actualConf1.getFinalParameters().contains("test.key2"));
+      assertEquals(fileResource.toUri().getPath(),
+          actualConf1.getPropertySources("test.key2")[0]);
+
+      // case 2: dump an non existing property
+      // test json format
+      try {
+        outWriter = new StringWriter();
+        Configuration.dumpConfiguration(testConf,
+            "test.unknown.key", outWriter);
+        outWriter.close();
+      } catch (Exception e) {
+        assertTrue(e instanceof IllegalArgumentException);
+        assertTrue(e.getMessage().contains("test.unknown.key") &&
+            e.getMessage().contains("not found"));
+      }
+      // test xml format
+      try {
+        outWriter = new StringWriter();
+        testConf.writeXml("test.unknown.key", outWriter);
+        outWriter.close();
+      } catch (Exception e) {
+        assertTrue(e instanceof IllegalArgumentException);
+        assertTrue(e.getMessage().contains("test.unknown.key") &&
+            e.getMessage().contains("not found"));
+      }
+
+      // case 3: specify a null property, ensure all configurations are dumped
+      outWriter = new StringWriter();
+      Configuration.dumpConfiguration(testConf, null, outWriter);
+      jsonStr = outWriter.toString();
+      mapper = new ObjectMapper();
+      JsonConfiguration jconf3 =
+          mapper.readValue(jsonStr, JsonConfiguration.class);
+      assertEquals(3, jconf3.getProperties().length);
+
+      outWriter = new StringWriter();
+      testConf.writeXml(null, outWriter);
+      xmlStr = outWriter.toString();
+      outWriter.close();
+      Configuration actualConf3 = getActualConf(xmlStr);
+      assertEquals(3, actualConf3.size());
+      assertTrue(actualConf3.getProps().containsKey("test.key1") &&
+          actualConf3.getProps().containsKey("test.key2") &&
+          actualConf3.getProps().containsKey("test.key3"));
+
+      // case 4: specify an empty property, ensure all configurations are dumped
+      outWriter = new StringWriter();
+      Configuration.dumpConfiguration(testConf, "", outWriter);
+      jsonStr = outWriter.toString();
+      mapper = new ObjectMapper();
+      JsonConfiguration jconf4 =
+          mapper.readValue(jsonStr, JsonConfiguration.class);
+      assertEquals(3, jconf4.getProperties().length);
+
+      outWriter = new StringWriter();
+      testConf.writeXml("", outWriter);
+      xmlStr = outWriter.toString();
+      outWriter.close();
+      Configuration actualConf4 = getActualConf(xmlStr);
+      assertEquals(3, actualConf4.size());
+      assertTrue(actualConf4.getProps().containsKey("test.key1") &&
+          actualConf4.getProps().containsKey("test.key2") &&
+          actualConf4.getProps().containsKey("test.key3"));
+    } finally {
+      if(outWriter != null) {
+        outWriter.close();
+      }
+      if(out != null) {
+        out.close();
+      }
+    }
+  }
+
+  public void testDumpConfiguration() throws IOException {
     StringWriter outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
     String jsonStr = outWriter.toString();
@@ -1153,8 +1302,41 @@ public class TestConfiguration extends TestCase {
       assertEquals(fileResource.toString(),prop.getResource());
     }
   }
-  
-    
+
+  public void testDumpSensitiveProperty() throws IOException {
+    final String myPassword = "ThisIsMyPassword";
+    Configuration testConf = new Configuration(false);
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.password", myPassword);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    testConf.addResource(fileResource);
+
+    try (StringWriter outWriter = new StringWriter()) {
+      testConf.set(SENSITIVE_CONFIG_KEYS, "password$");
+      Configuration.dumpConfiguration(testConf, "test.password", outWriter);
+      assertFalse(outWriter.toString().contains(myPassword));
+    }
+  }
+
+  public void testDumpSensitiveConfiguration() throws IOException {
+    final String myPassword = "ThisIsMyPassword";
+    Configuration testConf = new Configuration(false);
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.password", myPassword);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    testConf.addResource(fileResource);
+
+    try (StringWriter outWriter = new StringWriter()) {
+      testConf.set(SENSITIVE_CONFIG_KEYS, "password$");
+      Configuration.dumpConfiguration(testConf, outWriter);
+      assertFalse(outWriter.toString().contains(myPassword));
+    }
+  }
+
   public void testGetValByRegex() {
     Configuration conf = new Configuration();
     String key1 = "t.abc.key1";
@@ -1308,7 +1490,7 @@ public class TestConfiguration extends TestCase {
 
       @Override
       public void run() {
-        for (int i = 0; i < 100000; i++) {
+        for (int i = 0; i < 10000; i++) {
           config.set("some.config.value-" + prefix + i, "value");
         }
       }
@@ -1326,6 +1508,60 @@ public class TestConfiguration extends TestCase {
     }
     // If this test completes without going into infinite loop,
     // it's expected behaviour.
+  }
+
+  public void testGetPasswordDeprecatedKeyStored() throws Exception {
+    final String oldKey = "test.password.old.key";
+    final String newKey = "test.password.new.key";
+    final String password = "MyPasswordForDeprecatedKey";
+
+    final File tmpDir = GenericTestUtils.getRandomizedTestDir();
+    tmpDir.mkdirs();
+    final String ourUrl = new URI(LocalJavaKeyStoreProvider.SCHEME_NAME,
+        "file",  new File(tmpDir, "test.jks").toString(), null).toString();
+
+    conf = new Configuration(false);
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
+    CredentialProvider provider =
+        CredentialProviderFactory.getProviders(conf).get(0);
+    provider.createCredentialEntry(oldKey, password.toCharArray());
+    provider.flush();
+
+    Configuration.addDeprecation(oldKey, newKey);
+
+    Assert.assertThat(conf.getPassword(newKey),
+        CoreMatchers.is(password.toCharArray()));
+    Assert.assertThat(conf.getPassword(oldKey),
+        CoreMatchers.is(password.toCharArray()));
+
+    FileUtil.fullyDelete(tmpDir);
+  }
+
+  public void testGetPasswordByDeprecatedKey() throws Exception {
+    final String oldKey = "test.password.old.key";
+    final String newKey = "test.password.new.key";
+    final String password = "MyPasswordForDeprecatedKey";
+
+    final File tmpDir = GenericTestUtils.getRandomizedTestDir();
+    tmpDir.mkdirs();
+    final String ourUrl = new URI(LocalJavaKeyStoreProvider.SCHEME_NAME,
+        "file",  new File(tmpDir, "test.jks").toString(), null).toString();
+
+    conf = new Configuration(false);
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
+    CredentialProvider provider =
+        CredentialProviderFactory.getProviders(conf).get(0);
+    provider.createCredentialEntry(newKey, password.toCharArray());
+    provider.flush();
+
+    Configuration.addDeprecation(oldKey, newKey);
+
+    Assert.assertThat(conf.getPassword(newKey),
+        CoreMatchers.is(password.toCharArray()));
+    Assert.assertThat(conf.getPassword(oldKey),
+        CoreMatchers.is(password.toCharArray()));
+
+    FileUtil.fullyDelete(tmpDir);
   }
 
   public static void main(String[] argv) throws Exception {

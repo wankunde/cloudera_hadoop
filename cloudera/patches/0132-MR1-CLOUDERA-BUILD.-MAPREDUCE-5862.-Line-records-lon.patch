@@ -1,8 +1,9 @@
 From 005f3fab1532115a97f4305d0fd17355ac9071a3 Mon Sep 17 00:00:00 2001
 From: bc Wong <bcwalrus@cloudera.com>
 Date: Tue, 29 Apr 2014 00:16:18 -0700
-Subject: [PATCH 132/924] MR1: CLOUDERA-BUILD. MAPREDUCE-5862. Line records
- longer than 2x split size aren't handled correctly
+Subject: [PATCH 0132/2639] MR1: CLOUDERA-BUILD. MAPREDUCE-5862. Line records
+ longer than 2x split size aren't handled
+ correctly
 
 (cherry picked from commit 6519104ee5ccf6820beee90bf672b9ad5aa37085)
 (cherry picked from commit 36720350e9c3544eae5159731b2f8e7348a12321)

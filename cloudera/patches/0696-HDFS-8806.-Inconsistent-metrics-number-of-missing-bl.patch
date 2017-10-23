@@ -1,7 +1,7 @@
 From 4d031287d9d0d0f3c06ecb2eb3894b6616ac1dc2 Mon Sep 17 00:00:00 2001
 From: Akira Ajisaka <aajisaka@apache.org>
 Date: Fri, 24 Jul 2015 18:28:44 +0900
-Subject: [PATCH 696/924] HDFS-8806. Inconsistent metrics: number of missing
+Subject: [PATCH 0696/2639] HDFS-8806. Inconsistent metrics: number of missing
  blocks with replication factor 1 not properly
  cleared. Contributed by Zhe Zhang.
 

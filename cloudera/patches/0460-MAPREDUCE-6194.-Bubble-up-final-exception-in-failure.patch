@@ -1,7 +1,7 @@
 From 7bb71a16651e394f24a2ed2755351d93472b7c90 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@cloudera.com>
 Date: Mon, 15 Dec 2014 14:26:22 +0530
-Subject: [PATCH 460/924] MAPREDUCE-6194. Bubble up final exception in
+Subject: [PATCH 0460/2639] MAPREDUCE-6194. Bubble up final exception in
  failures during creation of output collectors.
  Contributed by Varun Saxena.
 

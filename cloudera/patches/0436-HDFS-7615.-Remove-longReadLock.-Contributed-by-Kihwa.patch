@@ -1,7 +1,7 @@
 From 36aaa00535928d26ae2888038f8af4599a127cab Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Thu, 15 Jan 2015 16:40:18 -0600
-Subject: [PATCH 436/924] HDFS-7615. Remove longReadLock. Contributed by
+Subject: [PATCH 0436/2639] HDFS-7615. Remove longReadLock. Contributed by
  Kihwal Lee. (cherry picked from commit
  44eed6cbc97649c15177f9b36f6b119cc1900f7a)
 

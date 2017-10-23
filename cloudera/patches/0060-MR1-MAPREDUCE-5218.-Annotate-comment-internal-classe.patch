@@ -1,7 +1,7 @@
 From d035af77f746049d5cc123c4f3e2cba9341d3a8f Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Thu, 9 May 2013 21:22:50 +0000
-Subject: [PATCH 060/924] MR1: MAPREDUCE-5218. Annotate (comment) internal
+Subject: [PATCH 0060/2639] MR1: MAPREDUCE-5218. Annotate (comment) internal
  classes as Private. (kkambatl via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1480779 13f79535-47bb-0310-9956-ffa450edef68

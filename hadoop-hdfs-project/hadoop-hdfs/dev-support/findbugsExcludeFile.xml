@@ -79,6 +79,17 @@
        <Bug pattern="REC_CATCH_EXCEPTION" />
      </Match>
 
+    <!--
+     we don't need to synchronize out in newStreamForAppend method because
+     out.streamer cannot be touched by other threads. It is false-positive.
+    -->
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.DFSOutputStream" />
+        <Method name="newStreamForAppend" />
+        <Field name="streamer" />
+        <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
+
      <!--
       lastAppliedTxid is carefully unsynchronized in the BackupNode in a couple spots.
       See the comments in BackupImage for justification.
@@ -114,6 +125,33 @@
         <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLog" />
         <Field name="journalSet" />
         <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
+    <!--
+      FSEditLog#getTotalSyncCount is not synchronized because this method is
+      used by metrics. NullPointerException can happen and it is ignored.
+    -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLog" />
+      <Field name="editLogStream" />
+      <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
+    <!--
+      FSEditLog#isOpenForWriteWithoutLock and FSEditLog#isSegmentOpenWithoutLock
+      are not synchronized because these methods are used by metrics.
+    -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLog" />
+      <Field name="state" />
+      <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
+    <!--
+      All of the threads which update/increment txid are synchronized,
+      so make txid volatile instead of AtomicLong.
+    -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLog" />
+      <Field name="txid" />
+      <Bug pattern="VO_VOLATILE_INCREMENT" />
     </Match>
      <!--
       This method isn't performance-critical and is much clearer to write as it's written.

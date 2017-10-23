@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT;
@@ -33,6 +35,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import com.google.common.collect.Lists;
 
@@ -40,6 +43,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
@@ -86,15 +90,19 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -230,9 +238,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
          new ClientNamenodeProtocolServerSideTranslatorPB(this);
      BlockingService clientNNPbService = ClientNamenodeProtocol.
          newReflectiveBlockingService(clientProtocolServerTranslator);
-    
+
+    int maxDataLength = conf.getInt(IPC_MAXIMUM_DATA_LENGTH,
+        IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     DatanodeProtocolServerSideTranslatorPB dnProtoPbTranslator = 
-        new DatanodeProtocolServerSideTranslatorPB(this);
+        new DatanodeProtocolServerSideTranslatorPB(this, maxDataLength);
     BlockingService dnProtoPbService = DatanodeProtocolService
         .newReflectiveBlockingService(dnProtoPbTranslator);
 
@@ -599,7 +609,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public LocatedBlock append(String src, String clientName) 
+  public LastBlockWithStatus append(String src, String clientName) 
       throws IOException {
     checkNNStartup();
     String clientMachine = getClientMachine();
@@ -608,7 +618,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +src+" for "+clientName+" at "+clientMachine);
     }
     namesystem.checkOperation(OperationCategory.WRITE);
-    LocatedBlock info = namesystem.appendFile(src, clientName, clientMachine);
+    LastBlockWithStatus info = namesystem.appendFile(src, clientName, clientMachine);
     metrics.incrFilesAppended();
     return info;
   }
@@ -657,7 +667,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public LocatedBlock addBlock(String src, String clientName,
       ExtendedBlock previous, DatanodeInfo[] excludedNodes, long fileId,
-      String[] favoredNodes)
+      String[] favoredNodes, EnumSet<AddBlockFlag> addBlockFlags)
       throws IOException {
     checkNNStartup();
     if (stateChangeLog.isDebugEnabled()) {
@@ -674,7 +684,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     List<String> favoredNodesList = (favoredNodes == null) ? null
         : Arrays.asList(favoredNodes);
     LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, fileId,
-        clientName, previous, excludedNodesSet, favoredNodesList);
+        clientName, previous, excludedNodesSet, favoredNodesList, addBlockFlags);
     if (locatedBlock != null)
       metrics.incrAddBlockOps();
     return locatedBlock;
@@ -925,7 +935,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     return results;
   }
-    
+
   @Override // ClientProtocol
   public DatanodeStorageReport[] getDatanodeStorageReport(
       DatanodeReportType type) throws IOException {
@@ -984,7 +994,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.checkSuperuserPrivilege();
-    return namesystem.getFSImage().getLastAppliedOrWrittenTxId();
+    return namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
   }
   
   @Override // NamenodeProtocol
@@ -1044,6 +1054,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void metaSave(String filename) throws IOException {
     checkNNStartup();
     namesystem.metaSave(filename);
+  }
+
+  @Override // ClientProtocol
+  public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId)
+      throws IOException {
+    checkNNStartup();
+    return namesystem.listOpenFiles(prevId);
   }
 
   @Override // ClientProtocol
@@ -1170,9 +1187,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // DatanodeProtocol
-  public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
-        String poolId, StorageBlockReport[] reports,
-        BlockReportContext context) throws IOException {
+  public DatanodeCommand blockReport(final DatanodeRegistration nodeReg,
+        String poolId, final StorageBlockReport[] reports,
+        final BlockReportContext context) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     if(blockStateChangeLog.isDebugEnabled()) {
@@ -1188,10 +1205,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
       // for the same node and storage, so the value returned by the last
       // call of this loop is the final updated value for noStaleStorage.
       //
-      noStaleStorages = bm.processReport(nodeReg, reports[r].getStorage(),
-          blocks, context, (r == reports.length - 1));
+      final int index = r;
+      noStaleStorages = bm.runBlockOp(new Callable<Boolean>() {
+        @Override
+        public Boolean call() throws IOException {
+          return bm.processReport(nodeReg, reports[index].getStorage(),
+              blocks, context);
+        }
+      });
       metrics.incrStorageBlockReportOps();
     }
+    bm.removeBRLeaseIfNeeded(nodeReg, context);
+
     BlockManagerFaultInjector.getInstance().
         incomingBlockReportRpc(nodeReg, context);
 
@@ -1219,8 +1244,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // DatanodeProtocol
-  public void blockReceivedAndDeleted(DatanodeRegistration nodeReg, String poolId,
-      StorageReceivedDeletedBlocks[] receivedAndDeletedBlocks) throws IOException {
+  public void blockReceivedAndDeleted(final DatanodeRegistration nodeReg,
+      String poolId, StorageReceivedDeletedBlocks[] receivedAndDeletedBlocks)
+          throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     metrics.incrBlockReceivedAndDeletedOps();
@@ -1229,8 +1255,22 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +"from "+nodeReg+" "+receivedAndDeletedBlocks.length
           +" blocks.");
     }
-    for(StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
-      namesystem.processIncrementalBlockReport(nodeReg, r);
+    final BlockManager bm = namesystem.getBlockManager();
+    for (final StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
+      bm.enqueueBlockOp(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            namesystem.processIncrementalBlockReport(nodeReg, r);
+          } catch (Exception ex) {
+            // usually because the node is unregistered/dead.  next heartbeat
+            // will correct the problem
+            blockStateChangeLog.error(
+                "*BLOCK* NameNode.blockReceivedAndDeleted: "
+                    + "failed from " + nodeReg + ": " + ex.getMessage());
+          }
+        }
+      });
     }
   }
   
@@ -1260,7 +1300,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // DatanodeProtocol, NamenodeProtocol
   public NamespaceInfo versionRequest() throws IOException {
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege();
     return namesystem.getNamespaceInfo();
   }
 
@@ -1616,6 +1655,21 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public void reencryptEncryptionZone(final String zone,
+      final ReencryptAction action) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
+    namesystem.reencryptEncryptionZone(zone, action);
+  }
+
+  @Override // ClientProtocol
+  public BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(
+      final long prevId) throws IOException {
+    checkNNStartup();
+    return namesystem.listReencryptionStatus(prevId);
+  }
+
+  @Override // ClientProtocol
   public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
       throws IOException {
     checkNNStartup();
@@ -1645,7 +1699,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   private void checkNNStartup() throws IOException {
     if (!this.nn.isStarted()) {
-      throw new RetriableException(this.nn.getRole() + " still not started");
+      String message = NameNode.composeNotStartedMessage(this.nn.getRole());
+      throw new RetriableException(message);
     }
   }
 

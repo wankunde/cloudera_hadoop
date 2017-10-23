@@ -1,9 +1,9 @@
 From b24f1b8530ef57b57ea4a41595dc963ba5125ea9 Mon Sep 17 00:00:00 2001
 From: Arpit Agarwal <arp@apache.org>
 Date: Thu, 23 Apr 2015 09:35:04 -0700
-Subject: [PATCH 666/924] HADOOP-10597. RPC Server signals backoff to clients
- when all request queues are full. (Contributed by
- Ming Ma)
+Subject: [PATCH 0666/2639] HADOOP-10597. RPC Server signals backoff to
+ clients when all request queues are full.
+ (Contributed by Ming Ma)
 
 (cherry picked from commit edbeefdb052bffd0a3ba2f00c8a5a376017fbf33)
 

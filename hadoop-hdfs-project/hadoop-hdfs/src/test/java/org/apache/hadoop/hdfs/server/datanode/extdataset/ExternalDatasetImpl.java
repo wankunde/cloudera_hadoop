@@ -51,7 +51,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
       StorageType.DEFAULT);
 
   @Override
-  public List<ExternalVolumeImpl> getVolumes() {
+  public FsVolumeReferences getFsVolumeReferences() {
     return null;
   }
 
@@ -72,7 +72,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   @Override
   public StorageReport[] getStorageReports(String bpid) throws IOException {
     StorageReport[] result = new StorageReport[1];
-    result[0] = new StorageReport(storage, false, 0, 0, 0, 0);
+    result[0] = new StorageReport(storage, false, 0, 0, 0, 0, 0);
     return result;
   }
 
@@ -177,13 +177,14 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public String recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen)
+  public Replica recoverClose(ExtendedBlock b, long newGS, long expectedBlkLen)
       throws IOException {
     return null;
   }
 
   @Override
-  public void finalizeBlock(ExtendedBlock b) throws IOException {
+  public void finalizeBlock(ExtendedBlock b, boolean fsyncDir)
+      throws IOException {
   }
 
   @Override
@@ -272,8 +273,8 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
-      long recoveryId, long newBlockId) throws IOException {
+  public Replica updateReplicaUnderRecovery(ExtendedBlock oldBlock,
+      long recoveryId, long newLength) throws IOException {
     return null;
   }
 
@@ -433,4 +434,12 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public boolean isDeletingBlock(String bpid, long blockId) {
     return false;
   }
+
+  @Override
+  public ReplicaInfo moveBlockAcrossVolumes(ExtendedBlock block,
+                                            FsVolumeSpi destination)
+      throws IOException {
+    return null;
+  }
+
 }

@@ -21,13 +21,18 @@ package org.apache.hadoop.yarn.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.List;
-import java.util.Map;
+import java.util.concurrent.TimeoutException;
+
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,19 +41,30 @@ import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
-import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
+import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import com.google.common.base.Supplier;
 
 public class TestRMFailover extends ClientBaseWithFixes {
   private static final Log LOG =
@@ -66,34 +82,14 @@ public class TestRMFailover extends ClientBaseWithFixes {
   private MiniYARNCluster cluster;
   private ApplicationId fakeAppId;
 
-
-  private void setConfForRM(String rmId, String prefix, String value) {
-    conf.set(HAUtil.addSuffix(prefix, rmId), value);
-  }
-
-  private void setRpcAddressForRM(String rmId, int base) {
-    setConfForRM(rmId, YarnConfiguration.RM_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_SCHEDULER_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_ADMIN_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_ADMIN_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_WEBAPP_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_WEBAPP_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT));
-  }
-
   @Before
   public void setup() throws IOException {
     fakeAppId = ApplicationId.newInstance(System.currentTimeMillis(), 0);
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
-    setRpcAddressForRM(RM1_NODE_ID, RM1_PORT_BASE);
-    setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE);
+    HATestUtil.setRpcAddressForRM(RM1_NODE_ID, RM1_PORT_BASE, conf);
+    HATestUtil.setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE, conf);
 
     conf.setLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_BASE_MS, 100L);
 
@@ -171,6 +167,21 @@ public class TestRMFailover extends ClientBaseWithFixes {
     verifyConnections();
   }
 
+  private void verifyRMTransitionToStandby(final ResourceManager rm)
+      throws InterruptedException {
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return rm.getRMContext().getHAServiceState() ==
+              HAServiceState.STANDBY;
+        }
+      }, 100, 20000);
+    } catch (TimeoutException e) {
+      fail("RM didn't transition to Standby.");
+    }
+  }
+
   @Test
   public void testAutomaticFailover()
       throws YarnException, InterruptedException, IOException {
@@ -193,16 +204,9 @@ public class TestRMFailover extends ClientBaseWithFixes {
     // so it transitions to standby.
     ResourceManager rm = cluster.getResourceManager(
         cluster.getActiveRMIndex());
-    rm.handleTransitionToStandBy();
-    int maxWaitingAttempts = 2000;
-    while (maxWaitingAttempts-- > 0 ) {
-      if (rm.getRMContext().getHAServiceState() == HAServiceState.STANDBY) {
-        break;
-      }
-      Thread.sleep(1);
-    }
-    Assert.assertFalse("RM didn't transition to Standby ",
-        maxWaitingAttempts == 0);
+    rm.getRMContext().getDispatcher().getEventHandler().handle(
+        new RMFatalEvent(RMFatalEventType.STATE_STORE_FENCED, "test"));
+    verifyRMTransitionToStandby(rm);
     verifyConnections();
   }
 
@@ -274,6 +278,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     assertEquals(404, response.getResponseCode());
   }
 
+  @Ignore
   @Test
   public void testRMWebAppRedirect() throws YarnException,
       InterruptedException, IOException {
@@ -285,56 +290,173 @@ public class TestRMFailover extends ClientBaseWithFixes {
     getAdminService(0).transitionToActive(req);
     String rm1Url = "http://0.0.0.0:18088";
     String rm2Url = "http://0.0.0.0:28088";
-    String header = getHeader("Refresh", rm2Url);
-    assertTrue(header.contains("; url=" + rm1Url));
+    String redirectURL = getRedirectURL(rm2Url);
+    // if uri is null, RMWebAppFilter will append a slash at the trail of the redirection url
+    assertEquals(redirectURL,rm1Url+"/");
 
-    // standby RM links /conf, /stacks, /logLevel, /metrics, /jmx,
-    // /static, /logs, /cluster/cluster as well as webService
+    redirectURL = getRedirectURL(rm2Url + "/metrics");
+    assertEquals(redirectURL,rm1Url + "/metrics");
+
+    redirectURL = getRedirectURL(rm2Url + "/jmx?param1=value1+x&param2=y");
+    assertEquals(rm1Url + "/jmx?param1=value1+x&param2=y", redirectURL);
+
+    // standby RM links /conf, /stacks, /logLevel, /static, /logs,
+    // /cluster/cluster as well as webService
     // /ws/v1/cluster/info should not be redirected to active RM
-    header = getHeader("Refresh", rm2Url + "/cluster/cluster");
-    assertEquals(null, header);
+    redirectURL = getRedirectURL(rm2Url + "/cluster/cluster");
+    assertNull(redirectURL);
 
-    header = getHeader("Refresh", rm2Url + "/conf");
-    assertEquals(null, header);
+    redirectURL = getRedirectURL(rm2Url + "/conf");
+    assertNull(redirectURL);
 
-    header = getHeader("Refresh", rm2Url + "/stacks");
-    assertEquals(null, header);
+    redirectURL = getRedirectURL(rm2Url + "/stacks");
+    assertNull(redirectURL);
 
-    header = getHeader("Refresh", rm2Url + "/logLevel");
-    assertEquals(null, header);
+    redirectURL = getRedirectURL(rm2Url + "/logLevel");
+    assertNull(redirectURL);
 
-    header = getHeader("Refresh", rm2Url + "/metrics");
-    assertEquals(null, header);
+    redirectURL = getRedirectURL(rm2Url + "/static");
+    assertNull(redirectURL);
 
-    header = getHeader("Refresh", rm2Url + "/jmx");
-    assertEquals(null, header);
+    redirectURL = getRedirectURL(rm2Url + "/logs");
+    assertNull(redirectURL);
 
-    header = getHeader("Refresh", rm2Url + "/static");
-    assertEquals(null, header);
+    redirectURL = getRedirectURL(rm2Url + "/ws/v1/cluster/info");
+    assertNull(redirectURL);
 
-    header = getHeader("Refresh", rm2Url + "/logs");
-    assertEquals(null, header);
+    redirectURL = getRedirectURL(rm2Url + "/ws/v1/cluster/apps");
+    assertEquals(redirectURL, rm1Url + "/ws/v1/cluster/apps");
 
-    header = getHeader("Refresh", rm2Url + "/ws/v1/cluster/info");
-    assertEquals(null, header);
+    redirectURL = getRedirectURL(rm2Url + "/proxy/" + fakeAppId);
+    assertNull(redirectURL);
 
-    header = getHeader("Refresh", rm2Url + "/ws/v1/cluster/apps");
-    assertTrue(header.contains("; url=" + rm1Url));
-
-    // Due to the limitation of MiniYARNCluster and dispatcher is a singleton,
-    // we couldn't add the test case after explicitFailover();
+    // transit the active RM to standby
+    // Both of RMs are in standby mode
+    getAdminService(0).transitionToStandby(req);
+    // RM2 is expected to send the httpRequest to itself.
+    // The Header Field: Refresh is expected to be set.
+    redirectURL = getRefreshURL(rm2Url);
+    assertTrue(redirectURL != null
+        && redirectURL.contains(YarnWebParams.NEXT_REFRESH_INTERVAL)
+        && redirectURL.contains(rm2Url));
   }
 
-  static String getHeader(String field, String url) {
-    String fieldHeader = null;
+  // set up http connection with the given url and get the redirection url from the response
+  // return null if the url is not redirected
+  static String getRedirectURL(String url) {
+    String redirectUrl = null;
     try {
-      Map<String, List<String>> map =
-          new URL(url).openConnection().getHeaderFields();
-      fieldHeader = map.get(field).get(0);
+      HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+      // do not automatically follow the redirection
+      // otherwise we get too many redirections exception
+      conn.setInstanceFollowRedirects(false);
+      if(conn.getResponseCode() == HttpServletResponse.SC_TEMPORARY_REDIRECT) {
+        redirectUrl = conn.getHeaderField("Location");
+      }
     } catch (Exception e) {
       // throw new RuntimeException(e);
     }
-    return fieldHeader;
+    return redirectUrl;
   }
 
+  static String getRefreshURL(String url) {
+    String redirectUrl = null;
+    try {
+      HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+      // do not automatically follow the redirection
+      // otherwise we get too many redirections exception
+      conn.setInstanceFollowRedirects(false);
+      redirectUrl = conn.getHeaderField("Refresh");
+    } catch (Exception e) {
+      // throw new RuntimeException(e);
+    }
+    return redirectUrl;
+  }
+
+  /**
+   * Throw {@link RuntimeException} inside a thread of
+   * {@link ResourceManager} with HA enabled and check if the
+   * {@link ResourceManager} is transited to standby state.
+   *
+   * @throws InterruptedException if any
+   */
+  @Test
+  public void testUncaughtExceptionHandlerWithHAEnabled()
+      throws InterruptedException {
+    conf.set(YarnConfiguration.RM_CLUSTER_ID, "yarn-test-cluster");
+    conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
+    cluster.init(conf);
+    cluster.start();
+    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+
+    ResourceManager resourceManager = cluster.getResourceManager(
+        cluster.getActiveRMIndex());
+
+    final RMCriticalThreadUncaughtExceptionHandler exHandler =
+        new RMCriticalThreadUncaughtExceptionHandler(
+            resourceManager.getRMContext());
+
+    // Create a thread and throw a RTE inside it
+    final RuntimeException rte = new RuntimeException("TestRuntimeException");
+    final Thread testThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        throw rte;
+      }
+    });
+    testThread.setName("TestThread");
+    testThread.setUncaughtExceptionHandler(exHandler);
+    testThread.start();
+    testThread.join();
+
+    verifyRMTransitionToStandby(resourceManager);
+  }
+
+  /**
+   * Throw {@link RuntimeException} inside a thread of
+   * {@link ResourceManager} with HA disabled and check
+   * {@link RMCriticalThreadUncaughtExceptionHandler} instance.
+   *
+   * Used {@link ExitUtil} class to avoid jvm exit through
+   * {@code System.exit(-1)}.
+   *
+   * @throws InterruptedException if any
+   */
+  @Test
+  public void testUncaughtExceptionHandlerWithoutHA()
+      throws InterruptedException {
+    ExitUtil.disableSystemExit();
+
+    // Create a MockRM and start it
+    ResourceManager resourceManager = new MockRM();
+    ((AsyncDispatcher) resourceManager.getRMContext().getDispatcher()).start();
+    AsyncDispatcher dispatcher = (AsyncDispatcher) resourceManager.
+        getRMContext().getDispatcher();
+    dispatcher.setExitOnDispatchException(false);
+    dispatcher.start();
+    resourceManager.getRMContext().getStateStore().start();
+    resourceManager.getRMContext().getContainerTokenSecretManager().
+        rollMasterKey();
+
+    final RMCriticalThreadUncaughtExceptionHandler exHandler =
+        new RMCriticalThreadUncaughtExceptionHandler(
+            resourceManager.getRMContext());
+    final RMCriticalThreadUncaughtExceptionHandler spyRTEHandler =
+        spy(exHandler);
+
+    // Create a thread and throw a RTE inside it
+    final RuntimeException rte = new RuntimeException("TestRuntimeException");
+    final Thread testThread = new Thread(new Runnable() {
+      @Override public void run() {
+        throw rte;
+      }
+    });
+    testThread.setName("TestThread");
+    testThread.setUncaughtExceptionHandler(spyRTEHandler);
+    assertSame(spyRTEHandler, testThread.getUncaughtExceptionHandler());
+    testThread.start();
+    testThread.join();
+
+    verify(spyRTEHandler).uncaughtException(testThread, rte);
+  }
 }

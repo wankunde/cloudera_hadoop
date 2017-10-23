@@ -1,7 +1,7 @@
 From e5099f28f0053d5aaf398545e83c2c07e2575df9 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Tue, 9 Dec 2014 14:00:31 -0800
-Subject: [PATCH 292/924] YARN-2910. FSLeafQueue can throw
+Subject: [PATCH 0292/2639] YARN-2910. FSLeafQueue can throw
  ConcurrentModificationException. (Wilfred
  Spiegelenburg via kasha)
 

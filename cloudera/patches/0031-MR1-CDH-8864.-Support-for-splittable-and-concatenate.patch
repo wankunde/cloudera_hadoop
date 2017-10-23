@@ -1,14 +1,14 @@
 From 06d22662ea3c62b2ebfc36a0df8d3e293184b680 Mon Sep 17 00:00:00 2001
 From: Christopher Douglas <cdouglas@apache.org>
 Date: Thu, 19 Jul 2012 19:06:21 +0000
-Subject: [PATCH 031/924] MR1: CDH-8864. Support for splittable and
+Subject: [PATCH 0031/2639] MR1: CDH-8864. Support for splittable and
  concatenated BZip2 - backport HADOOP-7823 and
  MAPREDUCE-4888 	  HADOOP-7823. Port
  HADOOP-4012 providing split support for bzip2
- compressed files to branch-1. Contributed by Andrew
- Purtell 	  MAPREDUCE-4888. Fixed
- NLineInputFormat one-off error which dropped data.
- Contributed by Vinod K V.
+ compressed files to branch-1. Contributed by
+ Andrew Purtell 	  MAPREDUCE-4888. Fixed
+ NLineInputFormat one-off error which dropped
+ data. Contributed by Vinod K V.
 
 Reason: Support splittable/concatenated bzip2 (customers' request)
 Ref: CDH-8864

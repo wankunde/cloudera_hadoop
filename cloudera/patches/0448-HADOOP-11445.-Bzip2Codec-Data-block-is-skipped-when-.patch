@@ -1,9 +1,9 @@
 From 561d1beaa8d998f506bf05cf243e7a8b4734f402 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Tue, 6 Jan 2015 21:19:10 +0000
-Subject: [PATCH 448/924] HADOOP-11445. Bzip2Codec: Data block is skipped when
- position of newly created stream is equal to start
- of split. Contributed by Ankit Kamboj
+Subject: [PATCH 0448/2639] HADOOP-11445. Bzip2Codec: Data block is skipped
+ when position of newly created stream is equal to
+ start of split. Contributed by Ankit Kamboj
 
 (cherry picked from commit d02fb53750bc592c23ba470ae82eb6f47d9a00ec)
 

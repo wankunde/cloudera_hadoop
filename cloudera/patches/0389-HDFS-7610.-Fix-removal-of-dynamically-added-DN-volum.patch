@@ -1,9 +1,9 @@
 From 81aa4dccebf4a1b5e5e6b8a4bc9d328065ed9319 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 20 Jan 2015 20:11:09 -0800
-Subject: [PATCH 389/924] HDFS-7610. Fix removal of dynamically added DN
- volumes (Lei (Eddy) Xu via Colin P. McCabe) (cherry
- picked from commit
+Subject: [PATCH 0389/2639] HDFS-7610. Fix removal of dynamically added DN
+ volumes (Lei (Eddy) Xu via Colin P. McCabe)
+ (cherry picked from commit
  7779f38e68ca4e0f7ac08eb7e5f4801b89979d02) (cherry
  picked from commit
  a17584936cc5141e3f5612ac3ecf35e27968e439)

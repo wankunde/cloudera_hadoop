@@ -1,9 +1,9 @@
 From ed0605db2036d64f874bd7d47d2e99542091933c Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Wed, 28 Jan 2015 15:23:13 -0800
-Subject: [PATCH 482/924] YARN-3103. AMRMClientImpl does not update AMRM token
- properly. Contributed by Jason Lowe (cherry picked
- from commit
+Subject: [PATCH 0482/2639] YARN-3103. AMRMClientImpl does not update AMRM
+ token properly. Contributed by Jason Lowe (cherry
+ picked from commit
  6d2bdbd7dab179dfb4f19bb41809e97f1db88c6b)
 
 (cherry picked from commit 12522fd9cbd8da8c040a5b7bb71fcdaa256daf89)

@@ -1,8 +1,8 @@
 From 1de769934f6cbe75c1f36282b120af732e2e2564 Mon Sep 17 00:00:00 2001
 From: Anubhav Dhoot <adhoot@cloudera.com>
 Date: Mon, 10 Aug 2015 10:54:42 -0700
-Subject: [PATCH 709/924] CLOUDERA-BUILD CDH-30230 Disable unit tests related
- to revert of YARN-2581
+Subject: [PATCH 0709/2639] CLOUDERA-BUILD CDH-30230 Disable unit tests
+ related to revert of YARN-2581
 
 ---
  .../TestContainerManagerRecovery.java              |    2 ++

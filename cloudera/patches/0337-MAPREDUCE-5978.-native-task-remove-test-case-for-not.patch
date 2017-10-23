@@ -1,7 +1,7 @@
 From 79ff10da23199eeb2edf78a1d1e65666599f8b59 Mon Sep 17 00:00:00 2001
 From: Sean Zhong <seanzhong@apache.org>
 Date: Wed, 6 Aug 2014 07:40:24 +0000
-Subject: [PATCH 337/924] MAPREDUCE-5978. native-task: remove test case for
+Subject: [PATCH 0337/2639] MAPREDUCE-5978. native-task: remove test case for
  not supported codec Bzip2Codec and DefaultCodec
  (Manu Zhang)
 

@@ -1,7 +1,7 @@
 From 450a57d62afa46a20cc10d3b738cb23c641ac342 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Wed, 23 Jan 2013 10:13:11 -0800
-Subject: [PATCH 011/924] MR1: MAPREDUCE-4807. Allow MapOutputBuffer to be
+Subject: [PATCH 0011/2639] MR1: MAPREDUCE-4807. Allow MapOutputBuffer to be
  pluggable. (masokan via tucu)
 
   Reason: enable pluggable sort

@@ -1,7 +1,7 @@
 From 28a9c293917128aa844f6a28a94367c4a3908713 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 28 Oct 2014 16:41:22 -0700
-Subject: [PATCH 226/924] HDFS-7235. DataNode#transferBlock should report
+Subject: [PATCH 0226/2639] HDFS-7235. DataNode#transferBlock should report
  blocks that don't exist using reportBadBlock
  (yzhang via cmccabe) (cherry picked from commit
  ac9ab037e9a9b03e4fa9bd471d3ab9940beb53fb)

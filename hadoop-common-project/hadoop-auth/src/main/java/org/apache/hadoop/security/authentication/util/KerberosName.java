@@ -25,6 +25,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
@@ -90,9 +91,19 @@ public class KerberosName {
     }
   }
 
+  @VisibleForTesting
+  public static void resetDefaultRealm() {
+    try {
+      defaultRealm = KerberosUtil.getDefaultRealm();
+    } catch (Exception ke) {
+      LOG.debug("resetting default realm failed, "
+          + "current default realm will still be used.", ke);
+    }
+  }
+
   /**
    * Create a name from the full Kerberos principal name.
-   * @param name
+   * @param name full Kerberos principal name.
    */
   public KerberosName(String name) {
     Matcher match = nameParser.matcher(name);
@@ -312,8 +323,8 @@ public class KerberosName {
         }
       }
       if (result != null && nonSimplePattern.matcher(result).find()) {
-        throw new NoMatchingRule("Non-simple name " + result +
-                                 " after auth_to_local rule " + this);
+        LOG.info("Non-simple name {} after auth_to_local rule {}",
+            result, this);
       }
       if (toLowerCase && result != null) {
         result = result.toLowerCase(Locale.ENGLISH);
@@ -366,8 +377,8 @@ public class KerberosName {
   /**
    * Get the translation of the principal name into an operating system
    * user name.
-   * @return the short name
-   * @throws IOException
+   * @return the user name
+   * @throws IOException throws if something is wrong with the rules
    */
   public String getShortName() throws IOException {
     String[] params;
@@ -386,7 +397,8 @@ public class KerberosName {
         return result;
       }
     }
-    throw new NoMatchingRule("No rules applied to " + toString());
+    LOG.info("No auth_to_local rules applied to {}", this);
+    return toString();
   }
 
   /**
@@ -412,16 +424,16 @@ public class KerberosName {
     }
     return ruleString;
   }
-  
+
   /**
    * Indicates if the name rules have been set.
-   * 
+   *
    * @return if the name rules have been set.
    */
   public static boolean hasRulesBeenSet() {
     return rules != null;
   }
-  
+
   static void printRules() throws IOException {
     int i = 0;
     for(Rule r: rules) {

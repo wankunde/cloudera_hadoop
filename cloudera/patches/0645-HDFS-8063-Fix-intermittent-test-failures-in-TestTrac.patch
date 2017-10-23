@@ -1,8 +1,9 @@
 From c57f734692a7131e6b1f2d3ba09da2eb50bb2eb2 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 9 Apr 2015 11:28:02 -0700
-Subject: [PATCH 645/924] HDFS-8063: Fix intermittent test failures in
- TestTracing (Masatake Iwasaki via Colin P. McCabe)
+Subject: [PATCH 0645/2639] HDFS-8063: Fix intermittent test failures in
+ TestTracing (Masatake Iwasaki via Colin P.
+ McCabe)
 
 (cherry picked from commit 61dc2ea3fee4085b19cd2d01de9eacdc4c42e21f)
 (cherry picked from commit 8dac245920f41709dd6343873682f172fdbeb0a1)

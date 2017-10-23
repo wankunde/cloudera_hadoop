@@ -1,12 +1,11 @@
-From 7e669077e83738f8e2e4ef3cb212eef58d9f1ef2 Mon Sep 17 00:00:00 2001
+From c1cb6016ae7a5809a08d7b9b2085493033bcb9e7 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 31 Aug 2015 17:31:29 -0700
-Subject: [PATCH 777/924] HDFS-8965. Harden edit log reading code against out
- of memory errors (cmccabe)
+Subject: [PATCH 0777/2639] HDFS-8965. Harden edit log reading code against
+ out of memory errors (cmccabe)
 
 (cherry picked from commit 24f6a7c9563757234f53ca23e12f9c9208b53082)
 (cherry picked from commit b52ae6140b2e075949305b614aa530ee370c425f)
-(cherry picked from commit c1cb6016ae7a5809a08d7b9b2085493033bcb9e7)
 
 Conflicts:
     hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSEditLogOp.java

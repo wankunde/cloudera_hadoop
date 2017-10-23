@@ -1,7 +1,7 @@
 From c22cf5dcdbe23a617deb117d2ae9090ac38fe286 Mon Sep 17 00:00:00 2001
 From: bc Wong <bcwalrus@cloudera.com>
 Date: Mon, 24 Mar 2014 21:41:47 -0700
-Subject: [PATCH 172/924] CLOUDERA-BUILD. CDH-17140. JT HA IPC timeout
+Subject: [PATCH 0172/2639] CLOUDERA-BUILD. CDH-17140. JT HA IPC timeout
 
 (cherry picked from commit 6ede546173b585c10a7be90d2b44832bf7442b3d)
 (cherry picked from commit 38f3cdd2cd769c6e4ecd8c231b9f9144fa86370c)

@@ -1,8 +1,9 @@
 From 7f79da2edb12aea277ea9e6498f73ecf7a5d671e Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 16 Jan 2013 23:56:04 +0000
-Subject: [PATCH 007/924] MR1: MAPREDUCE-4315. jobhistory.jsp throws 500 when
- a .txt file is found in /done. (sandyr via tucu)
+Subject: [PATCH 0007/2639] MR1: MAPREDUCE-4315. jobhistory.jsp throws 500
+ when a .txt file is found in /done. (sandyr via
+ tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1434506 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 61ee40b37429c41d9cbc4c619b6db4a12644dfa0)

@@ -1,9 +1,9 @@
 From 35fe05abc6198a76869b46b621abc3ccccc81428 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Sun, 26 Apr 2015 09:13:46 -0700
-Subject: [PATCH 543/924] YARN-3464. Race condition in LocalizerRunner kills
- localizer before localizing all resources. (Zhihai
- Xu via kasha)
+Subject: [PATCH 0543/2639] YARN-3464. Race condition in LocalizerRunner kills
+ localizer before localizing all resources.
+ (Zhihai Xu via kasha)
 
 (cherry picked from commit 47279c3228185548ed09c36579b420225e4894f5)
 

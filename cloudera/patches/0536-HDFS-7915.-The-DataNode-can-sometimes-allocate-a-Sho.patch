@@ -1,9 +1,10 @@
 From 5d17c9c6acb1bc795179fe224c3b5ab7176e3a52 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Sat, 14 Mar 2015 22:36:46 -0700
-Subject: [PATCH 536/924] HDFS-7915. The DataNode can sometimes allocate a
- ShortCircuitShm slot and fail to tell the DFSClient
- about it because of a network error (cmccabe)
+Subject: [PATCH 0536/2639] HDFS-7915. The DataNode can sometimes allocate a
+ ShortCircuitShm slot and fail to tell the
+ DFSClient about it because of a network error
+ (cmccabe)
 
 (cherry picked from commit bc9cb3e271b22069a15ca110cd60c860250aaab2)
 (cherry picked from commit c71b54fa32ef9149692269a95c918506e338e181)

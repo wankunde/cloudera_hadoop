@@ -1,7 +1,7 @@
 From 66b265eed24360834c850726e1ffc40e29695754 Mon Sep 17 00:00:00 2001
 From: Zhihai Xu <zxu@cloudera.com>
 Date: Wed, 11 Mar 2015 11:40:16 -0700
-Subject: [PATCH 486/924] CLOUDERA-BUILD. fix FileSystem memory leak at
+Subject: [PATCH 0486/2639] CLOUDERA-BUILD. fix FileSystem memory leak at
  KilledHistoryService
 
 (cherry picked from commit e25552098ed06f95c00668a31d37e9d363b28463)

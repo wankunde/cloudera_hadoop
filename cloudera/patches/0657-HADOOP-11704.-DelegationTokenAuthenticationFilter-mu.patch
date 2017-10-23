@@ -1,7 +1,7 @@
 From 5c83d7a0bedcccc1d91dacbe0db7429ab6b2b19a Mon Sep 17 00:00:00 2001
 From: Arun Suresh <asuresh@apache.org>
 Date: Tue, 21 Apr 2015 11:31:51 -0700
-Subject: [PATCH 657/924] HADOOP-11704. DelegationTokenAuthenticationFilter
+Subject: [PATCH 0657/2639] HADOOP-11704. DelegationTokenAuthenticationFilter
  must pass ipaddress instead of hostname to
  ProxyUsers#authorize (Anubhav Dhoot via asuresh)
 

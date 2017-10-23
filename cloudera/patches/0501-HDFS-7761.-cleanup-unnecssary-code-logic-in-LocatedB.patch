@@ -1,7 +1,7 @@
 From 30a630f1af3aa91a5c3f30b3a9f9ce6d901c25b7 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Thu, 12 Feb 2015 03:09:38 +0800
-Subject: [PATCH 501/924] HDFS-7761. cleanup unnecssary code logic in
+Subject: [PATCH 0501/2639] HDFS-7761. cleanup unnecssary code logic in
  LocatedBlock. (yliu)
 
 (cherry picked from commit f8d0825f39f2938703e179b9b572177a6322201f)

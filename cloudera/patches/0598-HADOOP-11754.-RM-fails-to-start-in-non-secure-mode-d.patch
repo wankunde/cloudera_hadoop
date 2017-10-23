@@ -1,7 +1,7 @@
 From e1badb21f05cb5e5486f879bb072f150574a9b82 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Mon, 30 Mar 2015 11:44:22 -0700
-Subject: [PATCH 598/924] HADOOP-11754. RM fails to start in non-secure mode
+Subject: [PATCH 0598/2639] HADOOP-11754. RM fails to start in non-secure mode
  due to authentication filter failure. Contributed
  by Haohui Mai.
 

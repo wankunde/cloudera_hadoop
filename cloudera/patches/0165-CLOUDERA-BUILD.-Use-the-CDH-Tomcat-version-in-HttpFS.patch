@@ -1,8 +1,8 @@
 From 1fd5039a1b8781a3e0fd320ac82259f0bd50a8c7 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <andrew.wang@cloudera.com>
 Date: Mon, 20 Jan 2014 12:00:17 -0800
-Subject: [PATCH 165/924] CLOUDERA-BUILD. Use the CDH Tomcat version in HttpFS
- pom.xml.
+Subject: [PATCH 0165/2639] CLOUDERA-BUILD. Use the CDH Tomcat version in
+ HttpFS pom.xml.
 
 (cherry picked from commit a079ed5a9acb70b29f666d936ec1b660e51758d6)
 (cherry picked from commit d23ae5cc8462bec859f6cc14ddf70b67eb7a3906)

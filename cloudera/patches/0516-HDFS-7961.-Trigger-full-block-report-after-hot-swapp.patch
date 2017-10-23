@@ -1,7 +1,7 @@
 From 36ebb3fedf22279d572892a78bd776e8321b02d9 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 24 Mar 2015 09:07:02 -0700
-Subject: [PATCH 516/924] HDFS-7961. Trigger full block report after hot
+Subject: [PATCH 0516/2639] HDFS-7961. Trigger full block report after hot
  swapping disk. Contributed by Eddy Xu. (cherry
  picked from commit
  e39c58fd9dfa03851301d105abcb2e62f757b3f5) (cherry

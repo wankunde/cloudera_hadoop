@@ -28,6 +28,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -41,7 +42,7 @@ import com.google.common.base.Preconditions;
  */
 public class OptionsParser {
 
-  private static final Log LOG = LogFactory.getLog(OptionsParser.class);
+  static final Log LOG = LogFactory.getLog(OptionsParser.class);
 
   private static final Options cliOptions = new Options();
 
@@ -66,6 +67,13 @@ public class OptionsParser {
     }
   }
 
+  private static void checkSnapshotsArgs(final String[] snapshots) {
+    Preconditions.checkArgument(snapshots != null && snapshots.length == 2
+        && !StringUtils.isBlank(snapshots[0])
+        && !StringUtils.isBlank(snapshots[1]),
+        "Must provide both the starting and ending snapshot names");
+  }
+
   /**
    * The parse method parses the command-line options, and creates
    * a corresponding Options object.
@@ -74,7 +82,8 @@ public class OptionsParser {
    * @return The Options object, corresponding to the specified command-line.
    * @throws IllegalArgumentException: Thrown if the parse fails.
    */
-  public static DistCpOptions parse(String args[]) throws IllegalArgumentException {
+  public static DistCpOptions parse(String[] args)
+      throws IllegalArgumentException {
 
     CommandLineParser parser = new CustomParser();
 
@@ -154,10 +163,16 @@ public class OptionsParser {
     parsePreserveStatus(command, option);
 
     if (command.hasOption(DistCpOptionSwitch.DIFF.getSwitch())) {
-      String[] snapshots = getVals(command, DistCpOptionSwitch.DIFF.getSwitch());
-      Preconditions.checkArgument(snapshots != null && snapshots.length == 2,
-          "Must provide both the starting and ending snapshot names");
-      option.setUseDiff(true, snapshots[0], snapshots[1]);
+      String[] snapshots = getVals(command,
+          DistCpOptionSwitch.DIFF.getSwitch());
+      checkSnapshotsArgs(snapshots);
+      option.setUseDiff(snapshots[0], snapshots[1]);
+    }
+    if (command.hasOption(DistCpOptionSwitch.RDIFF.getSwitch())) {
+      String[] snapshots = getVals(command,
+          DistCpOptionSwitch.RDIFF.getSwitch());
+      checkSnapshotsArgs(snapshots);
+      option.setUseRdiff(snapshots[0], snapshots[1]);
     }
 
     parseFileLimit(command);
@@ -169,12 +184,68 @@ public class OptionsParser {
           DistCpOptionSwitch.FILTERS.getSwitch()));
     }
 
+    parseBlocksPerChunk(command, option);
+
+    parseCopyBufferSize(command, option);
+
     return option;
   }
 
+
   /**
-   * parseSizeLimit is a helper method for parsing the deprecated
-   * argument SIZE_LIMIT.
+   * A helper method to parse chunk size in number of blocks.
+   * Used when breaking large file into chunks to copy in parallel.
+   *
+   * @param command command line arguments
+   */
+  private static void parseBlocksPerChunk(CommandLine command,
+      DistCpOptions option) {
+    boolean hasOption =
+        command.hasOption(DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch());
+    LOG.info("parseChunkSize: " +
+        DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch() + " " + hasOption);
+    if (hasOption) {
+      String chunkSizeString = getVal(command,
+          DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch().trim());
+      try {
+        int csize = Integer.parseInt(chunkSizeString);
+        if (csize < 0) {
+          csize = 0;
+        }
+        LOG.info("Set distcp blocksPerChunk to " + csize);
+        option.setBlocksPerChunk(csize);
+      }
+      catch (NumberFormatException e) {
+        throw new IllegalArgumentException("blocksPerChunk is invalid: "
+            + chunkSizeString, e);
+      }
+    }
+  }
+
+  /**
+   * A helper method to parse copyBufferSize.
+   *
+   * @param command command line arguments
+   */
+  private static void parseCopyBufferSize(CommandLine command,
+      DistCpOptions option) {
+    if (command.hasOption(DistCpOptionSwitch.COPY_BUFFER_SIZE.getSwitch())) {
+      String copyBufferSizeStr =
+          getVal(command, DistCpOptionSwitch.COPY_BUFFER_SIZE.getSwitch()
+              .trim());
+      try {
+        int copyBufferSize = Integer.parseInt(copyBufferSizeStr);
+        option.setCopyBufferSize(copyBufferSize);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("copyBufferSize is invalid: "
+            + copyBufferSizeStr, e);
+      }
+    }
+  }
+
+  /**
+   * parseSizeLimit is a helper method for parsing the deprecated argument
+   * SIZE_LIMIT.
    *
    * @param command command line arguments
    */
@@ -206,8 +277,7 @@ public class OptionsParser {
                               DistCpOptionSwitch.FILE_LIMIT.getSwitch().trim());
       try {
         Integer.parseInt(fileLimitString);
-      }
-      catch (NumberFormatException e) {
+      } catch (NumberFormatException e) {
         throw new IllegalArgumentException("File-limit is invalid: "
                                             + fileLimitString, e);
       }
@@ -342,7 +412,7 @@ public class OptionsParser {
             "source paths present");
       }
       option = new DistCpOptions(new Path(getVal(command, DistCpOptionSwitch.
-              SOURCE_FILE_LISTING.getSwitch())), targetPath);
+          SOURCE_FILE_LISTING.getSwitch())), targetPath);
     } else {
       if (sourcePaths.isEmpty()) {
         throw new IllegalArgumentException("Neither source file listing nor " +

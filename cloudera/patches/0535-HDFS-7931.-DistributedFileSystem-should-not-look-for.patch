@@ -1,9 +1,9 @@
 From 778cfc3669fd0f3c83cdf59a2c6f1075917edf83 Mon Sep 17 00:00:00 2001
 From: Arun Suresh <asuresh@cloudera.com>
 Date: Thu, 23 Apr 2015 12:37:48 -0700
-Subject: [PATCH 535/924] HDFS-7931. DistributedFileSystem should not look for
- keyProvider in cache if Encryption is disabled
- (asuresh)
+Subject: [PATCH 0535/2639] HDFS-7931. DistributedFileSystem should not look
+ for keyProvider in cache if Encryption is
+ disabled (asuresh)
 
 (cherry picked from commit 7660da95cb67cbfe034aa8fa2a5bf0f8c9fdf41a)
 (cherry picked from commit 3d17c5017604d59b029278a920da3e4606ac3f51)

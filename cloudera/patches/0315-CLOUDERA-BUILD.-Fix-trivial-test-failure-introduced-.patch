@@ -1,8 +1,9 @@
 From 7ada8326f0a94341fdf7e2bfe931383fd7c0b4ff Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Tue, 24 Jun 2014 14:49:29 -0700
-Subject: [PATCH 315/924] CLOUDERA-BUILD. Fix trivial test failure introduced
- by CLOUDERA-BUILD CDH-13222 (CDH-19994)
+Subject: [PATCH 0315/2639] CLOUDERA-BUILD. Fix trivial test failure
+ introduced by CLOUDERA-BUILD CDH-13222
+ (CDH-19994)
 
 (cherry picked from commit 2577048baa35a47b7fb98210ce8285c426c41b50)
 (cherry picked from commit 4189cc67eb18becb682534638077167f1d1130d9)

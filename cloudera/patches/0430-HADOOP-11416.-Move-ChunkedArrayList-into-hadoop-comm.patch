@@ -1,7 +1,7 @@
 From 1a455f01323ffaa16e6d9f1a3d46d9f385237560 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 16 Dec 2014 17:05:27 -0800
-Subject: [PATCH 430/924] HADOOP-11416. Move ChunkedArrayList into
+Subject: [PATCH 0430/2639] HADOOP-11416. Move ChunkedArrayList into
  hadoop-common (cmccabe)
 
 Conflicts:

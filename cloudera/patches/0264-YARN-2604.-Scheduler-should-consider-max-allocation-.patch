@@ -1,10 +1,11 @@
 From 60246749a4b68898833cc20577aad1271887de7f Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Fri, 21 Nov 2014 10:32:28 -0800
-Subject: [PATCH 264/924] YARN-2604. Scheduler should consider
+Subject: [PATCH 0264/2639] YARN-2604. Scheduler should consider
  max-allocation-* in conjunction with the largest
- node. (Robert Kanter via kasha) (cherry picked from
- commit 3114d4731dcca7cb6c16aaa7c7a6550b7dd7dccb)
+ node. (Robert Kanter via kasha) (cherry picked
+ from commit
+ 3114d4731dcca7cb6c16aaa7c7a6550b7dd7dccb)
 
 (cherry picked from commit e9db0aa35c95bc67b5c5b8692e681865577e572d)
 

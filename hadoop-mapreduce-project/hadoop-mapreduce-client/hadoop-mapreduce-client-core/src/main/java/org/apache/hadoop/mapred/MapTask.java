@@ -411,8 +411,14 @@ public class MapTask extends Task {
         LOG.warn(msg, e);
       }
     }
-    throw new IOException("Initialization of all the collectors failed. " +
-      "Error in last collector was :" + lastException.getMessage(), lastException);
+
+    if (lastException != null) {
+      throw new IOException("Initialization of all the collectors failed. " +
+          "Error in last collector was:" + lastException.toString(),
+          lastException);
+    } else {
+      throw new IOException("Initialization of all the collectors failed.");
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -1582,6 +1588,7 @@ public class MapTask extends Task {
       final long size = distanceTo(bufstart, bufend, bufvoid) +
                   partitions * APPROX_HEADER_LENGTH;
       FSDataOutputStream out = null;
+      FSDataOutputStream partitionOut = null;
       try {
         // create spill file
         final SpillRecord spillRec = new SpillRecord(partitions);
@@ -1602,7 +1609,7 @@ public class MapTask extends Task {
           IFile.Writer<K, V> writer = null;
           try {
             long segmentStart = out.getPos();
-            FSDataOutputStream partitionOut = CryptoUtils.wrapIfNecessary(job, out);
+            partitionOut = CryptoUtils.wrapIfNecessary(job, out, false);
             writer = new Writer<K, V>(job, partitionOut, keyClass, valClass, codec,
                                       spilledRecordsCounter);
             if (combinerRunner == null) {
@@ -1637,6 +1644,10 @@ public class MapTask extends Task {
 
             // close the writer
             writer.close();
+            if (partitionOut != out) {
+              partitionOut.close();
+              partitionOut = null;
+            }
 
             // record offsets
             rec.startOffset = segmentStart;
@@ -1665,6 +1676,9 @@ public class MapTask extends Task {
         ++numSpills;
       } finally {
         if (out != null) out.close();
+        if (partitionOut != null) {
+          partitionOut.close();
+        }
       }
     }
 
@@ -1677,6 +1691,7 @@ public class MapTask extends Task {
                                    int partition) throws IOException {
       long size = kvbuffer.length + partitions * APPROX_HEADER_LENGTH;
       FSDataOutputStream out = null;
+      FSDataOutputStream partitionOut = null;
       try {
         // create spill file
         final SpillRecord spillRec = new SpillRecord(partitions);
@@ -1691,7 +1706,7 @@ public class MapTask extends Task {
           try {
             long segmentStart = out.getPos();
             // Create a new codec, don't care!
-            FSDataOutputStream partitionOut = CryptoUtils.wrapIfNecessary(job, out);
+            partitionOut = CryptoUtils.wrapIfNecessary(job, out, false);
             writer = new IFile.Writer<K,V>(job, partitionOut, keyClass, valClass, codec,
                                             spilledRecordsCounter);
 
@@ -1703,6 +1718,10 @@ public class MapTask extends Task {
               mapOutputByteCounter.increment(out.getPos() - recordStart);
             }
             writer.close();
+            if (partitionOut != out) {
+              partitionOut.close();
+              partitionOut = null;
+            }
 
             // record offsets
             rec.startOffset = segmentStart;
@@ -1730,6 +1749,9 @@ public class MapTask extends Task {
         ++numSpills;
       } finally {
         if (out != null) out.close();
+        if (partitionOut != null) {
+          partitionOut.close();
+        }
       }
     }
 
@@ -1841,6 +1863,7 @@ public class MapTask extends Task {
 
       //The output stream for the final single output file
       FSDataOutputStream finalOut = rfs.create(finalOutputFile, true, 4096);
+      FSDataOutputStream finalPartitionOut = null;
 
       if (numSpills == 0) {
         //create dummy files
@@ -1849,10 +1872,15 @@ public class MapTask extends Task {
         try {
           for (int i = 0; i < partitions; i++) {
             long segmentStart = finalOut.getPos();
-            FSDataOutputStream finalPartitionOut = CryptoUtils.wrapIfNecessary(job, finalOut);
+            finalPartitionOut = CryptoUtils.wrapIfNecessary(job, finalOut,
+                false);
             Writer<K, V> writer =
               new Writer<K, V>(job, finalPartitionOut, keyClass, valClass, codec, null);
             writer.close();
+            if (finalPartitionOut != finalOut) {
+              finalPartitionOut.close();
+              finalPartitionOut = null;
+            }
             rec.startOffset = segmentStart;
             rec.rawLength = writer.getRawLength() + CryptoUtils.cryptoPadding(job);
             rec.partLength = writer.getCompressedLength() + CryptoUtils.cryptoPadding(job);
@@ -1861,6 +1889,9 @@ public class MapTask extends Task {
           sr.writeToFile(finalIndexFile, job);
         } finally {
           finalOut.close();
+          if (finalPartitionOut != null) {
+            finalPartitionOut.close();
+          }
         }
         sortPhase.complete();
         return;
@@ -1904,7 +1935,7 @@ public class MapTask extends Task {
 
           //write merged output to disk
           long segmentStart = finalOut.getPos();
-          FSDataOutputStream finalPartitionOut = CryptoUtils.wrapIfNecessary(job, finalOut);
+          finalPartitionOut = CryptoUtils.wrapIfNecessary(job, finalOut, false);
           Writer<K, V> writer =
               new Writer<K, V>(job, finalPartitionOut, keyClass, valClass, codec,
                                spilledRecordsCounter);
@@ -1917,6 +1948,10 @@ public class MapTask extends Task {
 
           //close
           writer.close();
+          if (finalPartitionOut != finalOut) {
+            finalPartitionOut.close();
+            finalPartitionOut = null;
+          }
 
           sortPhase.startNextPhase();
           
@@ -1928,6 +1963,9 @@ public class MapTask extends Task {
         }
         spillRec.writeToFile(finalIndexFile, job);
         finalOut.close();
+        if (finalPartitionOut != null) {
+          finalPartitionOut.close();
+        }
         for(int i = 0; i < numSpills; i++) {
           rfs.delete(filename[i],true);
         }

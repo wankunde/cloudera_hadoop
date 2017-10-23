@@ -1,8 +1,8 @@
 From 13b224d0b7442dd2e308be4631d53971c1bdf8bd Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Thu, 13 Nov 2014 10:21:27 -0800
-Subject: [PATCH 175/924] CLOUDERA-BUILD. CDH-23226: Bump C5 Hadoop's jetty to
- 6.1.26.cloudera.4
+Subject: [PATCH 0175/2639] CLOUDERA-BUILD. CDH-23226: Bump C5 Hadoop's jetty
+ to 6.1.26.cloudera.4
 
 (cherry picked from commit d3c8b1c5c8dbba403570ae7c5fcd85d760534aa6)
 (cherry picked from commit 79c51937798e5414008d0419ae92f75222fa122c)

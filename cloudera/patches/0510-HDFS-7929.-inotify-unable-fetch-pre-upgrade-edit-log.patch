@@ -1,9 +1,9 @@
 From 5a6cd19799696d25403c328878105f54a9e5b5bc Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 18 Mar 2015 18:48:54 -0700
-Subject: [PATCH 510/924] HDFS-7929. inotify unable fetch pre-upgrade edit log
- segments once upgrade starts (Zhe Zhang via Colin
- P. McCabe)
+Subject: [PATCH 0510/2639] HDFS-7929. inotify unable fetch pre-upgrade edit
+ log segments once upgrade starts (Zhe Zhang via
+ Colin P. McCabe)
 
 (cherry picked from commit 43b41f22411439c5e23629197fb2fde45dcf0f0f)
 

@@ -1,7 +1,7 @@
 From 51a601d63019bb807fce15c1346932c5162fb2db Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 28 Jan 2013 09:58:58 -0800
-Subject: [PATCH 022/924] MR1: CLOUDERA-BUILD. ReduceTask class requires
+Subject: [PATCH 0022/2639] MR1: CLOUDERA-BUILD. ReduceTask class requires
  public visibility for pluggable sort.
 
   Reason: bug

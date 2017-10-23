@@ -1,9 +1,9 @@
 From cfae8cd951025956b152e6eee86547dc6fd88827 Mon Sep 17 00:00:00 2001
 From: Tsuyoshi Ozawa <ozawa@apache.org>
 Date: Thu, 22 Jan 2015 14:15:59 +0900
-Subject: [PATCH 722/924] HADOOP-11209.
- Configuration#updatingResource/finalParameters are
- not thread-safe. Contributed by Varun Saxena.
+Subject: [PATCH 0722/2639] HADOOP-11209.
+ Configuration#updatingResource/finalParameters
+ are not thread-safe. Contributed by Varun Saxena.
 
 (cherry picked from commit 786dbdfad8991a99d71bdd861e0b5014669a422c)
 (cherry picked from commit 1435b2002b4556d28f9ecb641561914d6e4078da)

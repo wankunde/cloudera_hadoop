@@ -1,8 +1,8 @@
 From 90d0ebd536686a9af94aae3a4a49d0e8caa9d536 Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Tue, 21 Apr 2015 12:31:50 -0700
-Subject: [PATCH 551/924] MAPREDUCE-5710. Backport MAPREDUCE-1305 to branch-1
- (Yongjun Zhang via Sandy Ryza)
+Subject: [PATCH 0551/2639] MAPREDUCE-5710. Backport MAPREDUCE-1305 to
+ branch-1 (Yongjun Zhang via Sandy Ryza)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1556372 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 1e521f3824596178b7f1c6a24b0a4d5bf4ba59d8)

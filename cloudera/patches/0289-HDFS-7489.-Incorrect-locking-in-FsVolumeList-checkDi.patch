@@ -1,7 +1,7 @@
 From 2f15acb954b2268f4d0396cdadc68ad3dc1fa557 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 9 Dec 2014 10:55:17 -0800
-Subject: [PATCH 289/924] HDFS-7489. Incorrect locking in
+Subject: [PATCH 0289/2639] HDFS-7489. Incorrect locking in
  FsVolumeList#checkDirs can hang datanodes (Noah
  Lorang via Colin P. McCabe) (cherry picked from
  commit d8352b9b2b99aa46679c5880a724ba3f0ceb41ff)

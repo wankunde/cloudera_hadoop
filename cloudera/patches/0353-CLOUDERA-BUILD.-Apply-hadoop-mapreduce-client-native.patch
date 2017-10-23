@@ -1,7 +1,7 @@
 From 45799f1be331c4380c69efd19cba0c6fffad4778 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Sun, 1 Feb 2015 09:35:11 -0800
-Subject: [PATCH 353/924] CLOUDERA-BUILD. Apply
+Subject: [PATCH 0353/2639] CLOUDERA-BUILD. Apply
  hadoop-mapreduce-client-nativetask changes in
  HADOOP-11184.
 

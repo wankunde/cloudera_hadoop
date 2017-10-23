@@ -1,7 +1,7 @@
 From b97e2ccf02490935184b18f57575e449d003c831 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Thu, 9 Apr 2015 00:07:49 -0700
-Subject: [PATCH 526/924] YARN-3465. Use LinkedHashMap to preserve order of
+Subject: [PATCH 0526/2639] YARN-3465. Use LinkedHashMap to preserve order of
  resource requests. (Zhihai Xu via kasha)
 
 (cherry picked from commit 6495940eae09418a939882a8955845f9241a6485)

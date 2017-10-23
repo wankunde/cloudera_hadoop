@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStartMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -40,33 +41,42 @@ public class TestContainerMemoryCapabilitiesAbsoluteMinimum {
   @SuppressWarnings("unchecked")
   private void testMinimumMemory(int memoryMbSet, long memoryBytesExpected)
       throws Exception {
-    ContainerImpl.LaunchTransition lt = new ContainerImpl.LaunchTransition();
+    NodeManager nm = new NodeManager();
+    YarnConfiguration conf = new YarnConfiguration();
+    try {
+      nm.init(conf);
 
-    ArgumentCaptor<ContainerStartMonitoringEvent> captor =
-        ArgumentCaptor.forClass(ContainerStartMonitoringEvent.class);
+      ContainerImpl.LaunchTransition lt = new ContainerImpl.LaunchTransition();
 
-    Resource resource = Resource.newInstance(memoryMbSet, 1);
+      ArgumentCaptor<ContainerStartMonitoringEvent> captor =
+          ArgumentCaptor.forClass(ContainerStartMonitoringEvent.class);
 
-    ApplicationId appId = ApplicationId.newInstance(0, 1);
-    ApplicationAttemptId appAttemptID =
-        ApplicationAttemptId.newInstance(appId, 0);
-    ContainerId containerId = ContainerId.newInstance(appAttemptID, 1);
+      Resource resource = Resource.newInstance(memoryMbSet, 1);
 
-    Dispatcher mockDispatcher = Mockito.mock(Dispatcher.class);
-    EventHandler mockEventHandler = Mockito.mock(EventHandler.class);
-    Mockito.when(mockDispatcher.getEventHandler()).thenReturn(mockEventHandler);
-    NodeManagerMetrics mockMetrics = Mockito.mock(NodeManagerMetrics.class);
-    ContainerTokenIdentifier containerToken = BuilderUtils
-        .newContainerTokenIdentifier(BuilderUtils.newContainerToken(
-            containerId, InetAddress.getByName("localhost")
-            .getCanonicalHostName(), 1234, "u", resource,
-            System.currentTimeMillis() + 10000, 123, "password".getBytes(),
-            System.currentTimeMillis()));
-    ContainerImpl container = new ContainerImpl(new YarnConfiguration(),
-        mockDispatcher, null, null, null, mockMetrics, containerToken);
-    lt.transition(container, null);
-    Mockito.verify(mockEventHandler, Mockito.times(1)).handle(captor.capture());
-    Assert.assertEquals(memoryBytesExpected, captor.getValue().getPmemLimit());
+      ApplicationId appId = ApplicationId.newInstance(0, 1);
+      ApplicationAttemptId appAttemptID =
+          ApplicationAttemptId.newInstance(appId, 0);
+      ContainerId containerId = ContainerId.newInstance(appAttemptID, 1);
+
+      Dispatcher mockDispatcher = Mockito.mock(Dispatcher.class);
+      EventHandler mockEventHandler = Mockito.mock(EventHandler.class);
+      Mockito.when(mockDispatcher.getEventHandler()).thenReturn(mockEventHandler);
+      NodeManagerMetrics mockMetrics = Mockito.mock(NodeManagerMetrics.class);
+      ContainerTokenIdentifier containerToken = BuilderUtils
+          .newContainerTokenIdentifier(BuilderUtils.newContainerToken(
+              containerId, InetAddress.getByName("localhost")
+                  .getCanonicalHostName(), 1234, "u", resource,
+              System.currentTimeMillis() + 10000, 123, "password".getBytes(),
+              System.currentTimeMillis()));
+      ContainerImpl container = new ContainerImpl(conf,
+          mockDispatcher, null, null, mockMetrics, containerToken, nm.getNMContext());
+      lt.transition(container, null);
+      Mockito.verify(mockEventHandler, Mockito.times(1)).handle(captor.capture());
+      Assert.assertEquals(memoryBytesExpected, captor.getValue().getPmemLimit());
+    }
+    finally {
+      nm.stop();
+    }
   }
 
   @Test

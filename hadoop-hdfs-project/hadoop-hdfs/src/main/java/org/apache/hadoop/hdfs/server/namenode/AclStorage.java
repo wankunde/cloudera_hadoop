@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -68,21 +70,22 @@ final class AclStorage {
    *
    * @param child INode newly created child
    */
-  public static void copyINodeDefaultAcl(INode child) {
+  public static boolean copyINodeDefaultAcl(INode child) {
     INodeDirectory parent = child.getParent();
     AclFeature parentAclFeature = parent.getAclFeature();
     if (parentAclFeature == null || !(child.isFile() || child.isDirectory())) {
-      return;
+      return false;
     }
 
     // Split parent's entries into access vs. default.
-    List<AclEntry> featureEntries = parent.getAclFeature().getEntries();
+    List<AclEntry> featureEntries = getEntriesFromAclFeature(parent
+        .getAclFeature());
     ScopedAclEntries scopedEntries = new ScopedAclEntries(featureEntries);
     List<AclEntry> parentDefaultEntries = scopedEntries.getDefaultEntries();
 
     // The parent may have an access ACL but no default ACL.  If so, exit.
     if (parentDefaultEntries.isEmpty()) {
-      return;
+      return false;
     }
 
     // Pre-allocate list size for access entries to copy from parent.
@@ -139,6 +142,7 @@ final class AclStorage {
     }
 
     child.setPermission(newPerm);
+    return true;
   }
 
   /**
@@ -153,7 +157,25 @@ final class AclStorage {
    */
   public static List<AclEntry> readINodeAcl(INode inode, int snapshotId) {
     AclFeature f = inode.getAclFeature(snapshotId);
-    return f == null ? ImmutableList.<AclEntry> of() : f.getEntries();
+    return getEntriesFromAclFeature(f);
+  }
+
+  /**
+   * Build list of AclEntries from the AclFeature
+   * @param aclFeature AclFeature
+   * @return List of entries
+   */
+  @VisibleForTesting
+  static ImmutableList<AclEntry> getEntriesFromAclFeature(AclFeature aclFeature) {
+    if (aclFeature == null) {
+      return ImmutableList.<AclEntry> of();
+    }
+    ImmutableList.Builder<AclEntry> b = new ImmutableList.Builder<AclEntry>();
+    for (int pos = 0, entry; pos < aclFeature.getEntriesSize(); pos++) {
+      entry = aclFeature.getEntryAt(pos);
+      b.add(AclEntryStatusFormat.toAclEntry(entry));
+    }
+    return b.build();
   }
 
   /**
@@ -179,7 +201,7 @@ final class AclStorage {
 
     final List<AclEntry> existingAcl;
     // Split ACL entries stored in the feature into access vs. default.
-    List<AclEntry> featureEntries = f.getEntries();
+    List<AclEntry> featureEntries = getEntriesFromAclFeature(f);
     ScopedAclEntries scoped = new ScopedAclEntries(featureEntries);
     List<AclEntry> accessEntries = scoped.getAccessEntries();
     List<AclEntry> defaultEntries = scoped.getDefaultEntries();
@@ -235,7 +257,7 @@ final class AclStorage {
     }
 
     FsPermission perm = inode.getFsPermission();
-    List<AclEntry> featureEntries = f.getEntries();
+    List<AclEntry> featureEntries = getEntriesFromAclFeature(f);
     if (featureEntries.get(0).getScope() == AclEntryScope.ACCESS) {
       // Restore group permissions from the feature's entry to permission
       // bits, overwriting the mask, which is not part of a minimal ACL.
@@ -243,7 +265,10 @@ final class AclStorage {
           .setScope(AclEntryScope.ACCESS).setType(AclEntryType.GROUP).build();
       int groupEntryIndex = Collections.binarySearch(featureEntries,
           groupEntryKey, AclTransformation.ACL_ENTRY_COMPARATOR);
-      assert groupEntryIndex >= 0;
+      Preconditions.checkPositionIndex(groupEntryIndex, featureEntries.size(),
+          "Invalid group entry index after binary-searching inode: " + inode
+              .getFullPathName() + "(" + inode.getId() + ") "
+              + "with featureEntries:" + featureEntries);
       FsAction groupPerm = featureEntries.get(groupEntryIndex).getPermission();
       FsPermission newPerm = new FsPermission(perm.getUserAction(), groupPerm,
           perm.getOtherAction(), perm.getStickyBit());
@@ -330,7 +355,7 @@ final class AclStorage {
 
     // Add all default entries to the feature.
     featureEntries.addAll(defaultEntries);
-    return new AclFeature(ImmutableList.copyOf(featureEntries));
+    return new AclFeature(AclEntryStatusFormat.toInt(featureEntries));
   }
 
   /**

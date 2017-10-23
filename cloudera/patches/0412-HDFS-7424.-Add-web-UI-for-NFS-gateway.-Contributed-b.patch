@@ -1,7 +1,7 @@
 From db6a01b3450bad734033a9e59fae047845bd3614 Mon Sep 17 00:00:00 2001
 From: Brandon Li <brandonli@apache.org>
 Date: Thu, 4 Dec 2014 10:46:26 -0800
-Subject: [PATCH 412/924] HDFS-7424. Add web UI for NFS gateway. Contributed
+Subject: [PATCH 0412/2639] HDFS-7424. Add web UI for NFS gateway. Contributed
  by Brandon Li
 
 (cherry picked from commit 1bbcc3d0320b9435317bfeaa078af22d4de8d00c)

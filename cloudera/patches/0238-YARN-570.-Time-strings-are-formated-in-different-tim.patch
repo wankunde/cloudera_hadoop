@@ -1,8 +1,9 @@
 From 394e0fe595836292031881b203b311b2f28901fd Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Tue, 11 Nov 2014 13:22:48 -0800
-Subject: [PATCH 238/924] YARN-570. Time strings are formated in different
- timezone. (Akira Ajisaka and Peng Zhang via kasha)
+Subject: [PATCH 0238/2639] YARN-570. Time strings are formated in different
+ timezone. (Akira Ajisaka and Peng Zhang via
+ kasha)
 
 (cherry picked from commit 456b973819904e9647dabad292d2d6205dd84399)
 

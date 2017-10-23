@@ -1,8 +1,8 @@
 From d111f18bf33c0bbfff36959014292e7a3d840547 Mon Sep 17 00:00:00 2001
 From: Mike Mellenthin <mikem@cloudera.com>
 Date: Fri, 28 Feb 2014 16:20:17 -0800
-Subject: [PATCH 179/924] CLOUDERA-BUILD. Use a more calm color in the Hadoop
- web UI.
+Subject: [PATCH 0179/2639] CLOUDERA-BUILD. Use a more calm color in the
+ Hadoop web UI.
 
 (cherry picked from commit 275e44425b7c7c39265837f3da5cd1af3c042b20)
 (cherry picked from commit 8ba202b957f82df0623a86aca99c9f5d1c95625a)

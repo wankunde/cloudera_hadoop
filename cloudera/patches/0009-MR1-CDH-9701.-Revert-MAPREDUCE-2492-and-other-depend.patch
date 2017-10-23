@@ -1,7 +1,7 @@
 From 26393434d29020506025be2c7e4691a9d05e8d1d Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Wed, 23 Jan 2013 14:48:56 -0800
-Subject: [PATCH 009/924] MR1: CDH-9701. Revert MAPREDUCE-2492 and other
+Subject: [PATCH 0009/2639] MR1: CDH-9701. Revert MAPREDUCE-2492 and other
  dependent JIRAs. The reverted commits are:
 
 e804373 "CDH-9220. Fix TestStreamingStatus to check log contains error"

@@ -1,7 +1,7 @@
 From dd805315d383819d03f8b02b99fd49cb3927b0f0 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 9 Feb 2015 20:23:23 -0800
-Subject: [PATCH 361/924] HDFS-7718. Store KeyProvider in ClientContext to
+Subject: [PATCH 0361/2639] HDFS-7718. Store KeyProvider in ClientContext to
  avoid leaking key provider threads when using
  FileContext (Arun Suresh via Colin P. McCabe)
 

@@ -1,7 +1,7 @@
 From 162040d7c508382d6bd8ee080135811b3853e894 Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Thu, 11 Jul 2013 15:28:15 -0700
-Subject: [PATCH 093/924] MR1: MAPREDUCE-5351. Fixed a memory leak in
+Subject: [PATCH 0093/2639] MR1: MAPREDUCE-5351. Fixed a memory leak in
  JobTracker due to stable FS objects in FSCache.
  Contributed by Sandy Ryza.
 

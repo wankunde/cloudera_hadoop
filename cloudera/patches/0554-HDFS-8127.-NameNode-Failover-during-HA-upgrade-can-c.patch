@@ -1,9 +1,9 @@
 From 471d939b7401621e09d8c31a8633b8de77af07c3 Mon Sep 17 00:00:00 2001
 From: Jing Zhao <jing9@apache.org>
 Date: Tue, 14 Apr 2015 15:05:23 -0700
-Subject: [PATCH 554/924] HDFS-8127. NameNode Failover during HA upgrade can
- cause DataNode to finalize upgrade. Contributed by
- Jing Zhao.
+Subject: [PATCH 0554/2639] HDFS-8127. NameNode Failover during HA upgrade can
+ cause DataNode to finalize upgrade. Contributed
+ by Jing Zhao.
 
 (cherry picked from commit fddd55279d0bdd08b3b40aba6fe2ded1d2e0d846)
 (cherry picked from commit 38b031d6bab8527698bd186887d301bd6a63cf01)

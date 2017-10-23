@@ -1,7 +1,7 @@
 From 958597aaf566368407f3619b0c16c74e8326a45f Mon Sep 17 00:00:00 2001
 From: Zhihai Xu <zxu@cloudera.com>
 Date: Thu, 19 Jun 2014 19:02:56 -0700
-Subject: [PATCH 134/924] MR1: MAPREDUCE-5777. Support utf-8 text with BOM
+Subject: [PATCH 0134/2639] MR1: MAPREDUCE-5777. Support utf-8 text with BOM
  (byte order marker)
 
 (cherry picked from commit 507af07fcd86498f84e00382fc8e650cffaef6f3)

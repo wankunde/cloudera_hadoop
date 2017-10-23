@@ -55,10 +55,10 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   private static final String PROCFS = "/proc/";
 
-  private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern .compile(
-    "^([0-9-]+)\\s([^\\s]+)\\s[^\\s]\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+)\\s" +
-    "([0-9-]+\\s){7}([0-9]+)\\s([0-9]+)\\s([0-9-]+\\s){7}([0-9]+)\\s([0-9]+)" +
-    "(\\s[0-9-]+){15}");
+  private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern.compile(
+      "^([\\d-]+)\\s\\((.*)\\)\\s[^\\s]\\s([\\d-]+)\\s([\\d-]+)\\s" +
+      "([\\d-]+)\\s([\\d-]+\\s){7}(\\d+)\\s(\\d+)\\s([\\d-]+\\s){7}(\\d+)\\s" +
+      "(\\d+)(\\s[\\d-]+){15}");
 
   public static final String PROCFS_STAT_FILE = "stat";
   public static final String PROCFS_CMDLINE_FILE = "cmdline";
@@ -138,7 +138,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   static private String deadPid = "-1";
   private String pid = deadPid;
   static private Pattern numberPattern = Pattern.compile("[1-9][0-9]*");
-  private Long cpuTime = 0L;
+  private long cpuTime = UNAVAILABLE;
 
   protected Map<String, ProcessInfo> processTree =
     new HashMap<String, ProcessInfo>();
@@ -338,119 +338,135 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     return ret.toString();
   }
 
-  /**
-   * Get the cumulative virtual memory used by all the processes in the
-   * process-tree that are older than the passed in age.
-   *
-   * @param olderThanAge processes above this age are included in the
-   *                      memory addition
-   * @return cumulative virtual memory used by the process-tree in bytes,
-   *          for processes older than this age.
-   */
   @Override
-  public long getCumulativeVmem(int olderThanAge) {
-    long total = 0;
+  public long getVirtualMemorySize(int olderThanAge) {
+    long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.getAge() > olderThanAge)) {
-        total += p.getVmem();
+      if (p != null) {
+        if (total == UNAVAILABLE ) {
+          total = 0;
+        }
+        if (p.getAge() > olderThanAge) {
+          total += p.getVmem();
+        }
       }
     }
     return total;
   }
-
-  /**
-   * Get the cumulative resident set size (rss) memory used by all the processes
-   * in the process-tree that are older than the passed in age.
-   *
-   * @param olderThanAge processes above this age are included in the
-   *                      memory addition
-   * @return cumulative rss memory used by the process-tree in bytes,
-   *          for processes older than this age. return 0 if it cannot be
-   *          calculated
-   */
+  
   @Override
-  public long getCumulativeRssmem(int olderThanAge) {
+  @SuppressWarnings("deprecation")
+  public long getCumulativeVmem(int olderThanAge) {
+    return getVirtualMemorySize(olderThanAge);
+  }
+
+  @Override
+  public long getRssMemorySize(int olderThanAge) {
     if (PAGE_SIZE < 0) {
-      return 0;
+      return UNAVAILABLE;
     }
     if (smapsEnabled) {
-      return getSmapBasedCumulativeRssmem(olderThanAge);
+      return getSmapBasedRssMemorySize(olderThanAge);
     }
+    boolean isAvailable = false;
     long totalPages = 0;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.getAge() > olderThanAge)) {
-        totalPages += p.getRssmemPage();
+      if ((p != null) ) {
+        if (p.getAge() > olderThanAge) {
+          totalPages += p.getRssmemPage();
+        }
+        isAvailable = true;
       }
     }
-    return totalPages * PAGE_SIZE; // convert # pages to byte
+    return isAvailable ? totalPages * PAGE_SIZE : UNAVAILABLE; // convert # pages to byte
+  }
+  
+  @Override
+  @SuppressWarnings("deprecation")
+  public long getCumulativeRssmem(int olderThanAge) {
+    return getRssMemorySize(olderThanAge);
   }
 
   /**
-   * Get the cumulative resident set size (RSS) memory used by all the processes
+   * Get the resident set size (RSS) memory used by all the processes
    * in the process-tree that are older than the passed in age. RSS is
    * calculated based on SMAP information. Skip mappings with "r--s", "r-xs"
    * permissions to get real RSS usage of the process.
    *
    * @param olderThanAge
    *          processes above this age are included in the memory addition
-   * @return cumulative rss memory used by the process-tree in bytes, for
-   *         processes older than this age. return 0 if it cannot be calculated
+   * @return rss memory used by the process-tree in bytes, for
+   * processes older than this age. return {@link #UNAVAILABLE} if it cannot
+   * be calculated.
    */
-  private long getSmapBasedCumulativeRssmem(int olderThanAge) {
-    long total = 0;
+  private long getSmapBasedRssMemorySize(int olderThanAge) {
+    long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.getAge() > olderThanAge)) {
-        ProcessTreeSmapMemInfo procMemInfo = processSMAPTree.get(p.getPid());
-        if (procMemInfo != null) {
-          for (ProcessSmapMemoryInfo info : procMemInfo.getMemoryInfoList()) {
-            // Do not account for r--s or r-xs mappings
-            if (info.getPermission().trim()
-              .equalsIgnoreCase(READ_ONLY_WITH_SHARED_PERMISSION)
-                || info.getPermission().trim()
-                  .equalsIgnoreCase(READ_EXECUTE_WITH_SHARED_PERMISSION)) {
-              continue;
-            }
-            total +=
-                Math.min(info.sharedDirty, info.pss) + info.privateDirty
-                    + info.privateClean;
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(" total(" + olderThanAge + "): PID : " + p.getPid()
-                  + ", SharedDirty : " + info.sharedDirty + ", PSS : "
-                  + info.pss + ", Private_Dirty : " + info.privateDirty
-                  + ", Private_Clean : " + info.privateClean + ", total : "
-                  + (total * KB_TO_BYTES));
+      if (p != null) {
+        // set resource to 0 instead of UNAVAILABLE
+        if (total == UNAVAILABLE){
+          total = 0;
+        }
+        if (p.getAge() > olderThanAge) {
+          ProcessTreeSmapMemInfo procMemInfo = processSMAPTree.get(p.getPid());
+          if (procMemInfo != null) {
+            for (ProcessSmapMemoryInfo info : procMemInfo.getMemoryInfoList()) {
+              // Do not account for r--s or r-xs mappings
+              if (info.getPermission().trim()
+                .equalsIgnoreCase(READ_ONLY_WITH_SHARED_PERMISSION)
+                  || info.getPermission().trim()
+                    .equalsIgnoreCase(READ_EXECUTE_WITH_SHARED_PERMISSION)) {
+                continue;
+              }
+
+              total +=
+                  Math.min(info.sharedDirty, info.pss) + info.privateDirty
+                      + info.privateClean;
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(" total(" + olderThanAge + "): PID : " + p.getPid()
+                    + ", SharedDirty : " + info.sharedDirty + ", PSS : "
+                    + info.pss + ", Private_Dirty : " + info.privateDirty
+                    + ", Private_Clean : " + info.privateClean + ", total : "
+                    + (total * KB_TO_BYTES));
+              }
             }
           }
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(procMemInfo.toString());
+        
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(procMemInfo.toString());
+          }
         }
       }
+      
     }
-    total = (total * KB_TO_BYTES); // convert to bytes
+    if (total > 0) {
+      total *= KB_TO_BYTES; // convert to bytes
+    }
     LOG.info("SmapBasedCumulativeRssmem (bytes) : " + total);
     return total; // size
   }
 
-  /**
-   * Get the CPU time in millisecond used by all the processes in the
-   * process-tree since the process-tree created
-   *
-   * @return cumulative CPU time in millisecond since the process-tree created
-   *         return 0 if it cannot be calculated
-   */
   @Override
   public long getCumulativeCpuTime() {
     if (JIFFY_LENGTH_IN_MILLIS < 0) {
-      return 0;
+      return UNAVAILABLE;
     }
     long incJiffies = 0;
+    boolean isAvailable = false;
     for (ProcessInfo p : processTree.values()) {
       if (p != null) {
         incJiffies += p.getDtime();
+        // data is available
+        isAvailable = true;
       }
     }
-    cpuTime += incJiffies * JIFFY_LENGTH_IN_MILLIS;
+    if (isAvailable) {
+      // reset cpuTime to 0 instead of UNAVAILABLE
+      if (cpuTime == UNAVAILABLE) {
+        cpuTime = 0L;
+      }
+      cpuTime += incJiffies * JIFFY_LENGTH_IN_MILLIS;
+    }
     return cpuTime;
   }
 
@@ -534,8 +550,9 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       Matcher m = PROCFS_STAT_FILE_FORMAT.matcher(str);
       boolean mat = m.find();
       if (mat) {
+        String processName = "(" + m.group(2) + ")";
         // Set (name) (ppid) (pgrpId) (session) (utime) (stime) (vsize) (rss)
-        pinfo.updateProcessInfo(m.group(2), m.group(3),
+        pinfo.updateProcessInfo(processName, m.group(3),
                 Integer.parseInt(m.group(4)), Integer.parseInt(m.group(5)),
                 Long.parseLong(m.group(7)), new BigInteger(m.group(8)),
                 Long.parseLong(m.group(10)), Long.parseLong(m.group(11)));
@@ -782,7 +799,10 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
             if (LOG.isDebugEnabled()) {
               LOG.debug("MemInfo : " + key + " : Value  : " + value);
             }
-            memoryMappingInfo.setMemInfo(key, value);
+
+            if (memoryMappingInfo != null) {
+              memoryMappingInfo.setMemInfo(key, value);
+            }
           }
         } catch (Throwable t) {
           LOG
@@ -1025,8 +1045,8 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     System.out.println("Cpu usage  " + procfsBasedProcessTree
         .getCpuUsagePercent());
     System.out.println("Vmem usage in bytes " + procfsBasedProcessTree
-        .getCumulativeVmem());
+        .getVirtualMemorySize());
     System.out.println("Rss mem usage in bytes " + procfsBasedProcessTree
-        .getCumulativeRssmem());
+        .getRssMemorySize());
   }
 }

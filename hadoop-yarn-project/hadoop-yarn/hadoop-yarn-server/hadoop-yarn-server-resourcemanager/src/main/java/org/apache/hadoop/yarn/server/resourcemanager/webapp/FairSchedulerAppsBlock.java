@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -58,13 +57,15 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
   final FairSchedulerInfo fsinfo;
   final Configuration conf;
   
-  @Inject public FairSchedulerAppsBlock(RMContext rmContext, 
-      ResourceManager rm, ViewContext ctx, Configuration conf) {
+  @Inject
+  public FairSchedulerAppsBlock(ResourceManager rm, ViewContext ctx,
+      Configuration conf) {
     super(ctx);
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();
     fsinfo = new FairSchedulerInfo(scheduler);
     apps = new ConcurrentHashMap<ApplicationId, RMApp>();
-    for (Map.Entry<ApplicationId, RMApp> entry : rmContext.getRMApps().entrySet()) {
+    for (Map.Entry<ApplicationId, RMApp> entry : rm.getRMContext().getRMApps()
+        .entrySet()) {
       if (!(RMAppState.NEW.equals(entry.getValue().getState())
           || RMAppState.NEW_SAVING.equals(entry.getValue().getState())
           || RMAppState.SUBMITTED.equals(entry.getValue().getState()))) {
@@ -92,6 +93,8 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
             th(".runningcontainer", "Running Containers").
             th(".allocatedCpu", "Allocated CPU VCores").
             th(".allocatedMemory", "Allocated Memory MB").
+            th(".reservedCpu", "Reserved CPU VCores").
+            th(".reservedMemory", "Reserved Memory MB").
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
         tbody();
@@ -139,6 +142,10 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
         .valueOf(appInfo.getAllocatedVCores())).append("\",\"")
       .append(appInfo.getAllocatedMB() == -1 ? "N/A" : String
         .valueOf(appInfo.getAllocatedMB())).append("\",\"")
+      .append(appInfo.getReservedVCores() == -1 ? "N/A" : String
+        .valueOf(appInfo.getReservedVCores())).append("\",\"")
+      .append(appInfo.getReservedMB() == -1 ? "N/A" : String
+        .valueOf(appInfo.getReservedMB())).append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")

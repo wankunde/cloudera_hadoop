@@ -1,7 +1,7 @@
 From 9ff6245f7c37c90a4c9fb348a6b52b25be0ce72c Mon Sep 17 00:00:00 2001
 From: Juan Yu <jyu@cloudera.com>
 Date: Wed, 20 Aug 2014 15:15:41 -0700
-Subject: [PATCH 182/924] CLOUDERA-BUILD Revert "HADOOP-10451. Remove unused
+Subject: [PATCH 0182/2639] CLOUDERA-BUILD Revert "HADOOP-10451. Remove unused
  field and imports from SaslRpcServer."
 
 This reverts commit 8ae3acb5d23ea1dfadc2e0d5439a4fde61a60d70.

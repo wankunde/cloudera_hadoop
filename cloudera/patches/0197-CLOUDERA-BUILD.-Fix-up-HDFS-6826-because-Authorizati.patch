@@ -1,7 +1,7 @@
 From ab659e63217a828e62274a76a6b1155f12e5586f Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Tue, 27 Jan 2015 12:18:46 -0800
-Subject: [PATCH 197/924] CLOUDERA-BUILD. Fix up HDFS-6826 because
+Subject: [PATCH 0197/2639] CLOUDERA-BUILD. Fix up HDFS-6826 because
  AuthorizationProviderProxyClientProtocol needs to
  override getStoragePolicies and setStoragePolicy
 

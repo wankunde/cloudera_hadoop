@@ -1,7 +1,7 @@
 From 25988974554545f831a446d28d5c9bf133c80dd0 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Mon, 1 Dec 2014 21:21:23 -0800
-Subject: [PATCH 275/924] HADOOP-11337. KeyAuthorizationKeyProvider access
+Subject: [PATCH 0275/2639] HADOOP-11337. KeyAuthorizationKeyProvider access
  checks need to be done atomically. Contributed by
  Dian Fu.
 

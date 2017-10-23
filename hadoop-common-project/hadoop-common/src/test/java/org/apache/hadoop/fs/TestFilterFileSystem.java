@@ -161,6 +161,7 @@ public class TestFilterFileSystem {
     public ContentSummary getContentSummary(Path f) { return null; }
     public FsStatus getStatus() { return null; }
     public FileStatus[] listStatus(Path f, PathFilter filter) { return null; }
+    public FileStatus[] listStatusBatch(Path f, byte[] token) { return null; }
     public FileStatus[] listStatus(Path[] files) { return null; }
     public FileStatus[] listStatus(Path[] files, PathFilter filter) { return null; }
     public FileStatus[] globStatus(Path pathPattern) { return null; }
@@ -210,6 +211,7 @@ public class TestFilterFileSystem {
       return "dontcheck";
     }
     public Path fixRelativePart(Path p) { return null; }
+    public StorageStatistics getStorageStatistics() { return null; }
   }
   
   @Test
@@ -332,6 +334,17 @@ public class TestFilterFileSystem {
     reset(mockFs);
     fs.setWriteChecksum(true);
     verify(mockFs).setWriteChecksum(eq(true));
+  }
+
+  @Test
+  public void testRenameOptions() throws Exception {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+    Path src = new Path("/src");
+    Path dst = new Path("/dest");
+    Rename opt = Rename.TO_TRASH;
+    fs.rename(src, dst, opt);
+    verify(mockFs).rename(eq(src), eq(dst), eq(opt));
   }
 
   private void checkInit(FilterFileSystem fs, boolean expectInit)

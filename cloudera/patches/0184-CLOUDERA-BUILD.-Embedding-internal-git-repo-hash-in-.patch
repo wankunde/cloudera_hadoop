@@ -1,8 +1,8 @@
 From 23c838336694ed8fc6d0cd110e6deaca6bf015f5 Mon Sep 17 00:00:00 2001
 From: Sean Mackrory <sean@cloudera.com>
 Date: Fri, 25 Jul 2014 15:51:09 -0700
-Subject: [PATCH 184/924] CLOUDERA-BUILD. Embedding internal git repo hash in
- Hadoop
+Subject: [PATCH 0184/2639] CLOUDERA-BUILD. Embedding internal git repo hash
+ in Hadoop
 
 (cherry picked from commit ceb206ce879a7154a4dc80b7f16033fb9df54109)
 ---

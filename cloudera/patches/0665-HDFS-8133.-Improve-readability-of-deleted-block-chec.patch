@@ -1,7 +1,7 @@
 From eed6b9c5aabd31251fc746a29e9dadf0d2dc38ae Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 21 Apr 2015 11:41:22 -0700
-Subject: [PATCH 665/924] HDFS-8133. Improve readability of deleted block
+Subject: [PATCH 0665/2639] HDFS-8133. Improve readability of deleted block
  check (Daryn Sharp via Colin P. McCabe)
 
 (cherry picked from commit 997408eaaceef20b053ee7344468e28cb9a1379b)

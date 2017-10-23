@@ -1,7 +1,7 @@
 From f6d02d5d1495afd55be7b27e9fa1f34157db1e92 Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Mon, 7 Oct 2013 11:49:26 -0700
-Subject: [PATCH 112/924] MR1: MAPREDUCE-5508. JobTracker memory leak caused
+Subject: [PATCH 0112/2639] MR1: MAPREDUCE-5508. JobTracker memory leak caused
  by unreleased FileSystem objects in
  JobInProgress#cleanupJob. Contributed by Xi Fang.
 

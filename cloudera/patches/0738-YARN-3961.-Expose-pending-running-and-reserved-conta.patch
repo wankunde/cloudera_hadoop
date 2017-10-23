@@ -1,7 +1,7 @@
-From 52a602137642ec64e98c4e94e46a6b1a870baf44 Mon Sep 17 00:00:00 2001
+From e42915cf18be59c17a4df342af91b9289bcde16e Mon Sep 17 00:00:00 2001
 From: Arun Suresh <asuresh@apache.org>
 Date: Wed, 5 Aug 2015 23:14:14 -0700
-Subject: [PATCH 738/924] YARN-3961. Expose pending, running and reserved
+Subject: [PATCH 0738/2639] YARN-3961. Expose pending, running and reserved
  containers of a queue in REST api and yarn top
  (adhoot via asuresh)
 

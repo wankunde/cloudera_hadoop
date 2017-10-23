@@ -1,9 +1,9 @@
 From e1d05a9b2ba3b384a2a320801f4cb540babdc305 Mon Sep 17 00:00:00 2001
 From: stack <stack@apache.org>
 Date: Tue, 2 Dec 2014 20:54:03 -0800
-Subject: [PATCH 387/924] HDFS-6735. A minor optimization to avoid pread() be
- blocked by read() inside the same DFSInputStream
- (Lars Hofhansl via stack)
+Subject: [PATCH 0387/2639] HDFS-6735. A minor optimization to avoid pread()
+ be blocked by read() inside the same
+ DFSInputStream (Lars Hofhansl via stack)
 
 (cherry picked from commit 7caa3bc98e6880f98c5c32c486a0c539f9fd3f5f)
 (cherry picked from commit fe6ee8a3f12d7c4d5f84d9056ae631ea69bd7581)

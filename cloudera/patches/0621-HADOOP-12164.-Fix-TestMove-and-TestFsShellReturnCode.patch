@@ -1,7 +1,7 @@
 From 6e9b8776a8db0d48f8faf5ae254828394fb8f52b Mon Sep 17 00:00:00 2001
 From: Lei Xu <lei@apache.org>
 Date: Tue, 30 Jun 2015 17:26:49 -0700
-Subject: [PATCH 621/924]  HADOOP-12164. Fix TestMove and
+Subject: [PATCH 0621/2639]  HADOOP-12164. Fix TestMove and
  TestFsShellReturnCode failed to get command name
  using reflection. (Lei Xu)
 

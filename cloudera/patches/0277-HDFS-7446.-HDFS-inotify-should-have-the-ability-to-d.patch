@@ -1,7 +1,7 @@
 From e137ce35fbcc83728e59ca041567f9d5db6cd34a Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 25 Nov 2014 17:44:34 -0800
-Subject: [PATCH 277/924] HDFS-7446. HDFS inotify should have the ability to
+Subject: [PATCH 0277/2639] HDFS-7446. HDFS inotify should have the ability to
  determine what txid it has read up to (cmccabe)
  (cherry picked from commit
  75a326aaff8c92349701d9b3473c3070b8c2be44)

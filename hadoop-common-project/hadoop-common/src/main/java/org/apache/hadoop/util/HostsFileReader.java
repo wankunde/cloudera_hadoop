@@ -28,8 +28,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 
-// Keeps track of which datanodes/tasktrackers are allowed to connect to the 
-// namenode/jobtracker.
+// Keeps track of which datanodes/nodemanagers are allowed to connect to the
+// namenode/resourcemanager.
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class HostsFileReader {
@@ -78,13 +78,14 @@ public class HostsFileReader {
         String[] nodes = line.split("[ \t\n\f\r]+");
         if (nodes != null) {
           for (int i = 0; i < nodes.length; i++) {
-            if (nodes[i].trim().startsWith("#")) {
+            nodes[i] = nodes[i].trim();
+            if (nodes[i].startsWith("#")) {
               // Everything from now on is a comment
               break;
             }
             if (!nodes[i].isEmpty()) {
-              LOG.info("Adding " + nodes[i] + " to the list of " + type +
-                  " hosts from " + filename);
+              LOG.info("Adding a node \"" + nodes[i] + "\" to the list of "
+                  + type + " hosts from " + filename);
               set.add(nodes[i]);
             }
           }

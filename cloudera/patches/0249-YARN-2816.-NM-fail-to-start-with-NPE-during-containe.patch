@@ -1,7 +1,7 @@
 From 781e4f065d1fcaef6de18120892c03a3ee15b516 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Fri, 14 Nov 2014 21:25:59 +0000
-Subject: [PATCH 249/924] YARN-2816. NM fail to start with NPE during
+Subject: [PATCH 0249/2639] YARN-2816. NM fail to start with NPE during
  container recovery. Contributed by Zhihai Xu
 
 (cherry picked from commit 49c38898b0be64fc686d039ed2fb2dea1378df02)

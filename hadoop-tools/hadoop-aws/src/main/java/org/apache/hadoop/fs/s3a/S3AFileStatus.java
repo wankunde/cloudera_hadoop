@@ -15,33 +15,108 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+/**
+ * File status for an S3A "file".
+ * Modification time is trouble, see {@link #getModificationTime()}.
+ *
+ * The subclass is private as it should not be created directly.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class S3AFileStatus extends FileStatus {
-  private boolean isEmptyDirectory;
+  private Tristate isEmptyDirectory;
 
-  // Directories
-  public S3AFileStatus(boolean isdir, boolean isemptydir, Path path) {
-    super(0, isdir, 1, 0, 0, path);
+  /**
+   * Create a directory status.
+   * @param isemptydir is this an empty directory?
+   * @param path the path
+   * @param owner the owner
+   */
+  public S3AFileStatus(boolean isemptydir,
+      Path path,
+      String owner) {
+    this(Tristate.fromBool(isemptydir), path, owner);
+  }
+
+  /**
+   * Create a directory status.
+   * @param isemptydir is this an empty directory?
+   * @param path the path
+   * @param owner the owner
+   */
+  public S3AFileStatus(Tristate isemptydir,
+      Path path,
+      String owner) {
+    super(0, true, 1, 0, 0, path);
     isEmptyDirectory = isemptydir;
+    setOwner(owner);
+    setGroup(owner);
   }
 
-  // Files
+  /**
+   * A simple file.
+   * @param length file length
+   * @param modification_time mod time
+   * @param path path
+   * @param blockSize block size
+   * @param owner owner
+   */
   public S3AFileStatus(long length, long modification_time, Path path,
-      long blockSize) {
+      long blockSize, String owner) {
     super(length, false, 1, blockSize, modification_time, path);
-    isEmptyDirectory = false;
+    isEmptyDirectory = Tristate.FALSE;
+    setOwner(owner);
+    setGroup(owner);
   }
 
-  public boolean isEmptyDirectory() {
+  /**
+   * Convenience constructor for creating from a vanilla FileStatus plus
+   * an isEmptyDirectory flag.
+   * @param source FileStatus to convert to S3AFileStatus
+   * @param isEmptyDirectory TRUE/FALSE if known to be / not be an empty
+   *     directory, UNKNOWN if that information was not computed.
+   * @return a new S3AFileStatus
+   */
+  public static S3AFileStatus fromFileStatus(FileStatus source,
+      Tristate isEmptyDirectory) {
+    if (source.isDirectory()) {
+      return new S3AFileStatus(isEmptyDirectory, source.getPath(),
+          source.getOwner());
+    } else {
+      return new S3AFileStatus(source.getLen(), source.getModificationTime(),
+          source.getPath(), source.getBlockSize(), source.getOwner());
+    }
+  }
+
+
+  /**
+   * @return FALSE if status is not a directory, or its a dir, but known to
+   * not be empty.  TRUE if it is an empty directory.  UNKNOWN if it is a
+   * directory, but we have not computed whether or not it is empty.
+   */
+  public Tristate isEmptyDirectory() {
     return isEmptyDirectory;
   }
-  
-  /** Compare if this object is equal to another object
+
+  /**
+   * Should not be called by clients.  Only used so {@link org.apache.hadoop
+   * .fs.s3a.s3guard.MetadataStore} can maintain this flag when caching
+   * FileStatuses on behalf of s3a.
+   * @param value for directories: TRUE / FALSE if known empty/not-empty,
+   *              UNKNOWN otherwise
+   */
+  public void setIsEmptyDirectory(Tristate value) {
+    isEmptyDirectory = value;
+  }
+
+  /** Compare if this object is equal to another object.
    * @param   o the object to be compared.
    * @return  true if two file status has the same path name; false if not.
    */
@@ -60,4 +135,30 @@ public class S3AFileStatus extends FileStatus {
   public int hashCode() {
     return super.hashCode();
   }
+
+  /** Get the modification time of the file/directory.
+   *
+   * s3a uses objects as "fake" directories, which are not updated to
+   * reflect the accurate modification time. We choose to report the
+   * current time because some parts of the ecosystem (e.g. the
+   * HistoryServer) use modification time to ignore "old" directories.
+   *
+   * @return for files the modification time in milliseconds since January 1,
+   *         1970 UTC or for directories the current time.
+   */
+  @Override
+  public long getModificationTime(){
+    if(isDirectory()){
+      return System.currentTimeMillis();
+    } else {
+      return super.getModificationTime();
+    }
+  }
+
+  @Override
+  public String toString() {
+    return super.toString() +
+        String.format(" isEmptyDirectory=%s", isEmptyDirectory().name());
+  }
+
 }

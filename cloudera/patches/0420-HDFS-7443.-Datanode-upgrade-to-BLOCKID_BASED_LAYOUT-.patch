@@ -1,9 +1,9 @@
 From f18ac082ff850901ca5a719f92ca7c5cd9d63849 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 19 Dec 2014 13:08:29 -0800
-Subject: [PATCH 420/924] HDFS-7443. Datanode upgrade to BLOCKID_BASED_LAYOUT
- fails if duplicate block files are present in the
- same volume (cmccabe)
+Subject: [PATCH 0420/2639] HDFS-7443. Datanode upgrade to
+ BLOCKID_BASED_LAYOUT fails if duplicate block
+ files are present in the same volume (cmccabe)
 
 (cherry picked from commit 8fa265a290792ff42635ff9b42416c634f88bdf3)
 (cherry picked from commit bcaf15e2fa94db929b8cd11ed7c07085161bf950)

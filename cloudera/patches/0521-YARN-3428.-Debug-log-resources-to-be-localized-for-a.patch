@@ -1,8 +1,8 @@
 From 14398fedcd3644b96b90fc02e688805b94119f14 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Tue, 31 Mar 2015 17:34:40 -0700
-Subject: [PATCH 521/924] YARN-3428. Debug log resources to be localized for a
- container. (kasha)
+Subject: [PATCH 0521/2639] YARN-3428. Debug log resources to be localized for
+ a container. (kasha)
 
 (cherry picked from commit 2daa478a6420585dc13cea2111580ed5fe347bc1)
 (cherry picked from commit 93b29d962d75ce8a491c11dfadf906400458b0d4)

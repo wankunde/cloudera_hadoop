@@ -1,9 +1,9 @@
 From 4e15005f05d0760d5aa6d79cce4fdafba854504e Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Wed, 1 Apr 2015 16:50:59 -0700
-Subject: [PATCH 682/924] HDFS-8036. Use snapshot path as source when using
- snapshot diff report in DistCp. Contributed by Jing
- Zhao.
+Subject: [PATCH 0682/2639] HDFS-8036. Use snapshot path as source when using
+ snapshot diff report in DistCp. Contributed by
+ Jing Zhao.
 
 (cherry picked from commit 75cb1d42abec54ef5484636e020949ceebe189e9)
 ---

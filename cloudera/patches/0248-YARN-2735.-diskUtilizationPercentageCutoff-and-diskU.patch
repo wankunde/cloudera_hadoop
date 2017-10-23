@@ -1,9 +1,9 @@
 From d0f2bbbfd4cafb2c97f266c7096d572c07546de7 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Tue, 11 Nov 2014 10:31:39 -0800
-Subject: [PATCH 248/924] YARN-2735. diskUtilizationPercentageCutoff and
- diskUtilizationSpaceCutoff are initialized twice in
- DirectoryCollection. (Zhihai Xu via kasha)
+Subject: [PATCH 0248/2639] YARN-2735. diskUtilizationPercentageCutoff and
+ diskUtilizationSpaceCutoff are initialized twice
+ in DirectoryCollection. (Zhihai Xu via kasha)
 
 (cherry picked from commit 061bc293c8dd3e2605cf150568988bde18407af6)
 

@@ -1,9 +1,9 @@
 From cedaf1633c9cb6f6e105bd556850a1d756e7acce Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 26 May 2015 12:15:46 -0700
-Subject: [PATCH 574/924] HADOOP-11969. ThreadLocal initialization in several
- classes is not thread safe (Sean Busbey via Colin
- P. McCabe)
+Subject: [PATCH 0574/2639] HADOOP-11969. ThreadLocal initialization in
+ several classes is not thread safe (Sean Busbey
+ via Colin P. McCabe)
 
 (cherry picked from commit 7dba7005b79994106321b0f86bc8f4ea51a3c185)
 ---

@@ -1,9 +1,9 @@
 From 52557b45d2cc138980b03b87e42657e427cf32b0 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Mon, 8 Sep 2014 12:44:23 -0700
-Subject: [PATCH 146/924] HADOOP-11035. distcp on mr1(branch-1) fails with NPE
- using a short relative source path. Contributed by
- Zhihai Xu.
+Subject: [PATCH 0146/2639] HADOOP-11035. distcp on mr1(branch-1) fails with
+ NPE using a short relative source path.
+ Contributed by Zhihai Xu.
 
 (cherry picked from commit 4ca5ce88d5e88fd7368fa94b4886231b1ae9bb26)
 

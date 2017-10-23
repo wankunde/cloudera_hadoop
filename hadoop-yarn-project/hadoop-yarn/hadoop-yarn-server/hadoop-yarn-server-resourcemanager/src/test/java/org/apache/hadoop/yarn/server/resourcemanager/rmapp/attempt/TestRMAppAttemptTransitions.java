@@ -44,7 +44,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -324,9 +323,9 @@ public class TestRMAppAttemptTransitions {
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttemptId, spyRMContext, scheduler,
             masterService, submissionContext, new Configuration(), false,
-            BuilderUtils.newResourceRequest(
+            Collections.singletonList(BuilderUtils.newResourceRequest(
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                submissionContext.getResource(), 1));
+                submissionContext.getResource(), 1)));
 
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
@@ -345,14 +344,10 @@ public class TestRMAppAttemptTransitions {
     String url = null;
     final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
     try {
-      URI trackingUri =
-          StringUtils.isEmpty(appAttempt.getOriginalTrackingUrl()) ? null :
-              ProxyUriUtils
-                  .getUriFromAMUrl(scheme, appAttempt.getOriginalTrackingUrl());
       String proxy = WebAppUtils.getProxyHostAndPort(conf);
       URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
-      URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
-          appAttempt.getAppAttemptId().getApplicationId());
+      URI result = ProxyUriUtils.getProxyUri(null, proxyUri, appAttempt
+          .getAppAttemptId().getApplicationId());
       url = result.toASCIIString();
     } catch (URISyntaxException ex) {
       Assert.fail();
@@ -924,6 +919,19 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptFailedState(amContainer, diagnostics);
   }
   
+  @Test(timeout = 10000)
+  public void testCreateAppAttemptReport() {
+    RMAppAttemptState[] attemptStates = RMAppAttemptState.values();
+    applicationAttempt.handle(new RMAppAttemptEvent(
+        applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.KILL));
+    // ALL RMAppAttemptState TO BE CHECK
+    RMAppAttempt attempt = spy(applicationAttempt);
+    for (RMAppAttemptState rmAppAttemptState : attemptStates) {
+      when(attempt.getState()).thenReturn(rmAppAttemptState);
+      attempt.createApplicationAttemptReport();
+    }
+  }
+
   @Test
   public void testAMCrashAtAllocated() {
     Container amContainer = allocateApplicationAttempt();
@@ -1368,6 +1376,38 @@ public class TestRMAppAttemptTransitions {
     Assert.assertNull(token);
   }
 
+  // this is to test master key is saved in the secret manager only after
+  // attempt is launched and in secure-mode
+  @Test
+  public void testApplicationAttemptMasterKey() throws Exception {
+    Container amContainer = allocateApplicationAttempt();
+    ApplicationAttemptId appid = applicationAttempt.getAppAttemptId();
+    boolean isMasterKeyExisted = false;
+
+    // before attempt is launched, can not get MasterKey
+    isMasterKeyExisted = clientToAMTokenManager.hasMasterKey(appid);
+    Assert.assertFalse(isMasterKeyExisted);
+
+    launchApplicationAttempt(amContainer);
+    // after attempt is launched and in secure mode, can get MasterKey
+    isMasterKeyExisted = clientToAMTokenManager.hasMasterKey(appid);
+    if (isSecurityEnabled) {
+      Assert.assertTrue(isMasterKeyExisted);
+      Assert.assertNotNull(clientToAMTokenManager.getMasterKey(appid));
+    } else {
+      Assert.assertFalse(isMasterKeyExisted);
+    }
+
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+      .getAppAttemptId(), RMAppAttemptEventType.KILL));
+    assertEquals(YarnApplicationAttemptState.LAUNCHED,
+        applicationAttempt.createApplicationAttemptState());
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    // after attempt is killed, can not get MasterKey
+    isMasterKeyExisted = clientToAMTokenManager.hasMasterKey(appid);
+    Assert.assertFalse(isMasterKeyExisted);
+  }
+
   @Test
   public void testFailedToFailed() {
     // create a failed attempt.
@@ -1417,10 +1457,10 @@ public class TestRMAppAttemptTransitions {
     // create a failed attempt.
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(), spyRMContext,
-          scheduler, masterService, submissionContext, new Configuration(),
-          true, BuilderUtils.newResourceRequest(
+          scheduler, masterService, submissionContext, new Configuration(), true,
+            Collections.singletonList(BuilderUtils.newResourceRequest(
               RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-              submissionContext.getResource(), 1));
+              submissionContext.getResource(), 1)));
     when(submissionContext.getKeepContainersAcrossApplicationAttempts())
       .thenReturn(true);
     when(submissionContext.getMaxAppAttempts()).thenReturn(1);
@@ -1479,9 +1519,10 @@ public class TestRMAppAttemptTransitions {
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(),
             spyRMContext, scheduler, masterService, submissionContext,
-            new Configuration(), true, ResourceRequest.newInstance(
-                Priority.UNDEFINED, "host1", Resource.newInstance(3333, 1), 3,
-                false, "label-expression"));
+            new Configuration(), true, Collections.singletonList(
+                ResourceRequest.newInstance(Priority.UNDEFINED, "host1",
+                    Resource.newInstance(3333, 1), 3,
+                false, "label-expression")));
     new RMAppAttemptImpl.ScheduleTransition().transition(
         (RMAppAttemptImpl) applicationAttempt, null);
   }

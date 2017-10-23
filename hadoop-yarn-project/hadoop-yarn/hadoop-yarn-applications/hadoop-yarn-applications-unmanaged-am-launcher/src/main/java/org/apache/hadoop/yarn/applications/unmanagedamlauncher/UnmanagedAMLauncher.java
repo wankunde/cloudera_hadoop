@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Map;
@@ -191,11 +192,11 @@ public class UnmanagedAMLauncher {
       throw new RuntimeException(ex);
     }
     tokenFile.deleteOnExit();
-    DataOutputStream os = new DataOutputStream(new FileOutputStream(tokenFile, 
-        true));
-    credentials.writeTokenStorageToStream(os);
-    os.close();
-    
+    try (DataOutputStream os = new DataOutputStream(
+        new FileOutputStream(tokenFile, true))) {
+      credentials.writeTokenStorageToStream(os);
+    }
+
     Map<String, String> env = System.getenv();
     ArrayList<String> envAMList = new ArrayList<String>();
     boolean setClasspath = false;
@@ -232,11 +233,11 @@ public class UnmanagedAMLauncher {
     Process amProc = Runtime.getRuntime().exec(amCmd, envAMList.toArray(envAM));
 
     final BufferedReader errReader = 
-        new BufferedReader(new InputStreamReader(amProc
-                                                 .getErrorStream()));
+        new BufferedReader(new InputStreamReader(
+            amProc.getErrorStream(), Charset.forName("UTF-8")));
     final BufferedReader inReader = 
-        new BufferedReader(new InputStreamReader(amProc
-                                                 .getInputStream()));
+        new BufferedReader(new InputStreamReader(
+            amProc.getInputStream(), Charset.forName("UTF-8")));
     
     // read error and input streams as this would free up the buffers
     // free the error stream buffer

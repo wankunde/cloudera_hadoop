@@ -1,7 +1,7 @@
 From d70904abf73f756f70e7e85d7651e682d60b638e Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Mon, 12 Aug 2013 10:49:48 -0700
-Subject: [PATCH 181/924] CLOUDERA-BUILD. Revert "svn merge -c 1507259 from
+Subject: [PATCH 0181/2639] CLOUDERA-BUILD. Revert "svn merge -c 1507259 from
  trunk for HADOOP-9756. Remove the deprecated
  getServer(..) methods from RPC."
 
@@ -48,7 +48,7 @@ index 570e53a..a205c2a 100644
  
      HADOOP-9786. RetryInvocationHandler#isRpcInvocation should support 
 diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/conf/Configuration.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/conf/Configuration.java
-index 1276865..468f8a0 100644
+index 1276865..468f8a08 100644
 --- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/conf/Configuration.java
 +++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/conf/Configuration.java
 @@ -2592,7 +2592,7 @@ private synchronized Document asXmlDocument() throws IOException {

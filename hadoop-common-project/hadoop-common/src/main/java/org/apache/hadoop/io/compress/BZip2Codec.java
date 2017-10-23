@@ -206,7 +206,12 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
     // time stream might start without a leading BZ.
     final long FIRST_BZIP2_BLOCK_MARKER_POSITION =
       CBZip2InputStream.numberOfBytesTillNextMarker(seekableIn);
-    long adjStart = Math.max(0L, start - FIRST_BZIP2_BLOCK_MARKER_POSITION);
+    long adjStart = 0L;
+    if (start != 0) {
+      // Other than the first of file, the marker size is 6 bytes.
+      adjStart = Math.max(0L, start - (FIRST_BZIP2_BLOCK_MARKER_POSITION
+          - (HEADER_LEN + SUB_HEADER_LEN)));
+    }
 
     ((Seekable)seekableIn).seek(adjStart);
     SplitCompressionInputStream in =
@@ -325,15 +330,11 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
     }
 
     public void close() throws IOException {
-      if (needsReset) {
-        // In the case that nothing is written to this stream, we still need to
-        // write out the header before closing, otherwise the stream won't be
-        // recognized by BZip2CompressionInputStream.
-        internalReset();
+      try {
+        super.close();
+      } finally {
+        output.close();
       }
-      this.output.flush();
-      this.output.close();
-      needsReset = true;
     }
 
   }// end of class BZip2CompressionOutputStream
@@ -443,8 +444,12 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
 
     public void close() throws IOException {
       if (!needsReset) {
-        input.close();
-        needsReset = true;
+        try {
+          input.close();
+          needsReset = true;
+        } finally {
+          super.close();
+        }
       }
     }
 

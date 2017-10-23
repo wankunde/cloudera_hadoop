@@ -1,8 +1,9 @@
-From b951ac797c36ea4615394ccc53c96fec98dcd4b0 Mon Sep 17 00:00:00 2001
+From 80339862b11978963ef4fcad81aedb69655c8579 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Thu, 5 Feb 2015 10:58:58 -0800
-Subject: [PATCH 749/924] HDFS-7270. Add congestion signaling capability to
- DataNode write protocol. Contributed by Haohui Mai.
+Subject: [PATCH 0749/2639] HDFS-7270. Add congestion signaling capability to
+ DataNode write protocol. Contributed by Haohui
+ Mai.
 
 (cherry picked from commit 67002a5fc07e2f91c3967801ca532988130660a4)
 

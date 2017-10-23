@@ -20,8 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -152,15 +155,18 @@ public class TestAllocationFileLoaderService {
     // Give queue A a minimum of 1024 M
     out.println("<queue name=\"queueA\">");
     out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("<maxResources>2048mb,10vcores</maxResources>");
     out.println("</queue>");
     // Give queue B a minimum of 2048 M
     out.println("<queue name=\"queueB\">");
     out.println("<minResources>2048mb,0vcores</minResources>");
+    out.println("<maxResources>5120mb,110vcores</maxResources>");
     out.println("<aclAdministerApps>alice,bob admins</aclAdministerApps>");
     out.println("<schedulingPolicy>fair</schedulingPolicy>");
     out.println("</queue>");
     // Give queue C no minimum
     out.println("<queue name=\"queueC\">");
+    out.println("<minResources>5120mb,0vcores</minResources>");
     out.println("<aclSubmitApps>alice,bob admins</aclSubmitApps>");
     out.println("</queue>");
     // Give queue D a limit of 3 running apps and 0.4f maxAMShare
@@ -172,12 +178,16 @@ public class TestAllocationFileLoaderService {
     out.println("<queue name=\"queueE\">");
     out.println("<minSharePreemptionTimeout>60</minSharePreemptionTimeout>");
     out.println("</queue>");
-    //Make queue F a parent queue without configured leaf queues using the 'type' attribute
+    // Make queue F a parent queue without configured leaf queues using the
+    // 'type' attribute
     out.println("<queue name=\"queueF\" type=\"parent\" >");
+    out.println("<maxChildResources>2048mb,64vcores</maxChildResources>");
     out.println("</queue>");
     // Create hierarchical queues G,H, with different min/fair share preemption
-    // timeouts and preemption thresholds
+    // timeouts and preemption thresholds. Also add a child default to make sure
+    // it doesn't impact queue H.
     out.println("<queue name=\"queueG\">");
+    out.println("<maxChildResources>2048mb,64vcores</maxChildResources>");
     out.println("<fairSharePreemptionTimeout>120</fairSharePreemptionTimeout>");
     out.println("<minSharePreemptionTimeout>50</minSharePreemptionTimeout>");
     out.println("<fairSharePreemptionThreshold>0.6</fairSharePreemptionThreshold>");
@@ -189,6 +199,8 @@ public class TestAllocationFileLoaderService {
     out.println("</queue>");
     // Set default limit of apps per queue to 15
     out.println("<queueMaxAppsDefault>15</queueMaxAppsDefault>");
+    // Set default limit of max resource per queue to 4G and 100 cores
+    out.println("<queueMaxResourcesDefault>4096mb,100vcores</queueMaxResourcesDefault>");
     // Set default limit of apps per user to 5
     out.println("<userMaxAppsDefault>5</userMaxAppsDefault>");
     // Set default limit of AMResourceShare to 0.5f
@@ -221,18 +233,60 @@ public class TestAllocationFileLoaderService {
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
 
+    assertEquals(Resources.createResource(2048, 10),
+        queueConf.getMaxResources("root.queueA"));
+    assertEquals(Resources.createResource(5120, 110),
+        queueConf.getMaxResources("root.queueB"));
+    assertEquals(Resources.createResource(5120, 0),
+        queueConf.getMaxResources("root.queueC"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueD"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueE"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueF"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueG"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueG.queueH"));
+
     assertEquals(Resources.createResource(1024, 0),
         queueConf.getMinResources("root.queueA"));
     assertEquals(Resources.createResource(2048, 0),
         queueConf.getMinResources("root.queueB"));
-    assertEquals(Resources.createResource(0),
+    assertEquals(Resources.createResource(5120, 0),
         queueConf.getMinResources("root.queueC"));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root.queueD"));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root.queueE"));
+    assertEquals(Resources.createResource(0),
+        queueConf.getMinResources("root.queueF"));
+    assertEquals(Resources.createResource(0),
+        queueConf.getMinResources("root.queueG"));
+    assertEquals(Resources.createResource(0),
+        queueConf.getMinResources("root.queueG.queueH"));
 
-    assertEquals(15, queueConf.getQueueMaxApps("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
+    assertNull("Max child resources unexpectedly set for queue root.queueA",
+        queueConf.getMaxChildResources("root.queueA"));
+    assertNull("Max child resources unexpectedly set for queue root.queueB",
+        queueConf.getMaxChildResources("root.queueB"));
+    assertNull("Max child resources unexpectedly set for queue root.queueC",
+        queueConf.getMaxChildResources("root.queueC"));
+    assertNull("Max child resources unexpectedly set for queue root.queueD",
+        queueConf.getMaxChildResources("root.queueD"));
+    assertNull("Max child resources unexpectedly set for queue root.queueE",
+        queueConf.getMaxChildResources("root.queueE"));
+    assertEquals(Resources.createResource(2048, 64),
+        queueConf.getMaxChildResources("root.queueF"));
+    assertEquals(Resources.createResource(2048, 64),
+        queueConf.getMaxChildResources("root.queueG"));
+    assertNull("Max child resources unexpectedly set for "
+        + "queue root.queueG.queueH",
+        queueConf.getMaxChildResources("root.queueG.queueH"));
+
+    assertEquals(15, queueConf.getQueueMaxApps("root."
+        + YarnConfiguration.DEFAULT_QUEUE_NAME));
     assertEquals(15, queueConf.getQueueMaxApps("root.queueA"));
     assertEquals(15, queueConf.getQueueMaxApps("root.queueB"));
     assertEquals(15, queueConf.getQueueMaxApps("root.queueC"));
@@ -553,6 +607,53 @@ public class TestAllocationFileLoaderService {
     out.println("<allocations>");
     out.println("<queue name=\"      \">");
     out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    allocLoader.reloadAllocations();
+  }
+
+  /**
+   * Verify that you can't have the queue name with just a non breaking
+   * whitespace in the allocations file.
+   */
+  @Test (expected = AllocationConfigurationException.class)
+  public void testQueueNameContainingNBWhitespace() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new OutputStreamWriter(
+        new FileOutputStream(ALLOC_FILE), StandardCharsets.UTF_8));
+    out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"\u00a0\">");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    allocLoader.reloadAllocations();
+  }
+
+  /**
+   * Verify that defaultQueueSchedulingMode can't accept FIFO as a value.
+   */
+  @Test (expected = AllocationConfigurationException.class)
+  public void testDefaultQueueSchedulingModeIsFIFO() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<defaultQueueSchedulingPolicy>fifo</defaultQueueSchedulingPolicy>");
     out.println("</allocations>");
     out.close();
 

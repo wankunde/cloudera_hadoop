@@ -1,7 +1,7 @@
 From ac2cf4a3d7755a90da1dc3a51521944ddfc44a46 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Mon, 10 Nov 2014 11:04:41 -0800
-Subject: [PATCH 235/924] HADOOP-11289. Fix typo in RpcUtil log message.
+Subject: [PATCH 0235/2639] HADOOP-11289. Fix typo in RpcUtil log message.
  Contributed by Charles Lamb. (cherry picked from
  commit ebb0636c9dcab7970aff970186e257bbba7f263a)
 

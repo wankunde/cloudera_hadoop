@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -50,14 +52,17 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
@@ -115,7 +120,7 @@ public class AuthorizationProviderProxyClientProtocol implements ClientProtocol 
   }
 
   @Override
-  public LocatedBlock append(String src, String clientName)
+  public LastBlockWithStatus append(String src, String clientName)
       throws AccessControlException, DSQuotaExceededException,
              FileNotFoundException, SafeModeException, UnresolvedLinkException,
              SnapshotAccessControlException, IOException {
@@ -203,14 +208,14 @@ public class AuthorizationProviderProxyClientProtocol implements ClientProtocol 
   @Override
   public LocatedBlock addBlock(String src, String clientName,
       ExtendedBlock previous, DatanodeInfo[] excludeNodes, long fileId,
-      String[] favoredNodes)
+      String[] favoredNodes, EnumSet<AddBlockFlag> flag)
       throws AccessControlException, FileNotFoundException,
              NotReplicatedYetException, SafeModeException,
              UnresolvedLinkException, IOException {
     try {
       AuthorizationProvider.beginClientOp();
       return server.addBlock(src, clientName, previous, excludeNodes, fileId, 
-          favoredNodes);
+          favoredNodes, flag);
     } finally {
       AuthorizationProvider.endClientOp();
     }
@@ -941,6 +946,28 @@ public class AuthorizationProviderProxyClientProtocol implements ClientProtocol 
   }
 
   @Override
+  public void reencryptEncryptionZone(String zone, HdfsConstants.ReencryptAction action)
+      throws IOException {
+    try {
+      AuthorizationProvider.beginClientOp();
+      server.reencryptEncryptionZone(zone, action);
+    } finally {
+      AuthorizationProvider.endClientOp();
+    }
+  }
+
+  @Override
+  public BatchedRemoteIterator.BatchedEntries<ZoneReencryptionStatus>
+  listReencryptionStatus(long id) throws IOException {
+    try {
+      AuthorizationProvider.beginClientOp();
+      return server.listReencryptionStatus(id);
+    } finally {
+      AuthorizationProvider.endClientOp();
+    }
+  }
+
+  @Override
   public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
       throws IOException {
     try {
@@ -1012,4 +1039,14 @@ public class AuthorizationProviderProxyClientProtocol implements ClientProtocol 
     }
   }
 
+  @Override
+  public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId)
+      throws IOException {
+    try {
+      AuthorizationProvider.beginClientOp();
+      return server.listOpenFiles(prevId);
+    } finally {
+      AuthorizationProvider.endClientOp();
+    }
+  }
 }

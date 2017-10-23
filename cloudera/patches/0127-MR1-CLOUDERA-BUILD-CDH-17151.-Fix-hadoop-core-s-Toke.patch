@@ -1,7 +1,7 @@
 From 3b50d1fe3c0632c427d06e140a4571de32e448e1 Mon Sep 17 00:00:00 2001
 From: bc Wong <bcwalrus@cloudera.com>
 Date: Mon, 3 Feb 2014 21:58:25 -0800
-Subject: [PATCH 127/924] MR1: CLOUDERA-BUILD: CDH-17151. Fix hadoop-core's
+Subject: [PATCH 0127/2639] MR1: CLOUDERA-BUILD: CDH-17151. Fix hadoop-core's
  TokenRenewer provider list
 
 (cherry picked from commit 8a3986348c0f8cde7c14c011dc2fb50c88f65d0e)

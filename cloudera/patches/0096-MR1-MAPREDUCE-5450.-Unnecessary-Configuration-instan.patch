@@ -1,9 +1,10 @@
 From 437974a57160482a029a66b3130dff50b0204e68 Mon Sep 17 00:00:00 2001
 From: Sanford Ryza <sandy@apache.org>
 Date: Wed, 7 Aug 2013 19:59:05 +0000
-Subject: [PATCH 096/924] MR1: MAPREDUCE-5450. Unnecessary Configuration
- instantiation in IFileInputStream slows down merge.
- (Stanislav Barton and Ted Yu via Sandy Ryza)
+Subject: [PATCH 0096/2639] MR1: MAPREDUCE-5450. Unnecessary Configuration
+ instantiation in IFileInputStream slows down
+ merge. (Stanislav Barton and Ted Yu via Sandy
+ Ryza)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1511461 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 53dcb4c56c7bedf382227be43fcbbb5be74bdb67)

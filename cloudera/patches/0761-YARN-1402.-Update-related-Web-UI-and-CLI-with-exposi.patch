@@ -1,7 +1,7 @@
-From 6b7c8b8013299e7dc04400c391e428acf378ff38 Mon Sep 17 00:00:00 2001
+From eb2d7412438ff937d64801bfd8f408b5469b7625 Mon Sep 17 00:00:00 2001
 From: Junping Du <junping_du@apache.org>
 Date: Fri, 17 Apr 2015 13:18:59 -0700
-Subject: [PATCH 761/924] YARN-1402. Update related Web UI and CLI with
+Subject: [PATCH 0761/2639] YARN-1402. Update related Web UI and CLI with
  exposing client API to check log aggregation
  status. Contributed by Xuan Gong. (cherry picked
  from commit
@@ -15,7 +15,6 @@ Conflicts:
 	hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesApps.java
 
 Change-Id: I8ec61b11c1f63941d519b493beb45f931708e0e9
-(cherry picked from commit eb2d7412438ff937d64801bfd8f408b5469b7625)
 ---
  .../hadoop/yarn/api/records/ApplicationReport.java |   14 ++-
  .../yarn/api/records/LogAggregationStatus.java     |   55 ++++++++++

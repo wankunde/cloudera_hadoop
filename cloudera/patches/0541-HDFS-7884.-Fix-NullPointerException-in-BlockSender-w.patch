@@ -1,9 +1,9 @@
 From aa3c6e686d07c3ff9b4114d3729f2348d6328d8d Mon Sep 17 00:00:00 2001
 From: Tsz-Wo Nicholas Sze <szetszwo@hortonworks.com>
 Date: Tue, 24 Mar 2015 13:49:17 +0900
-Subject: [PATCH 541/924] HDFS-7884. Fix NullPointerException in BlockSender
- when the generation stamp provided by the client is
- larger than the one stored in the datanode. 
+Subject: [PATCH 0541/2639] HDFS-7884. Fix NullPointerException in BlockSender
+ when the generation stamp provided by the client
+ is larger than the one stored in the datanode. 
  Contributed by Brahma Reddy Battula
 
 (cherry picked from commit fe693b72dec703ecbf4ab3919d61d06ea8735a9e)

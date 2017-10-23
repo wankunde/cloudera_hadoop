@@ -1,7 +1,7 @@
 From ce1e8a47873134847a89d407da86fb2b7ff1356f Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Tue, 17 Feb 2015 16:36:32 +0000
-Subject: [PATCH 391/924] HADOOP-11570. S3AInputStream.close() downloads the
+Subject: [PATCH 0391/2639] HADOOP-11570. S3AInputStream.close() downloads the
  remaining bytes of the object from S3. (Dan Hecht
  via stevel). (cherry picked from commit
  701b96ca8e9a89d51ee47a470e524307fea3a035)

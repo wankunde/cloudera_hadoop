@@ -1,9 +1,9 @@
-From dabf3cd95ac50f93a2803aa59d62521d98e25d75 Mon Sep 17 00:00:00 2001
+From c21a462d48426bc947086d4a4b6b37bf4d558e4e Mon Sep 17 00:00:00 2001
 From: Junping Du <junping_du@apache.org>
 Date: Fri, 10 Apr 2015 08:56:18 -0700
-Subject: [PATCH 760/924] YARN-1376. NM need to notify the log aggregation
- status to RM through Node heartbeat. Contributed by
- Xuan Gong. (cherry picked from commit
+Subject: [PATCH 0760/2639] YARN-1376. NM need to notify the log aggregation
+ status to RM through Node heartbeat. Contributed
+ by Xuan Gong. (cherry picked from commit
  92431c961741747b5d6442f4025016d48d9a6863)
 
 (cherry picked from commit 0891de07125ca11b4b4b857ccf4c99b65871bd81)
@@ -23,7 +23,6 @@ Conflicts:
 	hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/rmapp/MockRMApp.java
 
 Change-Id: Iede920a9d5e3cbaff1fde0320428d82b26a2578d
-(cherry picked from commit c21a462d48426bc947086d4a4b6b37bf4d558e4e)
 ---
  .../apache/hadoop/yarn/conf/YarnConfiguration.java |   11 +
  .../api/protocolrecords/LogAggregationReport.java  |  104 +++++++

@@ -32,6 +32,8 @@ import java.util.Map;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -68,8 +70,8 @@ public abstract class KeyProvider {
 
     protected KeyVersion(String name, String versionName,
                          byte[] material) {
-      this.name = name;
-      this.versionName = versionName;
+      this.name = name == null ? null : name.intern();
+      this.versionName = versionName == null ? null : versionName.intern();
       this.material = material;
     }
 
@@ -85,6 +87,7 @@ public abstract class KeyProvider {
       return material;
     }
 
+    @Override
     public String toString() {
       StringBuilder buf = new StringBuilder();
       buf.append("key(");
@@ -103,6 +106,31 @@ public abstract class KeyProvider {
         }
       }
       return buf.toString();
+    }
+
+    @Override
+    public boolean equals(Object rhs) {
+      if (this == rhs) {
+        return true;
+      }
+      if (rhs == null || getClass() != rhs.getClass()) {
+        return false;
+      }
+      final KeyVersion kv = (KeyVersion) rhs;
+      return new EqualsBuilder().
+          append(name, kv.name).
+          append(versionName, kv.versionName).
+          append(material, kv.material).
+          isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+      return new HashCodeBuilder().
+          append(name).
+          append(versionName).
+          append(material).
+          toHashCode();
     }
   }
 
@@ -554,8 +582,24 @@ public abstract class KeyProvider {
   public KeyVersion rollNewVersion(String name) throws NoSuchAlgorithmException,
                                                        IOException {
     Metadata meta = getMetadata(name);
+    if (meta == null) {
+      throw new IOException("Can't find Metadata for key " + name);
+    }
+
     byte[] material = generateKey(meta.getBitLength(), meta.getCipher());
     return rollNewVersion(name, material);
+  }
+
+  /**
+   * Can be used by implementing classes to invalidate the caches. This could be
+   * used after rollNewVersion to provide a strong guarantee to return the new
+   * version of the given key.
+   *
+   * @param name the basename of the key
+   * @throws IOException
+   */
+  public void invalidateCache(String name) throws IOException {
+    // NOP
   }
 
   /**
@@ -604,5 +648,37 @@ public abstract class KeyProvider {
       }
     }
     throw new IOException("Can't find KeyProvider for key " + keyName);
+  }
+
+  /**
+   * Does this provider require a password? This means that a password is
+   * required for normal operation, and it has not been found through normal
+   * means. If true, the password should be provided by the caller using
+   * setPassword().
+   * @return Whether or not the provider requires a password
+   * @throws IOException
+   */
+  public boolean needsPassword() throws IOException {
+    return false;
+  }
+
+  /**
+   * If a password for the provider is needed, but is not provided, this will
+   * return a warning and instructions for supplying said password to the
+   * provider.
+   * @return A warning and instructions for supplying the password
+   */
+  public String noPasswordWarning() {
+    return null;
+  }
+
+  /**
+   * If a password for the provider is needed, but is not provided, this will
+   * return an error message and instructions for supplying said password to
+   * the provider.
+   * @return An error message and instructions for supplying the password
+   */
+  public String noPasswordError() {
+    return null;
   }
 }

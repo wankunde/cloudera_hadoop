@@ -1,8 +1,9 @@
-From 4ebdd43f7e579385ecb78873c436dc516a395f56 Mon Sep 17 00:00:00 2001
+From 35aa05cc3b5d01d4560db70a254e4b9deba05970 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Mon, 17 Nov 2014 11:42:20 -0800
-Subject: [PATCH 746/924] HDFS-7279. Use netty to implement
- DatanodeWebHdfsMethods. Contributed by Haohui Mai.
+Subject: [PATCH 0746/2639] HDFS-7279. Use netty to implement
+ DatanodeWebHdfsMethods. Contributed by Haohui
+ Mai.
 
 (cherry picked from commit bf8e4332cb4c33d0287ae6ecca61b335402ac1c4)
 

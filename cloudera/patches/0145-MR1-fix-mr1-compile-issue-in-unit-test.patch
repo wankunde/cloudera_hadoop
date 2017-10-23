@@ -1,7 +1,7 @@
 From 33d86f3e6406c6d5d053a4b59f11bb51990e94d3 Mon Sep 17 00:00:00 2001
 From: Juan Yu <jyu@cloudera.com>
 Date: Wed, 3 Sep 2014 15:34:43 -0700
-Subject: [PATCH 145/924] MR1: fix mr1 compile issue in unit test.
+Subject: [PATCH 0145/2639] MR1: fix mr1 compile issue in unit test.
 
 (cherry picked from commit 634853606589d94ce903701295d902c84f6c311a)
 ---

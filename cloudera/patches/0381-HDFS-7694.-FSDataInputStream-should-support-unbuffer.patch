@@ -1,7 +1,7 @@
 From 06f23ba760c655dd536065d26e9ce0ede1ab7395 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 12 Feb 2015 10:40:46 -0800
-Subject: [PATCH 381/924] HDFS-7694. FSDataInputStream should support
+Subject: [PATCH 0381/2639] HDFS-7694. FSDataInputStream should support
  "unbuffer" (cmccabe)
 
 (cherry picked from commit 6b39ad0865cb2a7960dd59d68178f0bf28865ce2)

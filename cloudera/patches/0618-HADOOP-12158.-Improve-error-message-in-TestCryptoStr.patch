@@ -1,9 +1,9 @@
 From b18ff04be0b47078d6c38e121ba287af20ad4db7 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 30 Jun 2015 15:04:18 -0700
-Subject: [PATCH 618/924] HADOOP-12158. Improve error message in
- TestCryptoStreamsWithOpensslAesCtrCryptoCodec when
- OpenSSL is not installed.
+Subject: [PATCH 0618/2639] HADOOP-12158. Improve error message in
+ TestCryptoStreamsWithOpensslAesCtrCryptoCodec
+ when OpenSSL is not installed.
 
 (cherry picked from commit 9ee7b6e6c4ab6bee6304fa7904993c7cbd9a6cd2)
 ---

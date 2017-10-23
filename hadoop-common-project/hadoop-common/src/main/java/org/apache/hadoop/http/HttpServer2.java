@@ -54,10 +54,7 @@ import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
-import org.apache.hadoop.security.authentication.util.FileSignerSecretProvider;
-import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
-import org.apache.hadoop.security.authentication.util.ZKSignerSecretProvider;
 import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
@@ -96,8 +93,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
-import static org.apache.hadoop.security.authentication.server
-    .AuthenticationFilter.*;
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is
  * to serve up status information for the server. There are three contexts:
@@ -184,6 +179,7 @@ public final class HttpServer2 implements FilterContainer {
     private String hostName;
     private boolean disallowFallbackToRandomSignerSecretProvider;
     private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
+    private String excludeCiphers;
 
     public Builder setName(String name){
       this.name = name;
@@ -293,6 +289,11 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
+    public Builder excludeCiphers(String pExcludeCiphers) {
+      this.excludeCiphers = pExcludeCiphers;
+      return this;
+    }
+
     public HttpServer2 build() throws IOException {
       if (this.name == null) {
         throw new HadoopIllegalArgumentException("name is not set");
@@ -343,6 +344,12 @@ public final class HttpServer2 implements FilterContainer {
             c.setTruststoreType(trustStoreType);
             c.setTrustPassword(trustStorePassword);
           }
+
+          if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
+            c.setExcludeCipherSuites(excludeCiphers.split(","));
+            LOG.info("Excluded Cipher List:" + excludeCiphers);
+          }
+
           listener = c;
 
         } else {
@@ -392,6 +399,7 @@ public final class HttpServer2 implements FilterContainer {
         : new QueuedThreadPool(maxThreads);
     threadPool.setDaemon(true);
     webServer.setThreadPool(threadPool);
+    webServer.setSendServerVersion(false);
 
     SessionManager sm = webAppContext.getSessionHandler().getSessionManager();
     if (sm instanceof AbstractSessionManager) {
@@ -568,9 +576,13 @@ public final class HttpServer2 implements FilterContainer {
    */
   protected void addDefaultApps(ContextHandlerCollection parent,
       final String appDir, Configuration conf) throws IOException {
-    // set up the context for "/logs/" if "hadoop.log.dir" property is defined.
+    // set up the context for "/logs/" if "hadoop.log.dir" property is defined
+    // and it's enabled.
     String logDir = System.getProperty("hadoop.log.dir");
-    if (logDir != null) {
+    boolean logsEnabled = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_HTTP_LOGS_ENABLED,
+        CommonConfigurationKeys.HADOOP_HTTP_LOGS_ENABLED_DEFAULT);
+    if (logDir != null && logsEnabled) {
       Context logContext = new Context(parent, "/logs");
       logContext.setResourceBase(logDir);
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
@@ -592,6 +604,9 @@ public final class HttpServer2 implements FilterContainer {
     staticContext.setResourceBase(appDir + "/static");
     staticContext.addServlet(DefaultServlet.class, "/*");
     staticContext.setDisplayName("static");
+    @SuppressWarnings("unchecked")
+    Map<String, String> params = staticContext.getInitParams();
+    params.put("org.mortbay.jetty.servlet.Default.dirAllowed", "false");
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
   }
@@ -1154,9 +1169,11 @@ public final class HttpServer2 implements FilterContainer {
   /**
    * A Servlet input filter that quotes all HTML active characters in the
    * parameter names and values. The goal is to quote the characters to make
-   * all of the servlets resistant to cross-site scripting attacks.
+   * all of the servlets resistant to cross-site scripting attacks. It also
+   * sets X-FRAME-OPTIONS in the header to mitigate clickjacking attacks.
    */
   public static class QuotingInputFilter implements Filter {
+    private static final XFrameOption X_FRAME_OPTION = XFrameOption.SAMEORIGIN;
     private FilterConfig config;
 
     public static class RequestQuoter extends HttpServletRequestWrapper {
@@ -1276,6 +1293,7 @@ public final class HttpServer2 implements FilterContainer {
       } else if (mime.startsWith("application/xml")) {
         httpResponse.setContentType("text/xml; charset=utf-8");
       }
+      httpResponse.addHeader("X-FRAME-OPTIONS", X_FRAME_OPTION.toString());
       chain.doFilter(quoted, httpResponse);
     }
 
@@ -1291,5 +1309,24 @@ public final class HttpServer2 implements FilterContainer {
       return (mimeBuffer == null) ? null : mimeBuffer.toString();
     }
 
+  }
+
+  /**
+   * The X-FRAME-OPTIONS header in HTTP response to mitigate clickjacking
+   * attack.
+   */
+  public enum XFrameOption {
+    DENY("DENY") , SAMEORIGIN ("SAMEORIGIN"), ALLOWFROM ("ALLOW-FROM");
+
+    XFrameOption(String name) {
+      this.name = name;
+    }
+
+    private final String name;
+
+    @Override
+    public String toString() {
+      return this.name;
+    }
   }
 }

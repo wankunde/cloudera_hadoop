@@ -1,7 +1,7 @@
 From 208fc2845901d6ac88cd5540ab0b551c361006cc Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Tue, 7 Jan 2014 10:29:06 -0800
-Subject: [PATCH 198/924] HDFS-5685. DistCp will fail to copy with -delete
+Subject: [PATCH 0198/2639] HDFS-5685. DistCp will fail to copy with -delete
  switch. Contributed by Yongjun Zhang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1556082 13f79535-47bb-0310-9956-ffa450edef68

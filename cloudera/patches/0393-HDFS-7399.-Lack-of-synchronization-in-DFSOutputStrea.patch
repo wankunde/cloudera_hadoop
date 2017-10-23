@@ -1,7 +1,7 @@
 From 843fd1e92aeb70de5de45f1a746012666a42b114 Mon Sep 17 00:00:00 2001
 From: Vinayakumar B <vinayakumarb@apache.org>
 Date: Mon, 17 Nov 2014 20:19:19 +0530
-Subject: [PATCH 393/924] HDFS-7399. Lack of synchronization in
+Subject: [PATCH 0393/2639] HDFS-7399. Lack of synchronization in
  DFSOutputStream#Packet#getLastByteOffsetBlock()
  (Contributed by Vinayakumar B)
 

@@ -378,8 +378,9 @@ public class TestCopyMapper {
               workPath);
       copyMapper.setup(context);
 
-      copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), pathList.get(0))),
-              new CopyListingFileStatus(fs.getFileStatus(pathList.get(0))), context);
+      copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH),
+          pathList.get(0))),
+          new CopyListingFileStatus(fs.getFileStatus(pathList.get(0))), context);
 
       Assert.assertTrue("There should have been an exception.", false);
     }
@@ -391,6 +392,8 @@ public class TestCopyMapper {
   public void testIgnoreFailures() {
     doTestIgnoreFailures(true);
     doTestIgnoreFailures(false);
+    doTestIgnoreFailuresDoubleWrapped(true);
+    doTestIgnoreFailuresDoubleWrapped(false);
   }
 
   @Test(timeout=40000)
@@ -525,7 +528,8 @@ public class TestCopyMapper {
       mkdirs(TARGET_PATH);
       cluster.getFileSystem().setPermission(new Path(SOURCE_PATH + "/src/file"),
           new FsPermission(FsAction.READ, FsAction.READ, FsAction.READ));
-      cluster.getFileSystem().setPermission(new Path(TARGET_PATH), new FsPermission((short)511));
+      cluster.getFileSystem().setPermission(new Path(TARGET_PATH),
+          new FsPermission((short)511));
 
       final FileSystem tmpFS = tmpUser.doAs(new PrivilegedAction<FileSystem>() {
         @Override
@@ -785,7 +789,8 @@ public class TestCopyMapper {
       }
       if (ignoreFailures) {
         for (Text value : stubContext.getWriter().values()) {
-          Assert.assertTrue(value.toString() + " is not skipped", value.toString().startsWith("FAIL:"));
+          Assert.assertTrue(value.toString() + " is not skipped",
+              value.toString().startsWith("FAIL:"));
         }
       }
       Assert.assertTrue("There should have been an exception.", ignoreFailures);
@@ -794,6 +799,89 @@ public class TestCopyMapper {
       Assert.assertTrue("Unexpected exception: " + e.getMessage(),
               !ignoreFailures);
       e.printStackTrace();
+    }
+  }
+
+  /**
+   * This test covers the case where the CopyReadException is double-wrapped and
+   * the mapper should be able to ignore this nested read exception.
+   * @see #doTestIgnoreFailures
+   */
+  private void doTestIgnoreFailuresDoubleWrapped(final boolean ignoreFailures) {
+    try {
+      deleteState();
+      createSourceData();
+
+      final UserGroupInformation tmpUser = UserGroupInformation
+          .createRemoteUser("guest");
+
+      final CopyMapper copyMapper = new CopyMapper();
+
+      final Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
+          tmpUser.doAs(new PrivilegedAction<
+              Mapper<Text, CopyListingFileStatus, Text, Text>.Context>() {
+            @Override
+            public Mapper<Text, CopyListingFileStatus, Text, Text>.Context
+            run() {
+              try {
+                StubContext stubContext = new StubContext(
+                    getConfiguration(), null, 0);
+                return stubContext.getContext();
+              } catch (Exception e) {
+                LOG.error("Exception encountered when get stub context", e);
+                throw new RuntimeException(e);
+              }
+            }
+          });
+
+      touchFile(SOURCE_PATH + "/src/file");
+      mkdirs(TARGET_PATH);
+      cluster.getFileSystem().setPermission(new Path(SOURCE_PATH + "/src/file"),
+          new FsPermission(FsAction.NONE, FsAction.NONE, FsAction.NONE));
+      cluster.getFileSystem().setPermission(new Path(TARGET_PATH),
+          new FsPermission((short)511));
+
+      context.getConfiguration().setBoolean(
+          DistCpOptionSwitch.IGNORE_FAILURES.getConfigLabel(), ignoreFailures);
+
+      final FileSystem tmpFS = tmpUser.doAs(new PrivilegedAction<FileSystem>() {
+        @Override
+        public FileSystem run() {
+          try {
+            return FileSystem.get(configuration);
+          } catch (IOException e) {
+            LOG.error("Exception encountered when get FileSystem.", e);
+            throw new RuntimeException(e);
+          }
+        }
+      });
+
+      tmpUser.doAs(new PrivilegedAction<Integer>() {
+        @Override
+        public Integer run() {
+          try {
+            copyMapper.setup(context);
+            copyMapper.map(new Text("/src/file"),
+                new CopyListingFileStatus(tmpFS.getFileStatus(
+                    new Path(SOURCE_PATH + "/src/file"))),
+                context);
+            Assert.assertTrue("Should have thrown an IOException if not " +
+                "ignoring failures", ignoreFailures);
+          } catch (IOException e) {
+            LOG.error("Unexpected exception encountered. ", e);
+            Assert.assertFalse("Should not have thrown an IOException if " +
+                "ignoring failures", ignoreFailures);
+            // the IOException is not thrown again as it's expected
+          } catch (Exception e) {
+            LOG.error("Exception encountered when the mapper copies file.", e);
+            throw new RuntimeException(e);
+          }
+          return null;
+        }
+      });
+    } catch (Exception e) {
+      LOG.error("Unexpected exception encountered. ", e);
+      Assert.fail("Test failed: " + e.getMessage());
     }
   }
 
@@ -813,7 +901,6 @@ public class TestCopyMapper {
   @Test(timeout=40000)
   public void testCopyFailOnBlockSizeDifference() {
     try {
-
       deleteState();
       createSourceDataWithDifferentBlockSize();
 
@@ -833,16 +920,18 @@ public class TestCopyMapper {
 
       for (Path path : pathList) {
         final FileStatus fileStatus = fs.getFileStatus(path);
-        copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
-            new CopyListingFileStatus(fileStatus), context);
+        copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH),
+            path)), new CopyListingFileStatus(fileStatus), context);
       }
 
       Assert.fail("Copy should have failed because of block-size difference.");
     }
     catch (Exception exception) {
       // Check that the exception suggests the use of -pb/-skipCrc.
-      Assert.assertTrue("Failure exception should have suggested the use of -pb.", exception.getCause().getCause().getMessage().contains("pb"));
-      Assert.assertTrue("Failure exception should have suggested the use of -skipCrc.", exception.getCause().getCause().getMessage().contains("skipCrc"));
+      Assert.assertTrue("Failure exception should have suggested the use of -pb.",
+          exception.getCause().getCause().getMessage().contains("pb"));
+      Assert.assertTrue("Failure exception should have suggested the use of -skipCrc.",
+          exception.getCause().getCause().getMessage().contains("skipCrc"));
     }
   }
 

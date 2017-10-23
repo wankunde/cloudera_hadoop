@@ -121,6 +121,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final int retentionSize;
   private final long rollingMonitorInterval;
   private final NodeId nodeId;
+  // This variable is only for testing
+  private final AtomicBoolean waiting = new AtomicBoolean(false);
 
   private boolean renameTemporaryLogFileFailed = false;
 
@@ -185,12 +187,12 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       }
     } else {
       if (configuredRollingMonitorInterval <= 0) {
-        LOG.warn("rollingMonitorInterval is set as "
+        LOG.info("rollingMonitorInterval is set as "
             + configuredRollingMonitorInterval + ". "
-            + "The log rolling mornitoring interval is disabled. "
+            + "The log rolling monitoring interval is disabled. "
             + "The logs will be aggregated after this application is finished.");
       } else {
-        LOG.warn("rollingMonitorInterval is set as "
+        LOG.info("rollingMonitorInterval is set as "
             + configuredRollingMonitorInterval + ". "
             + "The logs will be aggregated every "
             + configuredRollingMonitorInterval + " seconds");
@@ -289,6 +291,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
       if (writer != null) {
         writer.close();
+        writer = null;
       }
 
       long currentTime = System.currentTimeMillis();
@@ -305,7 +308,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         userUgi.doAs(new PrivilegedExceptionAction<Object>() {
           @Override
           public Object run() throws Exception {
-            FileSystem remoteFS = FileSystem.get(conf);
+            FileSystem remoteFS = remoteNodeLogFileForApp.getFileSystem(conf);
             if (remoteFS.exists(remoteNodeTmpLogFileForApp)) {
               if (rename) {
                 remoteFS.rename(remoteNodeTmpLogFileForApp, renamedPath);
@@ -419,6 +422,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   public void run() {
     try {
       doAppLogAggregation();
+    } catch (Exception e) {
+      // do post clean up of log directories on any exception
+      LOG.error("Error occured while aggregating the log for the application "
+          + appId, e);
+      doAppLogAggregationPostCleanUp();
     } finally {
       if (!this.appAggregationFinished.get()) {
         LOG.warn("Aggregation did not complete for application " + appId);
@@ -432,6 +440,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     while (!this.appFinishing.get() && !this.aborted.get()) {
       synchronized(this) {
         try {
+          waiting.set(true);
           if (this.rollingMonitorInterval > 0) {
             wait(this.rollingMonitorInterval * 1000);
             if (this.appFinishing.get() || this.aborted.get()) {
@@ -455,6 +464,15 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     // App is finished, upload the container logs.
     uploadLogsForContainers(true);
 
+    doAppLogAggregationPostCleanUp();
+
+    this.dispatcher.getEventHandler().handle(
+        new ApplicationEvent(this.appId,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
+    this.appAggregationFinished.set(true);
+  }
+
+  private void doAppLogAggregationPostCleanUp() {
     // Remove the local app-log-dirs
     List<Path> localAppLogDirs = new ArrayList<Path>();
     for (String rootLogDir : dirsHandler.getLogDirsForCleanup()) {
@@ -475,11 +493,6 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       this.delService.delete(this.userUgi.getShortUserName(), null,
         localAppLogDirs.toArray(new Path[localAppLogDirs.size()]));
     }
-    
-    this.dispatcher.getEventHandler().handle(
-        new ApplicationEvent(this.appId,
-            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
-    this.appAggregationFinished.set(true);    
   }
 
   private Path getRemoteNodeTmpLogFileForApp() {
@@ -546,9 +559,26 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.notifyAll();
   }
 
+  @Override
+  public void disableLogAggregation() {
+    this.logAggregationDisabled = true;
+  }
+
   @Private
   @VisibleForTesting
+  // This is only used for testing.
+  // This will wake the log aggregation thread that is waiting for
+  // rollingMonitorInterval.
+  // To use this method, make sure the log aggregation thread is running
+  // and waiting for rollingMonitorInterval.
   public synchronized void doLogAggregationOutOfBand() {
+    while(!waiting.get()) {
+      try {
+        wait(200);
+      } catch (InterruptedException e) {
+        // Do Nothing
+      }
+    }
     LOG.info("Do OutOfBand log aggregation");
     this.notifyAll();
   }
@@ -565,10 +595,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     public Set<Path> doContainerLogAggregation(LogWriter writer) {
       LOG.info("Uploading logs for container " + containerId
           + ". Current good log dirs are "
-          + StringUtils.join(",", dirsHandler.getLogDirs()));
+          + StringUtils.join(",", dirsHandler.getLogDirsForRead()));
       final LogKey logKey = new LogKey(containerId);
       final LogValue logValue =
-          new LogValue(dirsHandler.getLogDirs(), containerId,
+          new LogValue(dirsHandler.getLogDirsForRead(), containerId,
             userUgi.getShortUserName(), logAggregationContext,
             this.uploadedFileMeta);
       try {

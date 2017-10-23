@@ -1,7 +1,7 @@
 From 75c8caad082f9788d4c3055422e8108e9f810602 Mon Sep 17 00:00:00 2001
 From: Brandon Li <brandonli@apache.org>
 Date: Thu, 11 Dec 2014 15:40:45 -0800
-Subject: [PATCH 414/924] HDFS-7449. Add metrics to NFS gateway. Contributed
+Subject: [PATCH 0414/2639] HDFS-7449. Add metrics to NFS gateway. Contributed
  by Brandon Li
 
 (cherry picked from commit f6f2a3f1c73266bfedd802eacde60d8b19b81015)

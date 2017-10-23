@@ -1,7 +1,7 @@
 From 7ca34afe7120e6c712d37b6c15d4fcc49852edf0 Mon Sep 17 00:00:00 2001
 From: Ray Chiang <rchiang@cloudera.com>
 Date: Wed, 8 Jul 2015 21:31:46 -0700
-Subject: [PATCH 628/924] MAPREDUCE-6376.  Fix extra line accidentally left
+Subject: [PATCH 0628/2639] MAPREDUCE-6376.  Fix extra line accidentally left
  in.
 
 ---

@@ -1,7 +1,7 @@
 From 1a047da8d3916625f8b49cc432fc3833f7f03541 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 3 Sep 2014 12:02:47 -0700
-Subject: [PATCH 346/924] MAPREDUCE-6055. native-task: findbugs, interface
+Subject: [PATCH 0346/2639] MAPREDUCE-6055. native-task: findbugs, interface
  annotations, and other misc cleanup
 
 (cherry picked from commit 1081d9cee23aa661d7c9165bc9855865a38b528e)

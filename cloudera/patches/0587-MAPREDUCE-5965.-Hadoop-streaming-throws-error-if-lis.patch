@@ -1,7 +1,7 @@
 From ae4158e9825798797173f13baff776150fd07a5e Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@apache.org>
 Date: Wed, 3 Jun 2015 18:41:45 -0700
-Subject: [PATCH 587/924] MAPREDUCE-5965. Hadoop streaming throws error if
+Subject: [PATCH 0587/2639] MAPREDUCE-5965. Hadoop streaming throws error if
  list of input files is high. Error is: "error=7,
  Argument list too long at if number of input file
  is high" (wilfreds via rkanter)

@@ -1,7 +1,7 @@
 From 682f35abcd732120d57dad61105ab67b1fa647e7 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 3 Apr 2015 14:08:25 -0700
-Subject: [PATCH 669/924] HADOOP-11785. Reduce the number of listStatus
+Subject: [PATCH 0669/2639] HADOOP-11785. Reduce the number of listStatus
  operation in distcp buildListing (Zoran
  Dimitrijevic via Colin P. McCabe)
 

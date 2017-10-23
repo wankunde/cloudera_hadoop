@@ -1,9 +1,9 @@
 From 80fcbb78a4f1ba4e516c295c991b13310f2f8f9e Mon Sep 17 00:00:00 2001
 From: Binglin Chang <bchang@apache.org>
 Date: Thu, 24 Jul 2014 11:44:09 +0000
-Subject: [PATCH 332/924] MAPREDUCE-5991. native-task should not run unit
- tests if native profile is not enabled. Contributed
- by Binglin Chang.
+Subject: [PATCH 0332/2639] MAPREDUCE-5991. native-task should not run unit
+ tests if native profile is not enabled.
+ Contributed by Binglin Chang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1613072 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ea9e5b7baae34c7ba660681d1e5aceb9c1047e6f)

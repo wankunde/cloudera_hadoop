@@ -1,7 +1,7 @@
 From 27a9fcccf72fa5680188aa627a66b8b72c8b0a92 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 6 Jan 2014 11:29:16 -0800
-Subject: [PATCH 120/924] MR1: MAPREDUCE-3310. Custom grouping comparator
+Subject: [PATCH 0120/2639] MR1: MAPREDUCE-3310. Custom grouping comparator
  cannot be set for Combiners (tucu)
 
 (cherry picked from commit a3001f9ebccaf587ac312d563ce2f445080f4982)

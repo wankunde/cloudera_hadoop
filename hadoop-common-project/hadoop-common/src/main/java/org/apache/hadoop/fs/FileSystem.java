@@ -21,20 +21,21 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.lang.ref.ReferenceQueue;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.Stack;
@@ -47,11 +48,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.Text;
@@ -61,6 +64,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -68,6 +72,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.htrace.core.Tracer;
 import org.apache.htrace.core.TraceScope;
 
+import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 
 /****************************************************************
@@ -102,6 +107,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Priority of the FileSystem shutdown hook.
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 10;
+
+  public static final String TRASH_PREFIX = ".Trash";
+  public static final String USER_HOME_PREFIX = "/user";
 
   /** FileSystem cache */
   static final Cache CACHE = new Cache();
@@ -733,7 +741,8 @@ public abstract class FileSystem extends Configured implements Closeable {
         conf.getInt("io.file.buffer.size", 4096),
         false,
         CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT,
-        DataChecksum.Type.CRC32);
+        DataChecksum.Type.CRC32,
+        "");
   }
 
   /**
@@ -914,9 +923,9 @@ public abstract class FileSystem extends Configured implements Closeable {
                                             long blockSize,
                                             Progressable progress
                                             ) throws IOException {
-    return this.create(f, FsPermission.getFileDefault().applyUMask(
-        FsPermission.getUMask(getConf())), overwrite, bufferSize,
-        replication, blockSize, progress);
+    return this.create(f, FsCreateModes.applyUMask(
+        FsPermission.getFileDefault(), FsPermission.getUMask(getConf())),
+        overwrite, bufferSize, replication, blockSize, progress);
   }
 
   /**
@@ -1476,7 +1485,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * List the statuses of the files/directories in the given path if the path is
    * a directory.
-   * 
+   * <p>
+   * Does not guarantee to return the List of files/directories status in a
+   * sorted order.
    * @param f given path
    * @return the statuses of the files/directories in the given patch
    * @throws FileNotFoundException when the path does not exist;
@@ -1484,7 +1495,68 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public abstract FileStatus[] listStatus(Path f) throws FileNotFoundException, 
                                                          IOException;
-    
+
+  /**
+   * Represents a batch of directory entries when iteratively listing a
+   * directory. This is a private API not meant for use by end users.
+   * <p>
+   * For internal use by FileSystem subclasses that override
+   * {@link FileSystem#listStatusBatch(Path, byte[])} to implement iterative
+   * listing.
+   */
+  @InterfaceAudience.Private
+  public static class DirectoryEntries {
+    private final FileStatus[] entries;
+    private final byte[] token;
+    private final boolean hasMore;
+
+    public DirectoryEntries(FileStatus[] entries, byte[] token, boolean
+        hasMore) {
+      this.entries = entries;
+      if (token != null) {
+        this.token = token.clone();
+      } else {
+        this.token = null;
+      }
+      this.hasMore = hasMore;
+    }
+
+    public FileStatus[] getEntries() {
+      return entries;
+    }
+
+    public byte[] getToken() {
+      return token;
+    }
+
+    public boolean hasMore() {
+      return hasMore;
+    }
+  }
+
+  /**
+   * Given an opaque iteration token, return the next batch of entries in a
+   * directory. This is a private API not meant for use by end users.
+   * <p>
+   * This method should be overridden by FileSystem subclasses that want to
+   * use the generic {@link FileSystem#listStatusIterator(Path)} implementation.
+   * @param f Path to list
+   * @param token opaque iteration token returned by previous call, or null
+   *              if this is the first call.
+   * @return
+   * @throws FileNotFoundException
+   * @throws IOException
+   */
+  @InterfaceAudience.Private
+  protected DirectoryEntries listStatusBatch(Path f, byte[] token) throws
+      FileNotFoundException, IOException {
+    // The default implementation returns the entire listing as a single batch.
+    // Thus, there is never a second batch, and no need to respect the passed
+    // token or set a token in the returned DirectoryEntries.
+    FileStatus[] listing = listStatus(f);
+    return new DirectoryEntries(listing, null, false);
+  }
+
   /*
    * Filter files/directories in the given path using the user-supplied path
    * filter. Results are added to the given array <code>results</code>.
@@ -1518,6 +1590,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Filter files/directories in the given path using the user-supplied path
    * filter.
+   * <p>
+   * Does not guarantee to return the List of files/directories status in a
+   * sorted order.
    * 
    * @param f
    *          a path name
@@ -1538,6 +1613,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Filter files/directories in the given list of paths using default
    * path filter.
+   * <p>
+   * Does not guarantee to return the List of files/directories status in a
+   * sorted order.
    * 
    * @param files
    *          a list of paths
@@ -1554,6 +1632,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Filter files/directories in the given list of paths using user-supplied
    * path filter.
+   * <p>
+   * Does not guarantee to return the List of files/directories status in a
+   * sorted order.
    * 
    * @param files
    *          a list of paths
@@ -1702,8 +1783,10 @@ public abstract class FileSystem extends Configured implements Closeable {
           throw new NoSuchElementException("No more entry in " + f);
         }
         FileStatus result = stats[i++];
+        // for files, use getBlockLocations(FileStatus, int, int) to avoid
+        // calling getFileStatus(Path) to load the FileStatus again
         BlockLocation[] locs = result.isFile() ?
-            getFileBlockLocations(result.getPath(), 0, result.getLen()) :
+            getFileBlockLocations(result, 0, result.getLen()) :
             null;
         return new LocatedFileStatus(result, locs);
       }
@@ -1711,37 +1794,68 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * Generic iterator for implementing {@link #listStatusIterator(Path)}.
+   */
+  private class DirListingIterator<T extends FileStatus> implements
+      RemoteIterator<T> {
+
+    private final Path path;
+    private DirectoryEntries entries;
+    private int i = 0;
+
+    DirListingIterator(Path path) {
+      this.path = path;
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      if (entries == null) {
+        fetchMore();
+      }
+      return i < entries.getEntries().length ||
+          entries.hasMore();
+    }
+
+    private void fetchMore() throws IOException {
+      byte[] token = null;
+      if (entries != null) {
+        token = entries.getToken();
+      }
+      entries = listStatusBatch(path, token);
+      i = 0;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public T next() throws IOException {
+      Preconditions.checkState(hasNext(), "No more items in iterator");
+      if (i == entries.getEntries().length) {
+        fetchMore();
+      }
+      return (T)entries.getEntries()[i++];
+    }
+  }
+
+  /**
    * Returns a remote iterator so that followup calls are made on demand
    * while consuming the entries. Each file system implementation should
    * override this method and provide a more efficient implementation, if
    * possible. 
+   * Does not guarantee to return the iterator that traverses statuses
+   * of the files in a sorted order.
    *
    * @param p target path
    * @return remote iterator
    */
   public RemoteIterator<FileStatus> listStatusIterator(final Path p)
   throws FileNotFoundException, IOException {
-    return new RemoteIterator<FileStatus>() {
-      private final FileStatus[] stats = listStatus(p);
-      private int i = 0;
-
-      @Override
-      public boolean hasNext() {
-        return i<stats.length;
-      }
-
-      @Override
-      public FileStatus next() throws IOException {
-        if (!hasNext()) {
-          throw new NoSuchElementException("No more entry in " + p);
-        }
-        return stats[i++];
-      }
-    };
+    return new DirListingIterator<>(p);
   }
 
   /**
    * List the statuses and block locations of the files in the given path.
+   * Does not guarantee to return the iterator that traverses statuses
+   * of the files in a sorted order.
    * 
    * If the path is a directory, 
    *   if recursive is false, returns files in the directory;
@@ -1814,7 +1928,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public Path getHomeDirectory() {
     return this.makeQualified(
-        new Path("/user/"+System.getProperty("user.name")));
+        new Path(USER_HOME_PREFIX + "/" + System.getProperty("user.name")));
   }
 
 
@@ -2160,12 +2274,11 @@ public abstract class FileSystem extends Configured implements Closeable {
     FsPermission perm = stat.getPermission();
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String user = ugi.getShortUserName();
-    List<String> groups = Arrays.asList(ugi.getGroupNames());
     if (user.equals(stat.getOwner())) {
       if (perm.getUserAction().implies(mode)) {
         return;
       }
-    } else if (groups.contains(stat.getGroup())) {
+    } else if (ugi.getGroups().contains(stat.getGroup())) {
       if (perm.getGroupAction().implies(mode)) {
         return;
       }
@@ -2589,6 +2702,54 @@ public abstract class FileSystem extends Configured implements Closeable {
         + " doesn't support removeXAttr");
   }
 
+  /**
+   * Get the root directory of Trash for current user when the path specified
+   * is deleted.
+   *
+   * @param path the trash root of the path to be determined.
+   * @return the default implementation returns "/user/$USER/.Trash".
+   */
+  public Path getTrashRoot(Path path) {
+    return this.makeQualified(new Path(getHomeDirectory().toUri().getPath(),
+        TRASH_PREFIX));
+  }
+
+  /**
+   * Get all the trash roots for current user or all users.
+   *
+   * @param allUsers return trash roots for all users if true.
+   * @return all the trash root directories.
+   *         Default FileSystem returns .Trash under users' home directories if
+   *         /user/$USER/.Trash exists.
+   */
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    Path userHome = new Path(getHomeDirectory().toUri().getPath());
+    List<FileStatus> ret = new ArrayList<>();
+    try {
+      if (!allUsers) {
+        Path userTrash = new Path(userHome, TRASH_PREFIX);
+        if (exists(userTrash)) {
+          ret.add(getFileStatus(userTrash));
+        }
+      } else {
+        Path homeParent = userHome.getParent();
+        if (exists(homeParent)) {
+          FileStatus[] candidates = listStatus(homeParent);
+          for (FileStatus candidate : candidates) {
+            Path userTrash = new Path(candidate.getPath(), TRASH_PREFIX);
+            if (exists(userTrash)) {
+              candidate.setPath(userTrash);
+              ret.add(candidate);
+            }
+          }
+        }
+      }
+    } catch (IOException e) {
+      LOG.warn("Cannot get all trash roots", e);
+    }
+    return ret;
+  }
+
   // making it volatile to be able to do a double checked locking
   private volatile static boolean FILE_SYSTEMS_LOADED = false;
 
@@ -2599,8 +2760,20 @@ public abstract class FileSystem extends Configured implements Closeable {
     synchronized (FileSystem.class) {
       if (!FILE_SYSTEMS_LOADED) {
         ServiceLoader<FileSystem> serviceLoader = ServiceLoader.load(FileSystem.class);
-        for (FileSystem fs : serviceLoader) {
-          SERVICE_FILE_SYSTEMS.put(fs.getScheme(), fs.getClass());
+        Iterator<FileSystem> it = serviceLoader.iterator();
+        while (it.hasNext()) {
+          FileSystem fs = null;
+          try {
+            fs = it.next();
+            try {
+              SERVICE_FILE_SYSTEMS.put(fs.getScheme(), fs.getClass());
+            } catch (Exception e) {
+              LOG.warn("Cannot load: " + fs + " from " +
+                  ClassUtil.findContainingJar(fs.getClass()), e);
+            }
+          } catch (ServiceConfigurationError ee) {
+            LOG.warn("Cannot load filesystem", ee);
+          }
         }
         FILE_SYSTEMS_LOADED = true;
       }
@@ -2869,16 +3042,6 @@ public abstract class FileSystem extends Configured implements Closeable {
       volatile int readOps;
       volatile int largeReadOps;
       volatile int writeOps;
-      /**
-       * Stores a weak reference to the thread owning this StatisticsData.
-       * This allows us to remove StatisticsData objects that pertain to
-       * threads that no longer exist.
-       */
-      final WeakReference<Thread> owner;
-
-      StatisticsData(WeakReference<Thread> owner) {
-        this.owner = owner;
-      }
 
       /**
        * Add another StatisticsData object to this one.
@@ -2949,17 +3112,37 @@ public abstract class FileSystem extends Configured implements Closeable {
      * Thread-local data.
      */
     private final ThreadLocal<StatisticsData> threadData;
-    
+
     /**
-     * List of all thread-local data areas.  Protected by the Statistics lock.
+     * Set of all thread-local data areas.  Protected by the Statistics lock.
+     * The references to the statistics data are kept using weak references
+     * to the associated threads. Proper clean-up is performed by the cleaner
+     * thread when the threads are garbage collected.
      */
-    private LinkedList<StatisticsData> allData;
+    private final Set<StatisticsDataReference> allData;
+
+    /**
+     * Global reference queue and a cleaner thread that manage statistics data
+     * references from all filesystem instances.
+     */
+    private static final ReferenceQueue<Thread> STATS_DATA_REF_QUEUE;
+    private static final Thread STATS_DATA_CLEANER;
+
+    static {
+      STATS_DATA_REF_QUEUE = new ReferenceQueue<Thread>();
+      // start a single daemon cleaner thread
+      STATS_DATA_CLEANER = new Thread(new StatisticsDataReferenceCleaner());
+      STATS_DATA_CLEANER.
+          setName(StatisticsDataReferenceCleaner.class.getName());
+      STATS_DATA_CLEANER.setDaemon(true);
+      STATS_DATA_CLEANER.start();
+    }
 
     public Statistics(String scheme) {
       this.scheme = scheme;
-      this.rootData = new StatisticsData(null);
+      this.rootData = new StatisticsData();
       this.threadData = new ThreadLocal<StatisticsData>();
-      this.allData = null;
+      this.allData = new HashSet<StatisticsDataReference>();
     }
 
     /**
@@ -2969,7 +3152,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      */
     public Statistics(Statistics other) {
       this.scheme = other.scheme;
-      this.rootData = new StatisticsData(null);
+      this.rootData = new StatisticsData();
       other.visitAll(new StatisticsAggregator<Void>() {
         @Override
         public void accept(StatisticsData data) {
@@ -2981,6 +3164,64 @@ public abstract class FileSystem extends Configured implements Closeable {
         }
       });
       this.threadData = new ThreadLocal<StatisticsData>();
+      this.allData = new HashSet<StatisticsDataReference>();
+    }
+
+    /**
+     * A weak reference to a thread that also includes the data associated
+     * with that thread. On the thread being garbage collected, it is enqueued
+     * to the reference queue for clean-up.
+     */
+    private class StatisticsDataReference extends WeakReference<Thread> {
+      private final StatisticsData data;
+
+      public StatisticsDataReference(StatisticsData data, Thread thread) {
+        super(thread, STATS_DATA_REF_QUEUE);
+        this.data = data;
+      }
+
+      public StatisticsData getData() {
+        return data;
+      }
+
+      /**
+       * Performs clean-up action when the associated thread is garbage
+       * collected.
+       */
+      public void cleanUp() {
+        // use the statistics lock for safety
+        synchronized (Statistics.this) {
+          /*
+           * If the thread that created this thread-local data no longer exists,
+           * remove the StatisticsData from our list and fold the values into
+           * rootData.
+           */
+          rootData.add(data);
+          allData.remove(this);
+        }
+      }
+    }
+
+    /**
+     * Background action to act on references being removed.
+     */
+    private static class StatisticsDataReferenceCleaner implements Runnable {
+      @Override
+      public void run() {
+        while (!Thread.interrupted()) {
+          try {
+            StatisticsDataReference ref =
+                (StatisticsDataReference)STATS_DATA_REF_QUEUE.remove();
+            ref.cleanUp();
+          } catch (InterruptedException ie) {
+            LOG.warn("Cleaner thread interrupted, will stop", ie);
+            Thread.currentThread().interrupt();
+          } catch (Throwable th) {
+            LOG.warn("Exception in the cleaner thread but it will continue to "
+                + "run", th);
+          }
+        }
+      }
     }
 
     /**
@@ -2989,14 +3230,12 @@ public abstract class FileSystem extends Configured implements Closeable {
     public StatisticsData getThreadStatistics() {
       StatisticsData data = threadData.get();
       if (data == null) {
-        data = new StatisticsData(
-            new WeakReference<Thread>(Thread.currentThread()));
+        data = new StatisticsData();
         threadData.set(data);
+        StatisticsDataReference ref =
+            new StatisticsDataReference(data, Thread.currentThread());
         synchronized(this) {
-          if (allData == null) {
-            allData = new LinkedList<StatisticsData>();
-          }
-          allData.add(data);
+          allData.add(ref);
         }
       }
       return data;
@@ -3049,26 +3288,14 @@ public abstract class FileSystem extends Configured implements Closeable {
      * For each StatisticsData object, we will call accept on the visitor.
      * Finally, at the end, we will call aggregate to get the final total. 
      *
-     * @param         The visitor to use.
+     * @param         visitor to use.
      * @return        The total.
      */
     private synchronized <T> T visitAll(StatisticsAggregator<T> visitor) {
       visitor.accept(rootData);
-      if (allData != null) {
-        for (Iterator<StatisticsData> iter = allData.iterator();
-            iter.hasNext(); ) {
-          StatisticsData data = iter.next();
-          visitor.accept(data);
-          if (data.owner.get() == null) {
-            /*
-             * If the thread that created this thread-local data no
-             * longer exists, remove the StatisticsData from our list
-             * and fold the values into rootData.
-             */
-            rootData.add(data);
-            iter.remove();
-          }
-        }
+      for (StatisticsDataReference ref: allData) {
+        StatisticsData data = ref.getData();
+        visitor.accept(data);
       }
       return visitor.aggregate();
     }
@@ -3171,11 +3398,30 @@ public abstract class FileSystem extends Configured implements Closeable {
       });
     }
 
+    /**
+     * Get all statistics data
+     * MR or other frameworks can use the method to get all statistics at once.
+     * @return the StatisticsData
+     */
+    public StatisticsData getData() {
+      return visitAll(new StatisticsAggregator<StatisticsData>() {
+        private StatisticsData all = new StatisticsData();
+
+        @Override
+        public void accept(StatisticsData data) {
+          all.add(data);
+        }
+
+        public StatisticsData aggregate() {
+          return all;
+        }
+      });
+    }
 
     @Override
     public String toString() {
       return visitAll(new StatisticsAggregator<String>() {
-        private StatisticsData total = new StatisticsData(null);
+        private StatisticsData total = new StatisticsData();
 
         @Override
         public void accept(StatisticsData data) {
@@ -3208,7 +3454,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      */
     public void reset() {
       visitAll(new StatisticsAggregator<Void>() {
-        private StatisticsData total = new StatisticsData(null);
+        private StatisticsData total = new StatisticsData();
 
         @Override
         public void accept(StatisticsData data) {
@@ -3230,12 +3476,17 @@ public abstract class FileSystem extends Configured implements Closeable {
     public String getScheme() {
       return scheme;
     }
+
+    @VisibleForTesting
+    synchronized int getAllThreadLocalDataSize() {
+      return allData.size();
+    }
   }
   
   /**
    * Get the Map of Statistics object indexed by URI Scheme.
    * @return a Map having a key as URI scheme and value as Statistics object
-   * @deprecated use {@link #getAllStatistics} instead
+   * @deprecated use {@link #getGlobalStorageStatistics()}
    */
   @Deprecated
   public static synchronized Map<String, Statistics> getStatistics() {
@@ -3247,8 +3498,10 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Return the FileSystem classes that have Statistics
+   * Return the FileSystem classes that have Statistics.
+   * @deprecated use {@link #getGlobalStorageStatistics()}
    */
+  @Deprecated
   public static synchronized List<Statistics> getAllStatistics() {
     return new ArrayList<Statistics>(statisticsTable.values());
   }
@@ -3257,13 +3510,23 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Get the statistics for a particular file system
    * @param cls the class to lookup
    * @return a statistics object
+   * @deprecated use {@link #getGlobalStorageStatistics()}
    */
-  public static synchronized 
-  Statistics getStatistics(String scheme, Class<? extends FileSystem> cls) {
+  @Deprecated
+  public static synchronized Statistics getStatistics(final String scheme,
+      Class<? extends FileSystem> cls) {
     Statistics result = statisticsTable.get(cls);
     if (result == null) {
-      result = new Statistics(scheme);
-      statisticsTable.put(cls, result);
+      final Statistics newStats = new Statistics(scheme);
+      statisticsTable.put(cls, newStats);
+      result = newStats;
+      GlobalStorageStatistics.INSTANCE.put(scheme,
+          new StorageStatisticsProvider() {
+            @Override
+            public StorageStatistics provide() {
+              return new FileSystemStorageStatistics(scheme, newStats);
+            }
+          });
     }
     return result;
   }
@@ -3272,8 +3535,11 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Reset all statistics for all file systems
    */
   public static synchronized void clearStatistics() {
-    for(Statistics stat: statisticsTable.values()) {
-      stat.reset();
+    final Iterator<StorageStatistics> iterator =
+        GlobalStorageStatistics.INSTANCE.iterator();
+    while (iterator.hasNext()) {
+      final StorageStatistics statistics = iterator.next();
+      statistics.reset();
     }
   }
 
@@ -3302,5 +3568,27 @@ public abstract class FileSystem extends Configured implements Closeable {
   @VisibleForTesting
   public static void enableSymlinks() {
     symlinksEnabled = true;
+  }
+
+  /**
+   * Get the StorageStatistics for this FileSystem object.  These statistics are
+   * per-instance.  They are not shared with any other FileSystem object.
+   *
+   * <p>This is a default method which is intended to be overridden by
+   * subclasses. The default implementation returns an empty storage statistics
+   * object.</p>
+   *
+   * @return    The StorageStatistics for this FileSystem instance.
+   *            Will never be null.
+   */
+  public StorageStatistics getStorageStatistics() {
+    return new EmptyStorageStatistics(getUri().toString());
+  }
+
+  /**
+   * Get the global storage statistics.
+   */
+  public static GlobalStorageStatistics getGlobalStorageStatistics() {
+    return GlobalStorageStatistics.INSTANCE;
   }
 }

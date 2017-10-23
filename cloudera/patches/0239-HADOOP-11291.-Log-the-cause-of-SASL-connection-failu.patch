@@ -1,7 +1,7 @@
 From 6128b284d278c15dff747d84742553df6ff57e94 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Wed, 12 Nov 2014 21:54:06 -0800
-Subject: [PATCH 239/924] HADOOP-11291. Log the cause of SASL connection
+Subject: [PATCH 0239/2639] HADOOP-11291. Log the cause of SASL connection
  failures. Contributed by Stephen Chu.
 
 (cherry picked from commit 7dae5b5a880205fd0125c143c44498db79c19392)

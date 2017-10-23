@@ -1,7 +1,7 @@
 From 9b39fbbcb008cf72169c7bc820ecae3f191d06aa Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 27 Aug 2014 12:23:03 -0700
-Subject: [PATCH 342/924] MAPREDUCE-5977. Fix or suppress native-task gcc
+Subject: [PATCH 0342/2639] MAPREDUCE-5977. Fix or suppress native-task gcc
  warnings. Contributed by Manu Zhang.
 
 (cherry picked from commit fad4524c85848b8efe27dcf4a3e3a9ac1725bd2a)

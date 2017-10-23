@@ -1,7 +1,7 @@
 From 5b281a4c2b84f81876faaf9c34c12396687b0660 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 14 Aug 2014 04:47:20 +0000
-Subject: [PATCH 338/924] MAPREDUCE-6006. native-task: add native tests to
+Subject: [PATCH 0338/2639] MAPREDUCE-6006. native-task: add native tests to
  maven and fix bug in pom.xml. Contributed by
  Binglin Chang.
 

@@ -1,9 +1,9 @@
 From 94202e5abcda1a60b5801af6249483d20d450a3f Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 24 Jul 2014 06:17:33 +0000
-Subject: [PATCH 329/924] MAPREDUCE-5996. native-task: Rename system tests
- into standard directory layout. Contributed by Todd
- Lipcon.
+Subject: [PATCH 0329/2639] MAPREDUCE-5996. native-task: Rename system tests
+ into standard directory layout. Contributed by
+ Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1613004 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b2cba48f36c96f190f6a25e65291873be7aee322)

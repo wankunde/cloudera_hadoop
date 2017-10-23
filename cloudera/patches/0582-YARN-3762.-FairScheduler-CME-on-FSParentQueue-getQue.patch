@@ -1,7 +1,7 @@
 From 7e90ba1cf888533acc9344faab0572e351283720 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 3 Jun 2015 13:47:24 -0700
-Subject: [PATCH 582/924] YARN-3762. FairScheduler: CME on
+Subject: [PATCH 0582/2639] YARN-3762. FairScheduler: CME on
  FSParentQueue#getQueueUserAclInfo. (kasha)
 
 (cherry picked from commit edb9cd0f7aa1ecaf34afaa120e3d79583e0ec689)

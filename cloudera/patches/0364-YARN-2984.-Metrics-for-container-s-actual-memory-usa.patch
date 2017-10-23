@@ -1,7 +1,7 @@
 From cb91dd67d25d6034a5d60e94565dac06d453495f Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Sat, 17 Jan 2015 05:44:04 +0530
-Subject: [PATCH 364/924] YARN-2984. Metrics for container's actual memory
+Subject: [PATCH 0364/2639] YARN-2984. Metrics for container's actual memory
  usage. (kasha)
 
 (cherry picked from commit 84198564ba6028d51c1fcf9cdcb87f6ae6e08513)

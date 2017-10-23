@@ -1,7 +1,7 @@
 From 36d0589e47aae04ffcd43465808235b3323a1a04 Mon Sep 17 00:00:00 2001
 From: Sean Mackrory <sean@cloudera.com>
 Date: Thu, 2 Oct 2014 10:06:07 -0600
-Subject: [PATCH 151/924] CDH-22080. Updating MR1 dependency on JackSON
+Subject: [PATCH 0151/2639] CDH-22080. Updating MR1 dependency on JackSON
 
 (cherry picked from commit 317a080849374e5bb6990457701293b3ecdb6122)
 ---

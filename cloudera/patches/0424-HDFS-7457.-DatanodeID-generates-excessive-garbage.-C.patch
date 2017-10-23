@@ -1,7 +1,7 @@
 From c15b3a66d6eef916ac6d02bb061f6ef8c4469004 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Thu, 15 Jan 2015 16:45:06 -0600
-Subject: [PATCH 424/924] HDFS-7457. DatanodeID generates excessive garbage.
+Subject: [PATCH 0424/2639] HDFS-7457. DatanodeID generates excessive garbage.
  Contributed by Daryn Sharp. (cherry picked from
  commit 780a6bf14562fd9d1070a7c8e756fa1c3bc65d32)
 

@@ -105,7 +105,7 @@ public class ApplicationMasterService extends AbstractService implements
   private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;
-  private InetSocketAddress bindAddress;
+  private InetSocketAddress masterServiceAddress;
   private Server server;
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -121,15 +121,18 @@ public class ApplicationMasterService extends AbstractService implements
   }
 
   @Override
-  protected void serviceStart() throws Exception {
-    Configuration conf = getConfig();
-    YarnRPC rpc = YarnRPC.create(conf);
-
-    InetSocketAddress masterServiceAddress = conf.getSocketAddr(
+  protected void serviceInit(Configuration conf) throws Exception {
+    masterServiceAddress = conf.getSocketAddr(
         YarnConfiguration.RM_BIND_HOST,
         YarnConfiguration.RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
 
     Configuration serverConf = conf;
     // If the auth is not-simple, enforce it to be token-based.
@@ -158,7 +161,7 @@ public class ApplicationMasterService extends AbstractService implements
     }
     
     this.server.start();
-    this.bindAddress =
+    this.masterServiceAddress =
         conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
                                YarnConfiguration.RM_SCHEDULER_ADDRESS,
                                YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
@@ -168,7 +171,7 @@ public class ApplicationMasterService extends AbstractService implements
 
   @Private
   public InetSocketAddress getBindAddress() {
-    return this.bindAddress;
+    return this.masterServiceAddress;
   }
 
   // Obtain the needed AMRMTokenIdentifier from the remote-UGI. RPC layer
@@ -298,32 +301,35 @@ public class ApplicationMasterService extends AbstractService implements
 
       // For work-preserving AM restart, retrieve previous attempts' containers
       // and corresponding NM tokens.
-      List<Container> transferredContainers =
-          ((AbstractYarnScheduler) rScheduler)
+      if (app.getApplicationSubmissionContext()
+          .getKeepContainersAcrossApplicationAttempts()) {
+        List<Container> transferredContainers = ((AbstractYarnScheduler) rScheduler)
             .getTransferredContainers(applicationAttemptId);
-      if (!transferredContainers.isEmpty()) {
-        response.setContainersFromPreviousAttempts(transferredContainers);
-        List<NMToken> nmTokens = new ArrayList<NMToken>();
-        for (Container container : transferredContainers) {
-          try {
-            NMToken token = rmContext.getNMTokenSecretManager()
-                .createAndGetNMToken(app.getUser(), applicationAttemptId,
-                    container);
-            if (null != token) {
-              nmTokens.add(token);
-            }
-          } catch (IllegalArgumentException e) {
-            // if it's a DNS issue, throw UnknowHostException directly and that
-            // will be automatically retried by RMProxy in RPC layer.
-            if (e.getCause() instanceof UnknownHostException) {
-              throw (UnknownHostException) e.getCause();
+        if (!transferredContainers.isEmpty()) {
+          response.setContainersFromPreviousAttempts(transferredContainers);
+          List<NMToken> nmTokens = new ArrayList<NMToken>();
+          for (Container container : transferredContainers) {
+            try {
+              NMToken token = rmContext.getNMTokenSecretManager()
+                  .createAndGetNMToken(app.getUser(), applicationAttemptId,
+                      container);
+              if (null != token) {
+                nmTokens.add(token);
+              }
+            } catch (IllegalArgumentException e) {
+              // if it's a DNS issue, throw UnknowHostException directly and
+              // that
+              // will be automatically retried by RMProxy in RPC layer.
+              if (e.getCause() instanceof UnknownHostException) {
+                throw (UnknownHostException) e.getCause();
+              }
             }
           }
+          response.setNMTokensFromPreviousAttempts(nmTokens);
+          LOG.info("Application " + appID + " retrieved "
+              + transferredContainers.size() + " containers from previous"
+              + " attempts and " + nmTokens.size() + " NM tokens.");
         }
-        response.setNMTokensFromPreviousAttempts(nmTokens);
-        LOG.info("Application " + appID + " retrieved "
-            + transferredContainers.size() + " containers from previous"
-            + " attempts and " + nmTokens.size() + " NM tokens.");
       }
 
       response.setSchedulerResourceTypes(rScheduler
@@ -498,7 +504,7 @@ public class ApplicationMasterService extends AbstractService implements
               
       // sanity check
       try {
-        RMServerUtils.validateResourceRequests(ask,
+        RMServerUtils.normalizeAndValidateRequests(ask,
             rScheduler.getMaximumResourceCapability(), app.getQueue(),
             rScheduler);
       } catch (InvalidResourceRequestException e) {
@@ -587,16 +593,20 @@ public class ApplicationMasterService extends AbstractService implements
       if (nextMasterKey != null
           && nextMasterKey.getMasterKey().getKeyId() != amrmTokenIdentifier
             .getKeyId()) {
-        Token<AMRMTokenIdentifier> amrmToken =
-            rmContext.getAMRMTokenSecretManager().createAndGetAMRMToken(
-              appAttemptId);
-        ((RMAppAttemptImpl)appAttempt).setAMRMToken(amrmToken);
+        RMAppAttemptImpl appAttemptImpl = (RMAppAttemptImpl)appAttempt;
+        Token<AMRMTokenIdentifier> amrmToken = appAttempt.getAMRMToken();
+        if (nextMasterKey.getMasterKey().getKeyId() !=
+            appAttemptImpl.getAMRMTokenKeyId()) {
+          LOG.info("The AMRMToken has been rolled-over. Send new AMRMToken back"
+              + " to application: " + applicationId);
+          amrmToken = rmContext.getAMRMTokenSecretManager()
+              .createAndGetAMRMToken(appAttemptId);
+          appAttemptImpl.setAMRMToken(amrmToken);
+        }
         allocateResponse.setAMRMToken(org.apache.hadoop.yarn.api.records.Token
           .newInstance(amrmToken.getIdentifier(), amrmToken.getKind()
             .toString(), amrmToken.getPassword(), amrmToken.getService()
             .toString()));
-        LOG.info("The AMRMToken has been rolled-over. Send new AMRMToken back"
-            + " to application: " + applicationId);
       }
 
       /*

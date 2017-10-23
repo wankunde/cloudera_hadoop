@@ -1,8 +1,8 @@
 From be4ab93e495fa51fabe282ddcb5efdd438feb31b Mon Sep 17 00:00:00 2001
 From: Jing Zhao <jing9@apache.org>
 Date: Fri, 9 Jan 2015 17:35:57 -0800
-Subject: [PATCH 445/924] HDFS-7182. JMX metrics aren't accessible when NN is
- busy. Contributed by Ming Ma.
+Subject: [PATCH 0445/2639] HDFS-7182. JMX metrics aren't accessible when NN
+ is busy. Contributed by Ming Ma.
 
 (cherry picked from commit 4b589e7cfa27bd042e228bbbcf1c3b75b2aeaa57)
 

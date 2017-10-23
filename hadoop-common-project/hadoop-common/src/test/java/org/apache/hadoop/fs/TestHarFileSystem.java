@@ -34,6 +34,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
@@ -114,6 +115,7 @@ public class TestHarFileSystem {
     public ContentSummary getContentSummary(Path f);
     public FsStatus getStatus();
     public FileStatus[] listStatus(Path f, PathFilter filter);
+    public FileStatus[] listStatusBatch(Path f, byte[] token);
     public FileStatus[] listStatus(Path[] files);
     public FileStatus[] listStatus(Path[] files, PathFilter filter);
     public FileStatus[] globStatus(Path pathPattern);
@@ -205,6 +207,11 @@ public class TestHarFileSystem {
     public AclStatus getAclStatus(Path path) throws IOException;
 
     public void access(Path path, FsAction mode) throws IOException;
+
+    public Path getTrashRoot(Path path) throws IOException;
+
+    public Collection<FileStatus> getTrashRoots(boolean allUsers) throws IOException;
+    StorageStatistics getStorageStatistics();
   }
 
   @Test

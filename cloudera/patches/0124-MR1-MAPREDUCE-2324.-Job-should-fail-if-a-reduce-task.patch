@@ -1,7 +1,7 @@
 From 8f19e3a1772398f511cbcc796815b0a1fb81c70b Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <karthik@kambatla.com>
 Date: Tue, 11 Feb 2014 14:19:54 -0800
-Subject: [PATCH 124/924] MR1: MAPREDUCE-2324. Job should fail if a reduce
+Subject: [PATCH 0124/2639] MR1: MAPREDUCE-2324. Job should fail if a reduce
  task can't be scheduled anywhere
 
 (cherry picked from commit f1ace2953b28b97b89779cd8d369c5b678d1f949)

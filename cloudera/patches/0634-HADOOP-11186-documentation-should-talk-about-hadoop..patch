@@ -1,7 +1,7 @@
 From 452d54083cc44065a50a97f1dec3ceafacde6e94 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 29 Oct 2014 12:12:58 -0700
-Subject: [PATCH 634/924] HADOOP-11186: documentation should talk about
+Subject: [PATCH 0634/2639] HADOOP-11186: documentation should talk about
  hadoop.htrace.spanreceiver.classes, not
  hadoop.trace.spanreceiver.classes (cmccabe)
 

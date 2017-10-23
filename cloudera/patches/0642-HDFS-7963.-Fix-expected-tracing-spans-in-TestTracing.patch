@@ -1,7 +1,7 @@
 From a63549c152cb338c8d42f289c2db981965159172 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Thu, 26 Mar 2015 08:42:45 -0500
-Subject: [PATCH 642/924] HDFS-7963. Fix expected tracing spans in
+Subject: [PATCH 0642/2639] HDFS-7963. Fix expected tracing spans in
  TestTracing. Contributed by Masatake Iwasaki.
 
 (cherry picked from commit 071277b9cece8da9d891f525c4dd659f2a4949dd)

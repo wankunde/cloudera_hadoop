@@ -1,8 +1,9 @@
 From 24107048f8d7e657865ce60bf681b954bb46816a Mon Sep 17 00:00:00 2001
 From: Zhihai Xu <zxu@cloudera.com>
 Date: Sun, 1 Mar 2015 09:43:43 -0800
-Subject: [PATCH 449/924] CLOUDERA-BUILD. fix MAPREDUCE-5656 in MR1 code(bzip2
- codec can drop records when reading data in splits)
+Subject: [PATCH 0449/2639] CLOUDERA-BUILD. fix MAPREDUCE-5656 in MR1
+ code(bzip2 codec can drop records when reading
+ data in splits)
 
 (cherry picked from commit b65204ed98f69aad11ad826f2cfcbce761e0673f)
 (cherry picked from commit d90b0600eec30e1c667d490f7620ec44e2c456a0)

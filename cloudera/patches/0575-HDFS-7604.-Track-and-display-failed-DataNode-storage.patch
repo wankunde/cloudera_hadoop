@@ -1,9 +1,9 @@
 From 924a4b8eaaaa1ffbfca91a58c2001a4073a93771 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Mon, 16 Feb 2015 14:43:02 -0800
-Subject: [PATCH 575/924] HDFS-7604. Track and display failed DataNode storage
- locations in NameNode. Contributed by Chris
- Nauroth.
+Subject: [PATCH 0575/2639] HDFS-7604. Track and display failed DataNode
+ storage locations in NameNode. Contributed by
+ Chris Nauroth.
 
 (cherry picked from commit 9729b244de50322c2cc889c97c2ffb2b4675cf77)
 
@@ -1466,7 +1466,7 @@ index 197354c..800e7d9 100644
      return 0l;
    }
 diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
-index 455a200..3aa9a7b 100644
+index 455a200..3aa9a7b7 100644
 --- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
 +++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
 @@ -54,6 +54,7 @@

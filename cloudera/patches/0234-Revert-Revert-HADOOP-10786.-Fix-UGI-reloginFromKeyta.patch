@@ -1,7 +1,7 @@
 From 05992c1a07e51f176d4c39e09b11564dd2e78f55 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Wed, 28 Jan 2015 12:22:20 -0800
-Subject: [PATCH 234/924] Revert "Revert "HADOOP-10786. Fix
+Subject: [PATCH 0234/2639] Revert "Revert "HADOOP-10786. Fix
  UGI#reloginFromKeytab on Java 8. Contributed by
  Stephen Chu.""
 

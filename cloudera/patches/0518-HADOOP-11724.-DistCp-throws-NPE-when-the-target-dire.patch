@@ -1,8 +1,9 @@
 From 1a36b22563ed80a022bb24ab3682978783e989cd Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Wed, 25 Mar 2015 15:45:45 -0700
-Subject: [PATCH 518/924] HADOOP-11724. DistCp throws NPE when the target
- directory is root. (Lei Eddy Xu via Yongjun Zhang)
+Subject: [PATCH 0518/2639] HADOOP-11724. DistCp throws NPE when the target
+ directory is root. (Lei Eddy Xu via Yongjun
+ Zhang)
 
 (cherry-picked from commit 65ee02d9ed50e026c2d37ec80babd4176075ff84)
 (cherry picked from commit be0d228ed100b84a2427045ea2900e9fdf241973)

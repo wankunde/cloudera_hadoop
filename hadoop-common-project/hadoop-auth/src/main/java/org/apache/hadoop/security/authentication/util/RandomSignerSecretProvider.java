@@ -14,7 +14,10 @@
 package org.apache.hadoop.security.authentication.util;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import java.security.SecureRandom;
 import java.util.Random;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -30,7 +33,7 @@ public class RandomSignerSecretProvider extends RolloverSignerSecretProvider {
 
   public RandomSignerSecretProvider() {
     super();
-    rand = new Random();
+    rand = new SecureRandom();
   }
 
   /**
@@ -46,6 +49,8 @@ public class RandomSignerSecretProvider extends RolloverSignerSecretProvider {
 
   @Override
   protected byte[] generateNewSecret() {
-    return Long.toString(rand.nextLong()).getBytes();
+    byte[] secret = new byte[32]; // 32 bytes = 256 bits
+    rand.nextBytes(secret);
+    return secret;
   }
 }

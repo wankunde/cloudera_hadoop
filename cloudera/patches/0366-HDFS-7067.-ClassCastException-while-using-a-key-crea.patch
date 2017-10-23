@@ -1,7 +1,7 @@
 From c6890723664a3e7455dfa6e6f66308aaf8118833 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 14 Jan 2015 17:42:59 -0800
-Subject: [PATCH 366/924] HDFS-7067. ClassCastException while using a key
+Subject: [PATCH 0366/2639] HDFS-7067. ClassCastException while using a key
  created by keytool to create encryption zone.
  (Charles Lamb via Colin P. McCabe)
 

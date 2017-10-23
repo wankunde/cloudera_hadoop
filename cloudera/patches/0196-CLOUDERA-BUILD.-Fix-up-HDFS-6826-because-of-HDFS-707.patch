@@ -1,7 +1,7 @@
 From c79718fb69d9a354a676de07b5ea45bdb5f6b53d Mon Sep 17 00:00:00 2001
 From: Andrew Wang <andrew.wang@cloudera.com>
 Date: Thu, 25 Sep 2014 22:06:23 -0700
-Subject: [PATCH 196/924] CLOUDERA-BUILD. Fix up HDFS-6826 because of
+Subject: [PATCH 0196/2639] CLOUDERA-BUILD. Fix up HDFS-6826 because of
  HDFS-7077 changes to ClientProtocol.
 
 (cherry picked from commit e0bd2e4d2b3505eff13f2e91934dc022bba5422f)

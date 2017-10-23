@@ -1,9 +1,9 @@
 From 3b9019f509a06d6e9617a8dd221966a6aebfd06f Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 24 Nov 2014 10:46:33 -0800
-Subject: [PATCH 267/924] HDFS-4882. Prevent the Namenode's LeaseManager from
- looping forever in checkLeases (Ravi Prakash via
- Colin P. McCabe) (cherry picked from commit
+Subject: [PATCH 0267/2639] HDFS-4882. Prevent the Namenode's LeaseManager
+ from looping forever in checkLeases (Ravi Prakash
+ via Colin P. McCabe) (cherry picked from commit
  daacbc18d739d030822df0b75205eeb067f89850) (cherry
  picked from commit
  946df98dce18975e37a6a14744ca7a5429f019ce) (cherry

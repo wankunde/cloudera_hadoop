@@ -1,9 +1,9 @@
 From 31de3ec0d80040eb163e5e35f9a3fbd04431fd11 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Mon, 12 Aug 2013 23:04:53 -0700
-Subject: [PATCH 098/924] MR1: CLOUDERA-BUILD. CDH-11669. Change ZK FC port
- from 8019 (hdfs) to 8018 (cherry picked from commit
- 4fb5fa6f1a0e00ebe3c0afee704de2294c7a1ae7)
+Subject: [PATCH 0098/2639] MR1: CLOUDERA-BUILD. CDH-11669. Change ZK FC port
+ from 8019 (hdfs) to 8018 (cherry picked from
+ commit 4fb5fa6f1a0e00ebe3c0afee704de2294c7a1ae7)
 
 (cherry picked from commit a155a73eb9cf03106579cf7c58ebf03ff748a494)
 (cherry picked from commit 1f434f6bb3ce511a8af708d5b83f2975291a35d1)

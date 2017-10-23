@@ -1,7 +1,7 @@
 From 729bc1be8c53961fd3e5cbc85601bc808effcc95 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 2 Oct 2013 10:46:33 -0700
-Subject: [PATCH 125/924] MR1: CLOUDERA-BUILD. Update MR1 to ZK 3.4.5
+Subject: [PATCH 0125/2639] MR1: CLOUDERA-BUILD. Update MR1 to ZK 3.4.5
  dependency version
 
 This harmonizes the version number with Hadoop 2, which depends

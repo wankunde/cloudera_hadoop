@@ -1,7 +1,7 @@
 From 70306c3370d089f6271f6cd0ac58cd6d174a7757 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Thu, 30 Oct 2014 10:21:12 -0700
-Subject: [PATCH 224/924] HDFS-7165. Separate block metrics for files with
+Subject: [PATCH 0224/2639] HDFS-7165. Separate block metrics for files with
  replication count 1. Contributed by Zhe Zhang.
 
 Conflicts:

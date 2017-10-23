@@ -1,8 +1,8 @@
 From 10c8bf14add9bbdf7a7d7436046f14b39b35b689 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Mon, 17 Nov 2014 14:52:53 -0800
-Subject: [PATCH 153/924] MR1: CLOUDERA-BUILD. Adding bouncycastle dependency
- required for some unit tests
+Subject: [PATCH 0153/2639] MR1: CLOUDERA-BUILD. Adding bouncycastle
+ dependency required for some unit tests
 
 (cherry picked from commit b22da0e1d0cb7e1caa49667219303797fbd2139a)
 ---

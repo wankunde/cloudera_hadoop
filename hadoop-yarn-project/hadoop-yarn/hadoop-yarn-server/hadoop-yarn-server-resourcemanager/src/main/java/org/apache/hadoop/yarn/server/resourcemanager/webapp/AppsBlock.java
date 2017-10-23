@@ -31,7 +31,7 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -46,9 +46,10 @@ class AppsBlock extends HtmlBlock {
   final ConcurrentMap<ApplicationId, RMApp> apps;
   private final Configuration conf;
 
-@Inject AppsBlock(RMContext rmContext, ViewContext ctx, Configuration conf) {
+  @Inject
+  AppsBlock(ResourceManager rm, ViewContext ctx, Configuration conf) {
     super(ctx);
-    apps = rmContext.getRMApps();
+    apps = rm.getRMContext().getRMApps();
     this.conf = conf;
   }
 
@@ -69,6 +70,8 @@ class AppsBlock extends HtmlBlock {
             th(".runningcontainer", "Running Containers").
             th(".allocatedCpu", "Allocated CPU VCores").
             th(".allocatedMemory", "Allocated Memory MB").
+            th(".reservedCpu", "Reserved CPU VCores").
+            th(".reservedMemory", "Reserved Memory MB").
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
         tbody();
@@ -113,6 +116,10 @@ class AppsBlock extends HtmlBlock {
       .append(appInfo.getAllocatedMB() == -1 ? "N/A" : String
           .valueOf(appInfo.getAllocatedMB()))
       .append("\",\"")
+      .append(appInfo.getReservedVCores() == -1 ? "N/A" : String
+          .valueOf(appInfo.getReservedVCores())).append("\",\"")
+      .append(appInfo.getReservedMB() == -1 ? "N/A" : String
+          .valueOf(appInfo.getReservedMB())).append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")

@@ -1,9 +1,9 @@
 From ab62d568f14e857cff11e86fc68b678a3f3ec551 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Thu, 9 Apr 2015 10:58:12 -0700
-Subject: [PATCH 599/924] HADOOP-11815. HttpServer2 should destroy
- SignerSecretProvider when it stops. Contributed by
- Rohith.
+Subject: [PATCH 0599/2639] HADOOP-11815. HttpServer2 should destroy
+ SignerSecretProvider when it stops. Contributed
+ by Rohith.
 
 (cherry picked from commit f753e2043bd1fc7bfa17b40196eed14ffe075cff)
 ---

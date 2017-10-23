@@ -1,7 +1,7 @@
 From 6e9ce97d3fa4e0ab775fabbdee8f3762d098c63c Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 16 Jul 2012 17:30:50 +0000
-Subject: [PATCH 028/924] MR1: HADOOP-8552. Conflict: Same security.log.file
+Subject: [PATCH 0028/2639] MR1: HADOOP-8552. Conflict: Same security.log.file
  for multiple users. (kkambatl via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1362154 13f79535-47bb-0310-9956-ffa450edef68

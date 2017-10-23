@@ -1,7 +1,7 @@
 From afb2056fa3cb3ce3b5618e05568addf9eb43fa1a Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Mon, 4 Nov 2013 17:04:33 -0800
-Subject: [PATCH 109/924] CLOUDERA-BUILD. MR1: Dump stacks on task timeout.
+Subject: [PATCH 0109/2639] CLOUDERA-BUILD. MR1: Dump stacks on task timeout.
 
 This will go in upstream as MAPREDUCE-5592.
 
@@ -182,7 +182,7 @@ index 9adbc89..ac6c2662 100644
            } else {
              LOG.info(String.format("JVM Not killed %s but just removed", jvmId
 diff --git a/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/TaskRunner.java b/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/TaskRunner.java
-index ed2bd2d..4750a4d 100644
+index ed2bd2d..4750a4d6 100644
 --- a/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/TaskRunner.java
 +++ b/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/TaskRunner.java
 @@ -779,12 +779,14 @@ private static void symlink(File workDir, String target, String link)

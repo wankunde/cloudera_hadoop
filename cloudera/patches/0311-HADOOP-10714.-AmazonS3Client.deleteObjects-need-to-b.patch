@@ -1,9 +1,9 @@
 From 3131619f4d32689eff1bc689388144766cac8cbf Mon Sep 17 00:00:00 2001
 From: Juan Yu <jyu@cloudera.com>
 Date: Sun, 16 Nov 2014 13:07:53 -0800
-Subject: [PATCH 311/924] HADOOP-10714. AmazonS3Client.deleteObjects() need to
- be limited to 1000 entries per call. Contributed by
- Juan Yu.
+Subject: [PATCH 0311/2639] HADOOP-10714. AmazonS3Client.deleteObjects() need
+ to be limited to 1000 entries per call.
+ Contributed by Juan Yu.
 
 (cherry picked from commit 6ba52d88ec11444cbac946ffadbc645acd0657de)
 (cherry picked from commit 83e4f50951a0ee568a6c87d86ad71b2339ef36ec)

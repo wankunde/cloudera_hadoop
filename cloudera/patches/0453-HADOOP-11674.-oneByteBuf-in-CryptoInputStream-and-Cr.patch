@@ -1,7 +1,7 @@
 From 60ec1fa48f631370828dfc22f2aaace4e5add58d Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Thu, 5 Mar 2015 06:39:58 +0800
-Subject: [PATCH 453/924] HADOOP-11674. oneByteBuf in CryptoInputStream and
+Subject: [PATCH 0453/2639] HADOOP-11674. oneByteBuf in CryptoInputStream and
  CryptoOutputStream should be non static. (Sean
  Busbey via yliu)
 

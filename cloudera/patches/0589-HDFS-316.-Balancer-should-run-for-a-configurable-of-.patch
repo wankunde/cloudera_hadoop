@@ -1,7 +1,7 @@
 From 334da37aec4ec964c75059faee58baf88e54f4aa Mon Sep 17 00:00:00 2001
 From: Allen Wittenauer <aw@apache.org>
 Date: Wed, 11 Feb 2015 08:10:34 -0800
-Subject: [PATCH 589/924] HDFS-316. Balancer should run for a configurable #
+Subject: [PATCH 0589/2639] HDFS-316. Balancer should run for a configurable #
  of iterations (Xiaoyu Yao via aw)
 
 (cherry picked from commit 730597c20c178d8f053b250cf57f7780a1970f43)

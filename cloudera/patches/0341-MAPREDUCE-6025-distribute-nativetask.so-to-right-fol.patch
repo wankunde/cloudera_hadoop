@@ -1,7 +1,7 @@
 From f17670afd626103c04c19a1501d2cb9042b1807b Mon Sep 17 00:00:00 2001
 From: Sean Zhong <seanzhong@apache.org>
 Date: Fri, 15 Aug 2014 08:55:49 +0000
-Subject: [PATCH 341/924] MAPREDUCE-6025: distribute nativetask.so to right
+Subject: [PATCH 0341/2639] MAPREDUCE-6025: distribute nativetask.so to right
  folder (Manu Zhang)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1618120 13f79535-47bb-0310-9956-ffa450edef68

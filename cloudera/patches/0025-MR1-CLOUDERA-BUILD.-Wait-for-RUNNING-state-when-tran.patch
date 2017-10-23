@@ -1,7 +1,7 @@
 From 0b26cd165628edb1ac9876f130b78c529e853dfd Mon Sep 17 00:00:00 2001
 From: Tom White <tom@cloudera.com>
 Date: Wed, 30 Jan 2013 15:15:51 +0000
-Subject: [PATCH 025/924] MR1: CLOUDERA-BUILD. Wait for RUNNING state when
+Subject: [PATCH 0025/2639] MR1: CLOUDERA-BUILD. Wait for RUNNING state when
  transitioning to active in JT HA.
 
 Reason: Bug

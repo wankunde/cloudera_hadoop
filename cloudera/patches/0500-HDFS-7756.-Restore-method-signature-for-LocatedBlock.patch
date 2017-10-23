@@ -1,7 +1,7 @@
 From f268d40ce4c3f47a989e95b99090a166761c66b8 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Tue, 10 Feb 2015 02:00:32 +0800
-Subject: [PATCH 500/924] HDFS-7756. Restore method signature for
+Subject: [PATCH 0500/2639] HDFS-7756. Restore method signature for
  LocatedBlock#getLocations(). (Ted Yu via yliu)
 
 (cherry picked from commit cc0668ebe67078878d51d8158ac948383a3e351e)

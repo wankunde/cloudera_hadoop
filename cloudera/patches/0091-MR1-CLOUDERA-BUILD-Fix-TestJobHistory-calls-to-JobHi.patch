@@ -1,7 +1,7 @@
 From bb74febecb5aa5063b8556e16868f3b186fefb8a Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Tue, 16 Jul 2013 17:52:56 -0700
-Subject: [PATCH 091/924] MR1: CLOUDERA-BUILD: Fix TestJobHistory calls to
+Subject: [PATCH 0091/2639] MR1: CLOUDERA-BUILD: Fix TestJobHistory calls to
  JobHistory.parseHistoryFromFS
 
 Reason: Build fix

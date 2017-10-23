@@ -1,7 +1,7 @@
 From bc25d8beeff6132a6cd97073ccc1b72b35912c63 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Thu, 29 Jan 2015 10:37:16 -0800
-Subject: [PATCH 318/924] CLOUDERA-BUILD. Fix unescaped angle brackets in
+Subject: [PATCH 0318/2639] CLOUDERA-BUILD. Fix unescaped angle brackets in
  HDFSCommands.apt.vm
 
 ---

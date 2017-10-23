@@ -1,8 +1,8 @@
 From 1c3981ad9cb6f328085f49320369c6b6a314849b Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Tue, 21 Apr 2015 13:57:55 -0700
-Subject: [PATCH 533/924] CLOUDERA-BUILD: Set ZK tests jar scope back to tests
- (CDH-27186)
+Subject: [PATCH 0533/2639] CLOUDERA-BUILD: Set ZK tests jar scope back to
+ tests (CDH-27186)
 
 ---
  hadoop-project/pom.xml                             |    1 +

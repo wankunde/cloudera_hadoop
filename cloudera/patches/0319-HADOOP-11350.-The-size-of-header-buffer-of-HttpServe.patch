@@ -1,7 +1,7 @@
 From 14951137ed401698dcbb10733e8ef958fa2d9f98 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Thu, 15 Jan 2015 16:17:30 -0800
-Subject: [PATCH 319/924] HADOOP-11350. The size of header buffer of
+Subject: [PATCH 0319/2639] HADOOP-11350. The size of header buffer of
  HttpServer is too small when HTTPS is enabled.
  Contributed by Benoy Antony.
 

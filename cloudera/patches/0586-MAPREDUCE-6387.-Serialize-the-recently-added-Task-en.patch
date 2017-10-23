@@ -1,7 +1,7 @@
 From 0b8d8ce5875e6a123e6826ee3d88b42f8ff1a4ec Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Fri, 5 Jun 2015 09:14:06 -0700
-Subject: [PATCH 586/924] MAPREDUCE-6387. Serialize the recently added
+Subject: [PATCH 0586/2639] MAPREDUCE-6387. Serialize the recently added
  Task#encryptedSpillKey field at the end. (Arun
  Suresh via kasha)
 

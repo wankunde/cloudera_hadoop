@@ -1,7 +1,7 @@
 From c0ce0d7b63ac75fe3314c1a9e981eacab2403853 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Fri, 23 Jan 2015 16:19:31 -0800
-Subject: [PATCH 159/924] CLOUDERA-BUILD. Update poms for 5.4.0 - version:
+Subject: [PATCH 0159/2639] CLOUDERA-BUILD. Update poms for 5.4.0 - version:
  2.6.0-cdh5.4.0-SNAPSHOT and remove an unnecessary
  netty import that broke compilation
 
@@ -844,7 +844,7 @@ index e61c74c..bcfc007 100644
    <name>Apache Hadoop Scheduler Load Simulator</name>
    <packaging>jar</packaging>
 diff --git a/hadoop-tools/hadoop-streaming/pom.xml b/hadoop-tools/hadoop-streaming/pom.xml
-index 6eead32..b5ee73d 100644
+index 6eead32..b5ee73d3 100644
 --- a/hadoop-tools/hadoop-streaming/pom.xml
 +++ b/hadoop-tools/hadoop-streaming/pom.xml
 @@ -20,12 +20,12 @@

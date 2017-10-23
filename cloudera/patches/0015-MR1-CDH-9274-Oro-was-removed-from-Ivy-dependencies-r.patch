@@ -1,7 +1,7 @@
 From 77776101dd338e5ec015d5f043d1e9c1239a070a Mon Sep 17 00:00:00 2001
 From: Sean Mackrory <sean@cloudera.com>
 Date: Thu, 24 Jan 2013 13:55:29 -0800
-Subject: [PATCH 015/924] MR1: CDH-9274: Oro was removed from Ivy
+Subject: [PATCH 0015/2639] MR1: CDH-9274: Oro was removed from Ivy
  dependencies, removing it from Maven to prevent
  broken symlinks in packaging (cherry picked from
  commit c3f64c6260aea1d271a975d012d11ce18a1e360c)

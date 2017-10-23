@@ -1,7 +1,7 @@
 From bd7fcdf1e4eabbd38f41d5acb3c0c2fb7bd05f92 Mon Sep 17 00:00:00 2001
 From: Suresh Srinivas <suresh@apache.org>
 Date: Fri, 19 Oct 2012 22:05:30 +0000
-Subject: [PATCH 461/924] MAPREDUCE-4736. Remove obsolete option [-rootDir]
+Subject: [PATCH 0461/2639] MAPREDUCE-4736. Remove obsolete option [-rootDir]
  from TestDFSIO. Contributed by Brandon Li.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1400313 13f79535-47bb-0310-9956-ffa450edef68

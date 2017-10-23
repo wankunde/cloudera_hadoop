@@ -1,9 +1,9 @@
 From efaae1d3fe324cd0ecf2a0b1cb9057fa5f721517 Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Thu, 5 Feb 2015 09:35:47 -0800
-Subject: [PATCH 405/924] YARN-3101. In Fair Scheduler, fix canceling of
- reservations for exceeding max share (Anubhav Dhoot
- via Sandy Ryza)
+Subject: [PATCH 0405/2639] YARN-3101. In Fair Scheduler, fix canceling of
+ reservations for exceeding max share (Anubhav
+ Dhoot via Sandy Ryza)
 
 (cherry picked from commit b6466deac6d5d6344f693144290b46e2bef83a02)
 

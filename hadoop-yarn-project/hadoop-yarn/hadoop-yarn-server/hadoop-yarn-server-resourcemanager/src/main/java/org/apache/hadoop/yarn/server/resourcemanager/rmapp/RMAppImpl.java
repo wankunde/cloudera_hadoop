@@ -121,6 +121,10 @@ public class RMAppImpl implements RMApp, Recoverable {
     FsPermission.createImmutable((short) 0777); // rwxrwxrwx
   final public static FsPermission FAIL_FLAG_PERMISSION =
     FsPermission.createImmutable((short) 0664); // rw-rw-r--
+  private static final String STATE_CHANGE_MESSAGE =
+      "%s State change from %s to %s on event = %s";
+  private static final String RECOVERY_MESSAGE =
+      "Recovering app: %s with %d attempts and final state = %s";
 
   // Immutable fields
   private final ApplicationId applicationId;
@@ -183,7 +187,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private RMAppEvent eventCausingFinalSaving;
   private RMAppState targetedFinalState;
   private RMAppState recoveredFinalState;
-  private ResourceRequest amReq;
+  private List<ResourceRequest> amReqs;
 
   Object transitionTodo;
 
@@ -396,8 +400,8 @@ public class RMAppImpl implements RMApp, Recoverable {
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
       ApplicationMasterService masterService, long submitTime,
-      String applicationType, Set<String> applicationTags, 
-      ResourceRequest amReq) {
+      String applicationType, Set<String> applicationTags,
+      List<ResourceRequest> amReqs) {
 
     this.systemClock = new SystemClock();
 
@@ -416,7 +420,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.startTime = this.systemClock.getTime();
     this.applicationType = applicationType;
     this.applicationTags = applicationTags;
-    this.amReq = amReq;
+    this.amReqs = amReqs;
 
     int globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -495,21 +499,15 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public FinalApplicationStatus getFinalApplicationStatus() {
-    this.readLock.lock();
-    try {
-      // finish state is obtained based on the state machine's current state 
-      // as a fall-back in case the application has not been unregistered 
-      // ( or if the app never unregistered itself )
-      // when the report is requested
-      if (currentAttempt != null 
-          && currentAttempt.getFinalApplicationStatus() != null) {
-        return currentAttempt.getFinalApplicationStatus();   
-      }
-      return 
-          createFinalApplicationStatus(this.stateMachine.getCurrentState());
-    } finally {
-      this.readLock.unlock();
+    // finish state is obtained based on the state machine's current state
+    // as a fall-back in case the application has not been unregistered
+    // ( or if the app never unregistered itself )
+    // when the report is requested
+    if (currentAttempt != null
+        && currentAttempt.getFinalApplicationStatus() != null) {
+      return currentAttempt.getFinalApplicationStatus();
     }
+    return createFinalApplicationStatus(this.stateMachine.getCurrentState());
   }
 
   @Override
@@ -789,9 +787,16 @@ public class RMAppImpl implements RMApp, Recoverable {
         /* TODO fail the application on the failed transition */
       }
 
-      if (oldState != getState()) {
-        LOG.info(appID + " State change from " + oldState + " to "
-            + getState());
+      // Log at INFO if we're not recovering or not in a terminal state.
+      // Log at DEBUG otherwise.
+      if ((oldState != getState()) &&
+          (((recoveredFinalState == null)) ||
+            (event.getType() != RMAppEventType.RECOVER))) {
+        LOG.info(String.format(STATE_CHANGE_MESSAGE, appID, oldState,
+            getState(), event.getType()));
+      } else if ((oldState != getState()) && LOG.isDebugEnabled()) {
+        LOG.debug(String.format(STATE_CHANGE_MESSAGE, appID, oldState,
+            getState(), event.getType()));
       }
     } finally {
       this.writeLock.unlock();
@@ -803,9 +808,15 @@ public class RMAppImpl implements RMApp, Recoverable {
     ApplicationStateData appState =
         state.getApplicationState().get(getApplicationId());
     this.recoveredFinalState = appState.getState();
-    LOG.info("Recovering app: " + getApplicationId() + " with " + 
-        + appState.getAttemptCount() + " attempts and final state = "
-        + this.recoveredFinalState );
+
+    if (recoveredFinalState == null) {
+      LOG.info(String.format(RECOVERY_MESSAGE, getApplicationId(),
+          appState.getAttemptCount(), "NONE"));
+    } else if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format(RECOVERY_MESSAGE, getApplicationId(),
+          appState.getAttemptCount(), recoveredFinalState));
+    }
+
     this.diagnostics.append(appState.getDiagnostics());
     this.storedFinishTime = appState.getFinishTime();
     this.startTime = appState.getStartTime();
@@ -827,7 +838,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     } else {
       if (amBlacklistingEnabled) {
         currentAMBlacklist = new SimpleBlacklistManager(
-            scheduler.getNumClusterNodes(), blacklistDisableThreshold);
+            RMServerUtils.getApplicableNodeCountForAM(rmContext, conf,
+                getAMResourceRequests()),
+            blacklistDisableThreshold);
       } else {
         currentAMBlacklist = new DisabledBlacklistManager();
       }
@@ -839,7 +852,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           // previously failed attempts(which should not include Preempted,
           // hardware error and NM resync) + 1) equal to the max-attempt
           // limit.
-          maxAppAttempts == (getNumFailedAppAttempts() + 1), amReq,
+          maxAppAttempts == (getNumFailedAppAttempts() + 1), amReqs,
           currentAMBlacklist);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
@@ -946,14 +959,16 @@ public class RMAppImpl implements RMApp, Recoverable {
       }
 
       if (UserGroupInformation.isSecurityEnabled()) {
-        // synchronously renew delegation token on recovery.
+        // asynchronously renew delegation token on recovery.
         try {
-          app.rmContext.getDelegationTokenRenewer().addApplicationSync(
-            app.getApplicationId(), app.parseCredentials(),
-            app.submissionContext.getCancelTokensWhenComplete(), app.getUser());
+          app.rmContext.getDelegationTokenRenewer()
+              .addApplicationAsyncDuringRecovery(app.getApplicationId(),
+                  app.parseCredentials(),
+                  app.submissionContext.getCancelTokensWhenComplete(),
+                  app.getUser());
         } catch (Exception e) {
-          String msg = "Failed to renew token for " + app.applicationId
-                  + " on recovery : " + e.getMessage();
+          String msg = "Failed to fetch user credentials from application:"
+              + e.getMessage();
           app.diagnostics.append(msg);
           LOG.error(msg, e);
         }
@@ -1406,7 +1421,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         || appState == RMAppState.KILLED;
   }
   
-  private RMAppState getRecoveredFinalState() {
+  public RMAppState getRecoveredFinalState() {
     return this.recoveredFinalState;
   }
 
@@ -1466,6 +1481,11 @@ public class RMAppImpl implements RMApp, Recoverable {
       tokens.rewind();
     }
     return credentials;
+  }
+  
+  @Override
+  public List<ResourceRequest> getAMResourceRequests() {
+    return this.amReqs;
   }
 
   @Override

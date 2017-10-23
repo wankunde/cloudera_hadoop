@@ -1,7 +1,7 @@
 From b41f99371e586dd6bade42db110a810e0b127373 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 23 Sep 2014 14:56:51 -0700
-Subject: [PATCH 202/924] CDH-21635. CLOUDERA BUILD. Rolling upgrade fix for
+Subject: [PATCH 0202/2639] CDH-21635. CLOUDERA BUILD. Rolling upgrade fix for
  QJM clusters.
 
 (cherry picked from commit c905d3468330d71230eb7b865e3456e25f8656c0)

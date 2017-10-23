@@ -40,7 +40,13 @@ public class HdfsConstants {
   /* Hidden constructor */
   protected HdfsConstants() {
   }
-  
+
+  /**
+   * The inode id validation of lease check will be skipped when the request
+   * uses GRANDFATHER_INODE_ID for backward compatibility.
+   */
+  public static final long GRANDFATHER_INODE_ID = 0;
+
   /**
    * HDFS Protocol Names:  
    */
@@ -105,8 +111,15 @@ public class HdfsConstants {
   }
 
   // type of the datanode report
-  public static enum DatanodeReportType {
-    ALL, LIVE, DEAD, DECOMMISSIONING
+  public enum DatanodeReportType {
+    ALL, LIVE, DEAD, DECOMMISSIONING, ENTERING_MAINTENANCE
+  }
+
+  /**
+   * Re-encrypt encryption zone actions.
+   */
+  public enum ReencryptAction {
+    CANCEL, START
   }
 
   // An invalid transaction ID that will never be seen in a real namesystem.

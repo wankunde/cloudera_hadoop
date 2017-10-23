@@ -1,7 +1,7 @@
 From e5fd85a8d028fa95ee07e7deeef28eb3713021fe Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Tue, 15 Oct 2013 23:55:41 -0700
-Subject: [PATCH 108/924] MR1: CLOUDERA-BUILD. Update versions from 2.1.0 to
+Subject: [PATCH 0108/2639] MR1: CLOUDERA-BUILD. Update versions from 2.1.0 to
  2.2.0
 
 (cherry picked from commit fb1d354e6f688a53bda27928b2cd3ea0b288e079)

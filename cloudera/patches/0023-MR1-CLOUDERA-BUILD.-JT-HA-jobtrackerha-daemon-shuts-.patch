@@ -1,7 +1,7 @@
 From 4bcf42e2816384d18f1f555e2e6b3793341c7eb2 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 28 Jan 2013 16:16:03 -0800
-Subject: [PATCH 023/924] MR1: CLOUDERA-BUILD. JT HA: jobtrackerha daemon
+Subject: [PATCH 0023/2639] MR1: CLOUDERA-BUILD. JT HA: jobtrackerha daemon
  shuts down on secure cluster after a while
 
   Reason: bug

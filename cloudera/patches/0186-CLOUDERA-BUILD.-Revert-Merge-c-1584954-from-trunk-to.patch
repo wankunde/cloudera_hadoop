@@ -1,10 +1,10 @@
 From ace2f7bc6fb18e0e0e65e7bdef648ef452599912 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 24 Sep 2014 15:54:47 -0700
-Subject: [PATCH 186/924] CLOUDERA-BUILD. Revert "Merge -c 1584954 from trunk
- to branch-2 to fix YARN-1898. Addendum patch to
- ensure /jmx and /metrics are re-directed to Active
- RM."
+Subject: [PATCH 0186/2639] CLOUDERA-BUILD. Revert "Merge -c 1584954 from
+ trunk to branch-2 to fix YARN-1898. Addendum
+ patch to ensure /jmx and /metrics are re-directed
+ to Active RM."
 
 This reverts commit 8a8afe468b1e488b9d6e1736d05076df7d1ece61.
 

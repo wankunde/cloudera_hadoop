@@ -1,7 +1,8 @@
 From d8ef79e694881d27c7b18029c590ffe1b82af6af Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 30 Jun 2015 13:50:11 -0700
-Subject: [PATCH 617/924] CLOUDERA-BUILD. CDH-29026. Fix unit test failure in
+Subject: [PATCH 0617/2639] CLOUDERA-BUILD. CDH-29026. Fix unit test failure
+ in
  TestNameNodeJspHelper#testNodeListJspGenerateNodesList
  (cmccabe)
 

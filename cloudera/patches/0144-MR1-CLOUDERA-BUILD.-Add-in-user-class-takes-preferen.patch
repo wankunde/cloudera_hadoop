@@ -1,7 +1,7 @@
 From d42e5807b41840afcf2162be73ec0e2e92679389 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@cloudera.com>
 Date: Sat, 20 Apr 2013 08:19:28 +0530
-Subject: [PATCH 144/924] MR1: CLOUDERA-BUILD. Add in
+Subject: [PATCH 0144/2639] MR1: CLOUDERA-BUILD. Add in
  user-class-takes-preference API of CDH3/MR1's
  JobConf to CDH4-MR2's JobConf class, to not break
  API.

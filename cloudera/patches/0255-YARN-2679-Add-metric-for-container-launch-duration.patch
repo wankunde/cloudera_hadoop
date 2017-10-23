@@ -1,7 +1,8 @@
 From 1ac8782c820d59134a4c9a217513947b88306f20 Mon Sep 17 00:00:00 2001
 From: Zhihai Xu <zxu@cloudera.com>
 Date: Fri, 21 Nov 2014 16:26:07 -0800
-Subject: [PATCH 255/924] YARN-2679: Add metric for container launch duration
+Subject: [PATCH 0255/2639] YARN-2679: Add metric for container launch
+ duration
 
 (cherry picked from commit e3f51070dc99cb537d34bb93ac70ad7e90095715)
 ---

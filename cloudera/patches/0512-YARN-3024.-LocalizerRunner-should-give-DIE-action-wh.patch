@@ -1,7 +1,7 @@
 From df208ea262b61147d0f07e8353361de31dd8ee65 Mon Sep 17 00:00:00 2001
 From: Xuan <xgong@apache.org>
 Date: Sun, 25 Jan 2015 19:37:57 -0800
-Subject: [PATCH 512/924] YARN-3024. LocalizerRunner should give DIE action
+Subject: [PATCH 0512/2639] YARN-3024. LocalizerRunner should give DIE action
  when all resources are localized. Contributed by
  Chengbing Liu
 

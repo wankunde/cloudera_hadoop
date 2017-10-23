@@ -1,7 +1,7 @@
-From ec44704decc0c0802666d15c4f3731fba30dfd21 Mon Sep 17 00:00:00 2001
+From 816f846f80ffecf362e6c9c4b6ee1d2e8d2f6342 Mon Sep 17 00:00:00 2001
 From: Junping Du <junping_du@apache.org>
 Date: Fri, 20 Mar 2015 18:21:33 -0700
-Subject: [PATCH 758/924] YARN-3350. YARN RackResolver spams logs with
+Subject: [PATCH 0758/2639] YARN-3350. YARN RackResolver spams logs with
  messages at info level. Contributed by Wilfred
  Spiegelenburg (cherry picked from commit
  7f1e2f996995e1883d9336f720c27621cf1b73b6)

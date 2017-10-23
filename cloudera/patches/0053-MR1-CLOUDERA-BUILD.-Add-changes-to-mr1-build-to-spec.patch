@@ -1,9 +1,9 @@
 From d3d5048e0a91f166687f58d537bc826f8a29d132 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Wed, 17 Apr 2013 15:27:59 -0700
-Subject: [PATCH 053/924] MR1: CLOUDERA-BUILD. Add changes to mr1 build to
- specify JDK1.7 as target (cherry picked from commit
- 098bc163405dfb3e5e61d4cf8e80fdfb47e21d24)
+Subject: [PATCH 0053/2639] MR1: CLOUDERA-BUILD. Add changes to mr1 build to
+ specify JDK1.7 as target (cherry picked from
+ commit 098bc163405dfb3e5e61d4cf8e80fdfb47e21d24)
 
 (cherry picked from commit 45a3883a507355916bf5e4e802b9a06b97e8c35f)
 (cherry picked from commit 18379b27e6a698d45195af9db869b10708e90517)

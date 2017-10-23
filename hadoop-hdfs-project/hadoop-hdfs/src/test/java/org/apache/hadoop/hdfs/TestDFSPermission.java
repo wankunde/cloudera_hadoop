@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -38,6 +39,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.security.AccessControlException;
@@ -273,6 +275,86 @@ public class TestDFSPermission {
         FsPermission.createImmutable((short)0777));
   }
   
+  @Test(timeout=30000)
+  public void testTrashPermission() throws Exception {
+    //  /BSS                  user1:group2 777
+    //   /BSS/user1            user1:group2 755
+    //   /BSS/user1/test       user1:group1 600
+    Path rootDir = new Path("/BSS");
+    Path user1Dir = new Path("/BSS/user1");
+    Path user1File = new Path("/BSS/user1/test");
+
+    try {
+      conf.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "10");
+      fs = FileSystem.get(conf);
+
+      fs.mkdirs(rootDir);
+      fs.setPermission(rootDir, new FsPermission((short) 0777));
+
+      login(USER1);
+      fs.mkdirs(user1Dir);
+      fs.setPermission(user1Dir, new FsPermission((short) 0755));
+      fs.setOwner(user1Dir, USER1.getShortUserName(), GROUP2_NAME);
+
+      create(OpType.CREATE, user1File);
+      fs.setOwner(user1File, USER1.getShortUserName(), GROUP1_NAME);
+      fs.setPermission(user1File, new FsPermission((short) 0600));
+
+      try {
+        // login as user2, attempt to delete /BSS/user1
+        // this should fail because user2 has no permission to
+        // its sub directory.
+        login(USER2);
+        fs.delete(user1Dir, true);
+        fail("User2 should not be allowed to delete user1's dir.");
+      } catch (AccessControlException e) {
+        e.printStackTrace();
+        assertTrue("Permission denied messages must carry the username",
+            e.getMessage().contains(USER2_NAME));
+      }
+
+      // ensure the /BSS/user1 still exists
+      assertTrue(fs.exists(user1Dir));
+
+      try {
+        login(SUPERUSER);
+        Trash trash = new Trash(fs, conf);
+        Path trashRoot = trash.getCurrentTrashDir(user1Dir);
+        while(true) {
+          trashRoot = trashRoot.getParent();
+          if(trashRoot.getParent().isRoot()) {
+            break;
+          }
+        }
+        fs.mkdirs(trashRoot);
+        fs.setPermission(trashRoot, new FsPermission((short) 0777));
+
+        // login as user2, attempt to move /BSS/user1 to trash
+        // this should also fail otherwise the directory will be
+        // removed by trash emptier (emptier is running by superuser)
+        login(USER2);
+        Trash userTrash = new Trash(fs, conf);
+        assertTrue(userTrash.isEnabled());
+        userTrash.moveToTrash(user1Dir);
+        fail("User2 should not be allowed to move"
+            + "user1's dir to trash");
+      } catch (IOException e) {
+        // expect the exception is caused by permission denied
+        assertTrue(e.getCause() instanceof AccessControlException);
+        e.printStackTrace();
+        assertTrue("Permission denied messages must carry the username",
+            e.getCause().getMessage().contains(USER2_NAME));
+      }
+
+      // ensure /BSS/user1 still exists
+      assertEquals(fs.exists(user1Dir), true);
+    } finally {
+      login(SUPERUSER);
+      fs.delete(rootDir, true);
+      conf.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "0");
+    }
+  }
+
   /* check if the ownership of a file/directory is set correctly */
   @Test
   public void testOwnership() throws Exception {
@@ -510,8 +592,59 @@ public class TestDFSPermission {
     }
   }
 
-  /* Check if namenode performs permission checking correctly 
-   * for the given user for operations mkdir, open, setReplication, 
+  @Test
+  public void testPermissionMessageOnNonDirAncestor()
+      throws IOException, InterruptedException {
+    FileSystem rootFs = FileSystem.get(conf);
+    Path p4 = new Path("/p4");
+    rootFs.mkdirs(p4);
+    rootFs.setOwner(p4, USER1_NAME, GROUP1_NAME);
+
+    final Path fpath = new Path("/p4/file");
+    DataOutputStream out = rootFs.create(fpath);
+    out.writeBytes("dhruba: " + fpath);
+    out.close();
+    rootFs.setOwner(fpath, USER1_NAME, GROUP1_NAME);
+    assertTrue(rootFs.exists(fpath));
+
+    fs = USER1.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return FileSystem.get(conf);
+      }
+    });
+
+    final Path nfpath = new Path("/p4/file/nonexisting");
+    assertFalse(rootFs.exists(nfpath));
+
+    try {
+      fs.exists(nfpath);
+      fail("The exists call should have failed.");
+    } catch (AccessControlException e) {
+      assertTrue("Permission denied messages must carry file path",
+          e.getMessage().contains(fpath.getName()));
+      assertTrue("Permission denied messages must specify existing_file is not "
+              + "a directory, when checked on /existing_file/non_existing_name",
+          e.getMessage().contains("is not a directory"));
+    }
+
+    rootFs.setPermission(p4, new FsPermission("600"));
+    try {
+      fs.exists(nfpath);
+      fail("The exists call should have failed.");
+    } catch (AccessControlException e) {
+      assertFalse("Permission denied messages must not carry full file path,"
+          + "since the user does not have permission on /p4: "
+          + e.getMessage(),
+          e.getMessage().contains(fpath.getName()));
+      assertFalse("Permission denied messages must not specify /p4"
+          + " is not a directory: " + e.getMessage(),
+          e.getMessage().contains("is not a directory"));
+    }
+  }
+
+  /* Check if namenode performs permission checking correctly
+   * for the given user for operations mkdir, open, setReplication,
    * getFileInfo, isDirectory, exists, getContentLength, list, rename,
    * and delete */
   private void testPermissionCheckingPerUser(UserGroupInformation ugi,

@@ -1,9 +1,9 @@
 From 68cdfd00365868221ede69d2e826e470cef600e4 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 2 Dec 2014 19:04:20 -0800
-Subject: [PATCH 278/924] HADOOP-11344. KMS kms-config.sh sets a default value
- for the keystore password even in non-ssl setup.
- Contributed by Arun Suresh.
+Subject: [PATCH 0278/2639] HADOOP-11344. KMS kms-config.sh sets a default
+ value for the keystore password even in non-ssl
+ setup. Contributed by Arun Suresh.
 
 (cherry picked from commit 3d48ad7eb424206dd1528179b35de4cdf51afdf3)
 

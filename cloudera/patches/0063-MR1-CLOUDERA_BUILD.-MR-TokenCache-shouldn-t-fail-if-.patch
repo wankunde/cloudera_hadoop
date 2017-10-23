@@ -1,8 +1,8 @@
 From 18b4dcab697a4730ed6849b22591a33fae348351 Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Mon, 22 Apr 2013 16:38:46 -0700
-Subject: [PATCH 063/924] MR1: CLOUDERA_BUILD. MR TokenCache shouldn't fail if
- JT principal is missing
+Subject: [PATCH 0063/2639] MR1: CLOUDERA_BUILD. MR TokenCache shouldn't fail
+ if JT principal is missing
 
 Ref: CDH-11145
 Author: Sandy Ryza

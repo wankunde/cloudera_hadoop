@@ -138,16 +138,20 @@ copyToLocal
 
 count
 
-   Usage: <<<hdfs dfs -count [-q] [-h] <paths> >>>
+   Usage: <<<hdfs dfs -count [-q] [-h] [-v] [-x] <paths> >>>
 
    Count the number of directories, files and bytes under the paths that match
    the specified file pattern.  The output columns with -count are: DIR_COUNT,
-   FILE_COUNT, CONTENT_SIZE FILE_NAME
+   FILE_COUNT, CONTENT_SIZE PATHNAME
 
    The output columns with -count -q are: QUOTA, REMAINING_QUATA, SPACE_QUOTA,
-   REMAINING_SPACE_QUOTA, DIR_COUNT, FILE_COUNT, CONTENT_SIZE, FILE_NAME
+   REMAINING_SPACE_QUOTA, DIR_COUNT, FILE_COUNT, CONTENT_SIZE, PATHNAME
 
    The -h option shows sizes in human readable format.
+
+   The -v option displays a header line.
+
+   The -x option excludes snapshots from the result calculation. Without the -x option (default), the result is always calculated from all INodes, including all snapshots under the given path. The -x option is ignored if -u or -q option is given.
 
    Example:
 
@@ -156,6 +160,8 @@ count
      * <<<hdfs dfs -count -q hdfs://nn1.example.com/file1>>>
 
      * <<<hdfs dfs -count -q -h hdfs://nn1.example.com/file1>>>
+
+     * <<<hdfs dfs -count -q -h -v hdfs://nn1.example.com/file1>>>
 
    Exit Code:
 
@@ -197,7 +203,7 @@ cp
 
 du
 
-   Usage: <<<hdfs dfs -du [-s] [-h] URI [URI ...]>>>
+   Usage: <<<hdfs dfs -du [-s] [-h] [-x] URI [URI ...]>>>
 
    Displays sizes of files and directories contained in the given directory or
    the length of a file in case its just a file.
@@ -205,10 +211,15 @@ du
    Options:
 
      * The -s option will result in an aggregate summary of file lengths being
-       displayed, rather than the individual files.
+       displayed, rather than the individual files. Without the -s option,
+       calculation is done by going 1-level deep from the given path.
 
      * The -h option will format file sizes in a "human-readable" fashion (e.g
        64.0m instead of 67108864)
+
+     * The -x option will exclude snapshots from the result calculation.
+       Without the -x option (default), the result is always calculated from
+       all INodes, including all snapshots under the given path.
 
    Example:
 

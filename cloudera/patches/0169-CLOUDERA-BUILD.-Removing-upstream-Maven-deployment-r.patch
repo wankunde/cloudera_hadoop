@@ -1,7 +1,7 @@
 From 8bafc0705e90bd589773f2f702ea045c4f82ff07 Mon Sep 17 00:00:00 2001
 From: Andrew Bayer <andrew@cloudera.com>
 Date: Fri, 14 Feb 2014 16:07:35 -0800
-Subject: [PATCH 169/924] CLOUDERA-BUILD. Removing upstream Maven deployment
+Subject: [PATCH 0169/2639] CLOUDERA-BUILD. Removing upstream Maven deployment
  repos
 
 (cherry picked from commit ad6e9c9946e9374c23ccc3bdc6a63aa7dfed6f16)

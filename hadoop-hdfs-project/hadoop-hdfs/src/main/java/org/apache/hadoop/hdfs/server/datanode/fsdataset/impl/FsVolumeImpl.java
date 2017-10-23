@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.ClosedChannelException;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
@@ -59,6 +61,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -198,7 +201,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   private static class FsVolumeReferenceImpl implements FsVolumeReference {
-    private final FsVolumeImpl volume;
+    private FsVolumeImpl volume;
 
     FsVolumeReferenceImpl(FsVolumeImpl volume) throws ClosedChannelException {
       this.volume = volume;
@@ -211,7 +214,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
      */
     @Override
     public void close() throws IOException {
-      volume.unreference();
+      if (volume != null) {
+        volume.unreference();
+        volume = null;
+      }
     }
 
     @Override
@@ -229,30 +235,37 @@ public class FsVolumeImpl implements FsVolumeSpi {
     Preconditions.checkState(reference.getReferenceCount() > 0);
   }
 
+  @VisibleForTesting
+  int getReferenceCount() {
+    return this.reference.getReferenceCount();
+  }
+
   /**
-   * Close this volume and wait all other threads to release the reference count
-   * on this volume.
-   * @throws IOException if the volume is closed or the waiting is interrupted.
+   * Close this volume.
+   * @throws IOException if the volume is closed.
    */
-  void closeAndWait() throws IOException {
+  void setClosed() throws IOException {
     try {
       this.reference.setClosed();
+      dataset.stopAllDataxceiverThreads(this);
     } catch (ClosedChannelException e) {
       throw new IOException("The volume has already closed.", e);
     }
-    final int SLEEP_MILLIS = 500;
-    while (this.reference.getReferenceCount() > 0) {
+  }
+
+  /**
+   * Check whether this volume has successfully been closed.
+   */
+  boolean checkClosed() {
+    if (this.reference.getReferenceCount() > 0) {
       if (FsDatasetImpl.LOG.isDebugEnabled()) {
         FsDatasetImpl.LOG.debug(String.format(
             "The reference count for %s is %d, wait to be 0.",
             this, reference.getReferenceCount()));
       }
-      try {
-        Thread.sleep(SLEEP_MILLIS);
-      } catch (InterruptedException e) {
-        throw new IOException(e);
-      }
+      return false;
     }
+    return true;
   }
 
   File getCurrentDir() {
@@ -305,9 +318,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
   
   /**
-   * Calculate the capacity of the filesystem, after removing any
-   * reserved capacity.
-   * @return the unreserved number of bytes left in this filesystem. May be zero.
+   * Return either the configured capacity of the file system if configured; or
+   * the capacity of the file system excluding space reserved for non-HDFS.
+   * 
+   * @return the unreserved number of bytes left in this filesystem. May be
+   *         zero.
    */
   @VisibleForTesting
   public long getCapacity() {
@@ -329,14 +344,52 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.configuredCapacity = capacity;
   }
 
+  /*
+   * Calculate the available space of the filesystem, excluding space reserved
+   * for non-HDFS and space reserved for RBW
+   * 
+   * @return the available number of bytes left in this filesystem. May be zero.
+   */
   @Override
   public long getAvailable() throws IOException {
-    long remaining = getCapacity() - getDfsUsed() - reservedForRbw.get();
-    long available = usage.getAvailable();
+    long remaining = getCapacity() - getDfsUsed() - getReservedForRbw();
+    long available =
+        usage.getAvailable() - getRemainingReserved() - getReservedForRbw();
     if (remaining > available) {
       remaining = available;
     }
     return (remaining > 0) ? remaining : 0;
+  }
+
+  long getActualNonDfsUsed() throws IOException {
+    return usage.getUsed() - getDfsUsed();
+  }
+
+  private long getRemainingReserved() throws IOException {
+    long actualNonDfsUsed = getActualNonDfsUsed();
+    if (actualNonDfsUsed < reserved) {
+      return reserved - actualNonDfsUsed;
+    }
+    return 0L;
+  }
+
+  /**
+   * Unplanned Non-DFS usage, i.e. Extra usage beyond reserved.
+   *
+   * @return
+   * @throws IOException
+   */
+  public long getNonDfsUsed() throws IOException {
+    long actualNonDfsUsed = getActualNonDfsUsed();
+    if (actualNonDfsUsed < reserved) {
+      return 0L;
+    }
+    return actualNonDfsUsed - reserved;
+  }
+
+  @VisibleForTesting
+  long getDfAvailable() {
+    return usage.getAvailable();
   }
 
   @VisibleForTesting
@@ -431,7 +484,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
     @Override
     public boolean accept(File dir, String name) {
-      return !name.endsWith(".meta") && name.startsWith("blk_");
+      return !name.endsWith(".meta") &&
+              name.startsWith(Block.BLOCK_FILE_PREFIX);
     }
   }
 
@@ -624,6 +678,12 @@ public class FsVolumeImpl implements FsVolumeSpi {
             } else {
               ExtendedBlock block =
                   new ExtendedBlock(bpid, Block.filename2id(state.curEntry));
+              File blkFile = getBlockFile(bpid, block);
+              File metaFile = FsDatasetUtil.findMetaFile(blkFile);
+              block.setGenerationStamp(
+                  Block.getGenerationStamp(metaFile.getName()));
+              block.setNumBytes(blkFile.length());
+
               LOG.trace("nextBlock({}, {}): advancing to {}",
                   storageID, bpid, block);
               return block;
@@ -643,6 +703,12 @@ public class FsVolumeImpl implements FsVolumeSpi {
         LOG.error("nextBlock({}, {}): I/O error", storageID, bpid, e);
         throw e;
       }
+    }
+
+    private File getBlockFile(String bpid, ExtendedBlock blk)
+        throws IOException {
+      return new File(DatanodeUtil.idToBlockDir(getFinalizedDir(bpid),
+          blk.getBlockId()).toString() + "/" + blk.getBlockName());
     }
 
     @Override
@@ -905,6 +971,42 @@ public class FsVolumeImpl implements FsVolumeSpi {
   
   DatanodeStorage toDatanodeStorage() {
     return new DatanodeStorage(storageID, DatanodeStorage.State.NORMAL, storageType);
+  }
+
+
+  @Override
+  public byte[] loadLastPartialChunkChecksum(
+      File blockFile, File metaFile) throws IOException {
+    // readHeader closes the temporary FileInputStream.
+    DataChecksum dcs = BlockMetadataHeader
+        .readHeader(metaFile).getChecksum();
+    final int checksumSize = dcs.getChecksumSize();
+    final long onDiskLen = blockFile.length();
+    final int bytesPerChecksum = dcs.getBytesPerChecksum();
+
+    if (onDiskLen % bytesPerChecksum == 0) {
+      // the last chunk is a complete one. No need to preserve its checksum
+      // because it will not be modified.
+      return null;
+    }
+
+    long offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
+        (onDiskLen / bytesPerChecksum) * checksumSize;
+    byte[] lastChecksum = new byte[checksumSize];
+    try (RandomAccessFile raf = new RandomAccessFile(metaFile, "r")) {
+      raf.seek(offsetInChecksum);
+      int readBytes = raf.read(lastChecksum, 0, checksumSize);
+      if (readBytes == -1) {
+        throw new IOException("Expected to read " + checksumSize +
+            " bytes from offset " + offsetInChecksum +
+            " but reached end of file.");
+      } else if (readBytes != checksumSize) {
+        throw new IOException("Expected to read " + checksumSize +
+            " bytes from offset " + offsetInChecksum + " but read " +
+            readBytes + " bytes.");
+      }
+    }
+    return lastChecksum;
   }
 }
 

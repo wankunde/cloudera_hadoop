@@ -1,7 +1,7 @@
 From 5c37e0f0d80833985c3b93fe481b607fc6d99afb Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 28 May 2015 12:00:55 -0700
-Subject: [PATCH 652/924] HADOOP-11894. Bump the version of Apache HTrace to
+Subject: [PATCH 0652/2639] HADOOP-11894. Bump the version of Apache HTrace to
  3.2.0-incubating (Masatake Iwasaki via Colin P.
  McCabe)
 

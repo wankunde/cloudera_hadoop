@@ -1,7 +1,7 @@
 From 706fc22443442dbcbdfa1f9eb937b75aea6b6bb7 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Thu, 12 Feb 2015 11:18:41 -0600
-Subject: [PATCH 419/924] Adding missing files from HDFS-7404 (cherry picked
+Subject: [PATCH 0419/2639] Adding missing files from HDFS-7404 (cherry picked
  from commit
  8d7215d40fb206bff7558527b1aef7bd40d427ff)
 

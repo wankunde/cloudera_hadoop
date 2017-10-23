@@ -1,7 +1,7 @@
 From 6f726e5aa15d9339f2e9211520b8a35e44c16a65 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Sat, 9 May 2015 14:34:54 -0700
-Subject: [PATCH 659/924] YARN-1287. Consolidate MockClocks. (Sebastian Wong
+Subject: [PATCH 0659/2639] YARN-1287. Consolidate MockClocks. (Sebastian Wong
  and Anubhav Dhoot via kasha)
 
 (cherry picked from commit 70fb37cd79a7eba6818313960624380bacfe0bb2)

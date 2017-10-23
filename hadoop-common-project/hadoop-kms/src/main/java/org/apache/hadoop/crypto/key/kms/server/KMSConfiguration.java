@@ -38,6 +38,7 @@ public class KMSConfiguration {
   public static final String CONFIG_PREFIX = "hadoop.kms.";
 
   public static final String KEY_ACL_PREFIX = "key.acl.";
+  public static final String KEY_ACL_PREFIX_REGEX = "^key\\.acl\\..+";
   public static final String DEFAULT_KEY_ACL_PREFIX = "default.key.acl.";
   public static final String WHITELIST_KEY_ACL_PREFIX = "whitelist.key.acl.";
 
@@ -57,6 +58,10 @@ public class KMSConfiguration {
   // Delay for Audit logs that need aggregation
   public static final String KMS_AUDIT_AGGREGATION_WINDOW = CONFIG_PREFIX +
       "audit.aggregation.window.ms";
+
+  // KMS Audit logger classes to use
+  public static final String KMS_AUDIT_LOGGER_KEY = CONFIG_PREFIX +
+      "audit.logger";
   
   public static final boolean KEY_CACHE_ENABLE_DEFAULT = true;
   // 10 mins

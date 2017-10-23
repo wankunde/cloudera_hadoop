@@ -1,7 +1,7 @@
 From 8e6a9d401a87019a45d555cfe714f177bdc8436c Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 16 Dec 2014 11:07:27 -0800
-Subject: [PATCH 388/924] HDFS-7494. Checking of closed in
+Subject: [PATCH 0388/2639] HDFS-7494. Checking of closed in
  DFSInputStream#pread() should be protected by
  synchronization (Ted Yu via Colin P. McCabe)
 

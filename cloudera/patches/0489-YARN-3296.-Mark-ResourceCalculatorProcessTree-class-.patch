@@ -1,10 +1,11 @@
 From 60656cad6287ac44c396638bf83bf23df7010a35 Mon Sep 17 00:00:00 2001
 From: Junping Du <junping_du@apache.org>
 Date: Sun, 8 Mar 2015 14:47:35 -0700
-Subject: [PATCH 489/924] YARN-3296. Mark ResourceCalculatorProcessTree class
- as Public for configurable resource monitoring.
- Contributed by Hitesh Shah (cherry picked from
- commit 7ce3c7635392c32f0504191ddd8417fb20509caa)
+Subject: [PATCH 0489/2639] YARN-3296. Mark ResourceCalculatorProcessTree
+ class as Public for configurable resource
+ monitoring. Contributed by Hitesh Shah (cherry
+ picked from commit
+ 7ce3c7635392c32f0504191ddd8417fb20509caa)
 
 (cherry picked from commit b91e1b0feb8f9f7913f5d9c09ad1b1cd8dcbeb49)
 

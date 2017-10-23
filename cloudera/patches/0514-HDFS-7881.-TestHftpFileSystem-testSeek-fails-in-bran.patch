@@ -1,7 +1,7 @@
 From 8e6b034fd14f0a60b83c39b86d212df5528dda66 Mon Sep 17 00:00:00 2001
 From: Akira Ajisaka <aajisaka@apache.org>
 Date: Tue, 24 Mar 2015 06:21:14 +0900
-Subject: [PATCH 514/924] HDFS-7881. TestHftpFileSystem#testSeek fails in
+Subject: [PATCH 0514/2639] HDFS-7881. TestHftpFileSystem#testSeek fails in
  branch-2. Contributed by Brahma Reddy Battula.
 
 (cherry picked from commit fad8c78173c4b7c55324033720f04a09943deac7)

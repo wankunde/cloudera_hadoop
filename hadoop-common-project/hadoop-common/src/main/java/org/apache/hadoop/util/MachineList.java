@@ -18,7 +18,6 @@
 package org.apache.hadoop.util;
 
 import java.net.InetAddress;
-
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,6 +44,7 @@ import com.google.common.net.InetAddresses;
 public class MachineList {
   
   public static final Log LOG = LogFactory.getLog(MachineList.class);
+  public static final String WILDCARD_VALUE = "*";
 
   /**
    * InetAddressFactory is used to obtain InetAddress from host.
@@ -91,7 +91,7 @@ public class MachineList {
   public MachineList(Collection<String> hostEntries, InetAddressFactory addressFactory) {
     this.addressFactory = addressFactory;
     if (hostEntries != null) {
-      if ((hostEntries.size() == 1) && (hostEntries.contains("*"))) {
+      if ((hostEntries.size() == 1) && (hostEntries.contains(WILDCARD_VALUE))) {
         all = true; 
         ipAddresses = null; 
         hostNames = null; 
@@ -140,6 +140,10 @@ public class MachineList {
       return true;
     }
     
+    if (ipAddress == null) {
+      throw new IllegalArgumentException("ipAddress is null.");
+    }
+
     //check in the set of ipAddresses
     if ((ipAddresses != null) && ipAddresses.contains(ipAddress)) {
       return true;

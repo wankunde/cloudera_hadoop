@@ -1,9 +1,9 @@
 From 83f9ae87fd198cc346de92f9cd2cba6940ae5162 Mon Sep 17 00:00:00 2001
 From: Zhihai Xu <zxu@cloudera.com>
 Date: Wed, 1 Apr 2015 17:39:05 -0700
-Subject: [PATCH 522/924] MAPREDUCE-6076: Zero map split input length combine
- with none zero map split input length will cause
- MR1 job hung.
+Subject: [PATCH 0522/2639] MAPREDUCE-6076: Zero map split input length
+ combine with none zero map split input length
+ will cause MR1 job hung.
 
 (cherry picked from commit 31f8133c628e3c62c145fc91376a11a6f85f1e81)
 ---

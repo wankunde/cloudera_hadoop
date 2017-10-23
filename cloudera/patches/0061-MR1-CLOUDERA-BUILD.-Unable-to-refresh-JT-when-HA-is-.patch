@@ -1,8 +1,8 @@
 From 5a36331f72926ae26b9d27f91ad1bd080ecf55c6 Mon Sep 17 00:00:00 2001
 From: Tom White <tom@cloudera.com>
 Date: Mon, 13 May 2013 12:40:39 +0100
-Subject: [PATCH 061/924] MR1: CLOUDERA-BUILD. Unable to refresh JT when HA is
- enabled. (cherry picked from commit
+Subject: [PATCH 0061/2639] MR1: CLOUDERA-BUILD. Unable to refresh JT when HA
+ is enabled. (cherry picked from commit
  e3049f11a6e05c588909947fbbdee1cae57ad79c)
 
 (cherry picked from commit 0ba9978ad9c6dac3d5bc7b0178b4d5c801c500ce)

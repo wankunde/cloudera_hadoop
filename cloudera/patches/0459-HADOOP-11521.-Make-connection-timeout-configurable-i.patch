@@ -1,7 +1,7 @@
 From 6ebd7988fc4f1483ee3fe3e9a0fe4a1354e7865d Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Tue, 17 Feb 2015 20:00:00 +0000
-Subject: [PATCH 459/924] HADOOP-11521. Make connection timeout configurable
+Subject: [PATCH 0459/2639] HADOOP-11521. Make connection timeout configurable
  in s3a. (Thomas Demoor via stevel) (cherry picked
  from commit
  411c8a7cda0d72f7e0a34fa1e273a065bb620293)

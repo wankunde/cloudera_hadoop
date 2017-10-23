@@ -1,12 +1,11 @@
-From 06cb7a06036428ba29541e2e192bcd48de76eaa6 Mon Sep 17 00:00:00 2001
+From 77feee66b20b88d3cd854c11bdc25ed9ca25a0c0 Mon Sep 17 00:00:00 2001
 From: Jing Zhao <jing9@apache.org>
 Date: Wed, 19 Aug 2015 10:36:56 -0700
-Subject: [PATCH 772/924] HDFS-8867. Enable optimized block reports.
+Subject: [PATCH 0772/2639] HDFS-8867. Enable optimized block reports.
  Contributed by Daryn Sharp.
 
 (cherry picked from commit f61120d964a609ae5eabeb5c4d6c9afe0a15cad8)
 (cherry picked from commit c0a4cd978a9142a1fb9f6367d9af0dc7f0e711d9)
-(cherry picked from commit 77feee66b20b88d3cd854c11bdc25ed9ca25a0c0)
 ---
  .../hadoop/hdfs/server/protocol/NamespaceInfo.java |   17 +++++++++++++----
  .../hadoop/hdfs/protocol/TestBlockListAsLongs.java |    9 ++++++++-

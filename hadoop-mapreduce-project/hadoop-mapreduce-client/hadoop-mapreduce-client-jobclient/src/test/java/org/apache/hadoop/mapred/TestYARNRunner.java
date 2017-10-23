@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -35,6 +40,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -63,6 +69,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -88,6 +95,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
@@ -521,16 +530,191 @@ public class TestYARNRunner extends TestCase {
   }
 
   @Test
-  public void testAMStandardEnv() throws Exception {
+  public void testResourceRequestLocalityAny() throws Exception {
+    ResourceRequest amAnyResourceRequest =
+        createResourceRequest(ResourceRequest.ANY, true);
+    verifyResourceRequestLocality(null, null, amAnyResourceRequest);
+    verifyResourceRequestLocality(null, "label1", amAnyResourceRequest);
+  }
+
+  @Test
+  public void testResourceRequestLocalityRack() throws Exception {
+    ResourceRequest amAnyResourceRequest =
+        createResourceRequest(ResourceRequest.ANY, false);
+    ResourceRequest amRackResourceRequest =
+        createResourceRequest("/rack1", true);
+    verifyResourceRequestLocality("/rack1", null, amAnyResourceRequest,
+        amRackResourceRequest);
+    verifyResourceRequestLocality("/rack1", "label1", amAnyResourceRequest,
+        amRackResourceRequest);
+  }
+
+  @Test
+  public void testResourceRequestLocalityNode() throws Exception {
+    ResourceRequest amAnyResourceRequest =
+        createResourceRequest(ResourceRequest.ANY, false);
+    ResourceRequest amRackResourceRequest =
+        createResourceRequest("/rack1", false);
+    ResourceRequest amNodeResourceRequest =
+        createResourceRequest("node1", true);
+    verifyResourceRequestLocality("/rack1/node1", null, amAnyResourceRequest,
+        amRackResourceRequest, amNodeResourceRequest);
+    verifyResourceRequestLocality("/rack1/node1", "label1",
+        amAnyResourceRequest, amRackResourceRequest, amNodeResourceRequest);
+  }
+
+  @Test
+  public void testResourceRequestLocalityNodeDefaultRack() throws Exception {
+    ResourceRequest amAnyResourceRequest =
+        createResourceRequest(ResourceRequest.ANY, false);
+    ResourceRequest amRackResourceRequest =
+        createResourceRequest("/default-rack", false);
+    ResourceRequest amNodeResourceRequest =
+        createResourceRequest("node1", true);
+    verifyResourceRequestLocality("node1", null,
+        amAnyResourceRequest, amRackResourceRequest, amNodeResourceRequest);
+    verifyResourceRequestLocality("node1", "label1",
+        amAnyResourceRequest, amRackResourceRequest, amNodeResourceRequest);
+  }
+
+  @Test
+  public void testResourceRequestLocalityMultipleNodes() throws Exception {
+    ResourceRequest amAnyResourceRequest =
+        createResourceRequest(ResourceRequest.ANY, false);
+    ResourceRequest amRackResourceRequest =
+        createResourceRequest("/rack1", false);
+    ResourceRequest amNodeResourceRequest =
+        createResourceRequest("node1", true);
+    ResourceRequest amNode2ResourceRequest =
+        createResourceRequest("node2", true);
+    verifyResourceRequestLocality("/rack1/node1,/rack1/node2", null,
+        amAnyResourceRequest, amRackResourceRequest, amNodeResourceRequest,
+        amNode2ResourceRequest);
+    verifyResourceRequestLocality("/rack1/node1,/rack1/node2", "label1",
+        amAnyResourceRequest, amRackResourceRequest, amNodeResourceRequest,
+        amNode2ResourceRequest);
+  }
+
+  @Test
+  public void testResourceRequestLocalityMultipleNodesDifferentRack()
+      throws Exception {
+    ResourceRequest amAnyResourceRequest =
+        createResourceRequest(ResourceRequest.ANY, false);
+    ResourceRequest amRackResourceRequest =
+        createResourceRequest("/rack1", false);
+    ResourceRequest amNodeResourceRequest =
+        createResourceRequest("node1", true);
+    ResourceRequest amRack2ResourceRequest =
+        createResourceRequest("/rack2", false);
+    ResourceRequest amNode2ResourceRequest =
+        createResourceRequest("node2", true);
+    verifyResourceRequestLocality("/rack1/node1,/rack2/node2", null,
+        amAnyResourceRequest, amRackResourceRequest, amNodeResourceRequest,
+        amRack2ResourceRequest, amNode2ResourceRequest);
+    verifyResourceRequestLocality("/rack1/node1,/rack2/node2", "label1",
+        amAnyResourceRequest, amRackResourceRequest, amNodeResourceRequest,
+        amRack2ResourceRequest, amNode2ResourceRequest);
+  }
+
+  @Test
+  public void testResourceRequestLocalityMultipleNodesDefaultRack()
+      throws Exception {
+    ResourceRequest amAnyResourceRequest =
+        createResourceRequest(ResourceRequest.ANY, false);
+    ResourceRequest amRackResourceRequest =
+        createResourceRequest("/rack1", false);
+    ResourceRequest amNodeResourceRequest =
+        createResourceRequest("node1", true);
+    ResourceRequest amRack2ResourceRequest =
+        createResourceRequest("/default-rack", false);
+    ResourceRequest amNode2ResourceRequest =
+        createResourceRequest("node2", true);
+    verifyResourceRequestLocality("/rack1/node1,node2", null,
+        amAnyResourceRequest, amRackResourceRequest, amNodeResourceRequest,
+        amRack2ResourceRequest, amNode2ResourceRequest);
+    verifyResourceRequestLocality("/rack1/node1,node2", "label1",
+        amAnyResourceRequest, amRackResourceRequest, amNodeResourceRequest,
+        amRack2ResourceRequest, amNode2ResourceRequest);
+  }
+
+  @Test
+  public void testResourceRequestLocalityInvalid() throws Exception {
+    try {
+      verifyResourceRequestLocality("rack/node1", null,
+          new ResourceRequest[]{});
+      fail("Should have failed due to invalid resource but did not");
+    } catch (IOException ioe) {
+      assertTrue(ioe.getMessage().contains("Invalid resource name"));
+    }
+    try {
+      verifyResourceRequestLocality("/rack/node1/blah", null,
+          new ResourceRequest[]{});
+      fail("Should have failed due to invalid resource but did not");
+    } catch (IOException ioe) {
+      assertTrue(ioe.getMessage().contains("Invalid resource name"));
+    }
+  }
+
+  private void verifyResourceRequestLocality(String strictResource,
+      String label, ResourceRequest... expectedReqs) throws Exception {
+    JobConf jobConf = new JobConf();
+    if (strictResource != null) {
+      jobConf.set(MRJobConfig.AM_STRICT_LOCALITY, strictResource);
+    }
+
+    YARNRunner yarnRunner = new YARNRunner(jobConf);
+    ApplicationSubmissionContext appSubCtx =
+        buildSubmitContext(yarnRunner, jobConf);
+    assertEquals(Arrays.asList(expectedReqs),
+        appSubCtx.getAMContainerResourceRequests());
+  }
+
+  private ResourceRequest createResourceRequest(String name,
+      boolean relaxLocality) {
+    Resource capability = recordFactory.newRecordInstance(Resource.class);
+    capability.setMemory(MRJobConfig.DEFAULT_MR_AM_VMEM_MB);
+    capability.setVirtualCores(MRJobConfig.DEFAULT_MR_AM_CPU_VCORES);
+
+    ResourceRequest req =
+        recordFactory.newRecordInstance(ResourceRequest.class);
+    req.setPriority(YARNRunner.AM_CONTAINER_PRIORITY);
+    req.setResourceName(name);
+    req.setCapability(capability);
+    req.setNumContainers(1);
+    req.setRelaxLocality(relaxLocality);
+
+    return req;
+  }
+
+  @Test
+  public void testAMStandardEnvWithDefaultLibPath() throws Exception {
+    testAMStandardEnv(false);
+  }
+
+  @Test
+  public void testAMStandardEnvWithCustomLibPath() throws Exception {
+    testAMStandardEnv(true);
+  }
+
+  private void testAMStandardEnv(boolean customLibPath) throws Exception {
+    // the Windows behavior is different and this test currently doesn't really
+    // apply
+    // MAPREDUCE-6588 should revisit this test
+    if (Shell.WINDOWS) {
+      return;
+    }
+
     final String ADMIN_LIB_PATH = "foo";
     final String USER_LIB_PATH = "bar";
     final String USER_SHELL = "shell";
     JobConf jobConf = new JobConf();
+    String pathKey = Environment.LD_LIBRARY_PATH.name();
 
-    jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV, "LD_LIBRARY_PATH=" +
-        ADMIN_LIB_PATH);
-    jobConf.set(MRJobConfig.MR_AM_ENV, "LD_LIBRARY_PATH="
-        + USER_LIB_PATH);
+    if (customLibPath) {
+      jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV, pathKey + "=" +
+          ADMIN_LIB_PATH);
+      jobConf.set(MRJobConfig.MR_AM_ENV, pathKey + "=" + USER_LIB_PATH);
+    }
     jobConf.set(MRJobConfig.MAPRED_ADMIN_USER_SHELL, USER_SHELL);
 
     YARNRunner yarnRunner = new YARNRunner(jobConf);
@@ -540,15 +724,23 @@ public class TestYARNRunner extends TestCase {
     // make sure PWD is first in the lib path
     ContainerLaunchContext clc = appSubCtx.getAMContainerSpec();
     Map<String, String> env = clc.getEnvironment();
-    String libPath = env.get(Environment.LD_LIBRARY_PATH.name());
-    assertNotNull("LD_LIBRARY_PATH not set", libPath);
+    String libPath = env.get(pathKey);
+    assertNotNull(pathKey + " not set", libPath);
     String cps = jobConf.getBoolean(
         MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM,
         MRConfig.DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM)
         ? ApplicationConstants.CLASS_PATH_SEPARATOR : File.pathSeparator;
-    assertEquals("Bad AM LD_LIBRARY_PATH setting",
-        MRApps.crossPlatformifyMREnv(conf, Environment.PWD)
-        + cps + ADMIN_LIB_PATH + cps + USER_LIB_PATH, libPath);
+    String expectedLibPath =
+        MRApps.crossPlatformifyMREnv(conf, Environment.PWD);
+    if (customLibPath) {
+      // append admin libpath and user libpath
+      expectedLibPath += cps + ADMIN_LIB_PATH + cps + USER_LIB_PATH;
+    } else {
+      expectedLibPath += cps +
+          MRJobConfig.DEFAULT_MR_AM_ADMIN_USER_ENV.substring(
+              pathKey.length() + 1);
+    }
+    assertEquals("Bad AM " + pathKey + " setting", expectedLibPath, libPath);
 
     // make sure SHELL is set
     String shell = env.get(Environment.SHELL.name());

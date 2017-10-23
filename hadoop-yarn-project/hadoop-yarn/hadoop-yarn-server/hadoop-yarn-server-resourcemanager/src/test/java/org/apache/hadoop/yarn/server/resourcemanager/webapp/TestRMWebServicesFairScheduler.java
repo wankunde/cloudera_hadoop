@@ -19,18 +19,18 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Test;
@@ -60,10 +60,6 @@ public class TestRMWebServicesFairScheduler extends JerseyTest {
         ResourceScheduler.class);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      bind(RMContext.class).toInstance(rm.getRMContext());
-      bind(ApplicationACLsManager.class).toInstance(
-          rm.getApplicationACLsManager());
-      bind(QueueACLsManager.class).toInstance(rm.getQueueACLsManager());
       serve("/*").with(GuiceContainer.class);
     }
   });
@@ -106,6 +102,38 @@ public class TestRMWebServicesFairScheduler extends JerseyTest {
     verifyClusterScheduler(json);
   }
   
+  @Test
+  public void testClusterSchedulerWithSubQueues() throws JSONException,
+      Exception {
+    FairScheduler scheduler = (FairScheduler)rm.getResourceScheduler();
+    QueueManager queueManager = scheduler.getQueueManager();
+    // create LeafQueue
+    queueManager.getLeafQueue("root.q.subqueue1", true);
+    queueManager.getLeafQueue("root.q.subqueue2", true);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    JSONArray subQueueInfo = json.getJSONObject("scheduler")
+        .getJSONObject("schedulerInfo").getJSONObject("rootQueue")
+        .getJSONObject("childQueues").getJSONArray("queue")
+        .getJSONObject(1).getJSONObject("childQueues").getJSONArray("queue");
+    // subQueueInfo is consist of subqueue1 and subqueue2 info
+    assertEquals(2, subQueueInfo.length());
+
+    // Verify 'childQueues' field is omitted from FairSchedulerLeafQueueInfo.
+    try {
+      subQueueInfo.getJSONObject(1).getJSONObject("childQueues");
+      fail("FairSchedulerQueueInfo should omit field 'childQueues'" +
+           "if child queue is empty.");
+    } catch (JSONException je) {
+      assertEquals("JSONObject[\"childQueues\"] not found.", je.getMessage());
+    }
+  }
+
   private void verifyClusterScheduler(JSONObject json) throws JSONException,
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());

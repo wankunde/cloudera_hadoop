@@ -1,8 +1,8 @@
 From 7f0a00c074b78d029840a829f000849a61bd7519 Mon Sep 17 00:00:00 2001
 From: Jing Zhao <jing9@apache.org>
 Date: Mon, 18 May 2015 13:24:35 -0700
-Subject: [PATCH 716/924] HADOOP-1540. Support file exclusion list in distcp.
- Contributed by Rich Haase.
+Subject: [PATCH 0716/2639] HADOOP-1540. Support file exclusion list in
+ distcp. Contributed by Rich Haase.
 
 (cherry picked from commit 0790275f058b0cf41780ad337c9150a1e8ebebc6)
 

@@ -1,7 +1,7 @@
 From 77c140f1e759b51af8d66a810ab8a27ab23aa064 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Thu, 13 Jun 2013 14:10:35 -0700
-Subject: [PATCH 076/924] MR1: CLOUDERA-BUILD. Fix issues due to Common
+Subject: [PATCH 0076/2639] MR1: CLOUDERA-BUILD. Fix issues due to Common
  incompatibilities in CDH5 (cherry picked from
  commit 265e97bc866bae5ca7df66635783b6eb5a36dee0)
 

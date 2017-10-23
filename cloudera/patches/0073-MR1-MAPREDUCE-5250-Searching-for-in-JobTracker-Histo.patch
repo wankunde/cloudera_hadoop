@@ -1,9 +1,9 @@
 From 2b6e1ae31653ae81046498e6147a56415967f8cc Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Mon, 3 Jun 2013 12:57:59 -0700
-Subject: [PATCH 073/924] MR1: MAPREDUCE-5250 Searching for ';' in JobTracker
- History throws ArrayOutOfBoundException. (kkambatl
- via tucu)
+Subject: [PATCH 0073/2639] MR1: MAPREDUCE-5250 Searching for ';' in
+ JobTracker History throws
+ ArrayOutOfBoundException. (kkambatl via tucu)
 
 Reason: CDH-12176 (Customer request)
 (cherry picked from commit 4ad5b8337426ecb7046926f82aac2030f4a4fc85)

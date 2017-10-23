@@ -20,16 +20,19 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>2.6.0-cdh5.5.1</version>
+    <version>2.6.0-cdh5.13.0</version>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-project</artifactId>
-  <version>2.6.0-cdh5.5.1</version>
+  <version>2.6.0-cdh5.13.0</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
 
   <properties>
+    <!-- Set the Release year during release -->
+    <release-year>2017</release-year>
+
     <failIfNoTests>false</failIfNoTests>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
 
@@ -45,7 +48,7 @@
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
 
-    <commons-daemon.version>1.0.13</commons-daemon.version>
+    <commons-daemon.version>${cdh.commons-daemon.version}</commons-daemon.version>
 
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
     <test.build.data>${test.build.dir}</test.build.data>
@@ -67,14 +70,16 @@
 
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
+    <cdh.protobuf.path>${env.HADOOP_PROTOC_CDH5_PATH}</cdh.protobuf.path>
     <protobuf.version>${cdh.protobuf.version}</protobuf.version>
-    <protoc.path>${env.HADOOP_PROTOC_CDH5_PATH}</protoc.path>
+    <protoc.path>${cdh.protobuf.path}</protoc.path>
 
     <zookeeper.version>3.4.6</zookeeper.version>
     <curator.version>2.7.1</curator.version>
     <findbugs.version>3.0.0</findbugs.version>
 
     <tomcat.version>${cdh.tomcat.version}</tomcat.version>
+    <joda-time.version>2.9.4</joda-time.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>${javaVersion}</javac.version>
@@ -88,10 +93,13 @@
     <enforced.maven.version>[3.0.2,)</enforced.maven.version>
 
     <!-- Plugin versions and config -->
-    <maven-surefire-plugin.argLine>-Xmx4096m -XX:MaxPermSize=768m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>2.17</maven-surefire-plugin.version>
+    <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
+    <maven-surefire-plugin.argLine>-Xmx2048m -XX:MaxPermSize=768m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
+    <maven-surefire-plugin.version>${cdh.surefire.version}</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
+    <aws-java-sdk.version>1.11.134</aws-java-sdk.version>
+    <surefire.fork.timeout>900</surefire.fork.timeout>
   </properties>
 
   <dependencyManagement>
@@ -313,6 +321,12 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-distcp</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-datajoin</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -354,7 +368,7 @@
         <artifactId>hadoop-openstack</artifactId>
         <version>${project.version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-azure</artifactId>
@@ -556,7 +570,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty</artifactId>
-        <version>3.6.2.Final</version>
+        <version>3.10.5.Final</version>
       </dependency>
 
       <dependency>
@@ -664,8 +678,13 @@
       </dependency>
       <dependency>
         <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk</artifactId>
-        <version>1.7.4</version>
+        <artifactId>aws-java-sdk-bundle</artifactId>
+        <version>${aws-java-sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>DynamoDBLocal</artifactId>
+        <version>[1.11.86,2.0)</version>
       </dependency>
       <dependency>
         <groupId>org.apache.mina</groupId>
@@ -952,13 +971,24 @@
        <artifactId>bcprov-jdk16</artifactId>
        <version>1.46</version>
        <scope>test</scope>
-      </dependency>
+     </dependency>
+     <dependency>
+        <groupId>joda-time</groupId>
+        <artifactId>joda-time</artifactId>
+        <version>${joda-time.version}</version>
+     </dependency>
       <dependency>
         <groupId>com.microsoft.windowsazure.storage</groupId>
         <artifactId>microsoft-windowsazure-storage-sdk</artifactId>
         <version>0.6.0</version>
     </dependency>
-      
+
+        <dependency>
+            <groupId>org.skyscreamer</groupId>
+            <artifactId>jsonassert</artifactId>
+            <version>1.3.0</version>
+        </dependency>
+
     </dependencies>
   </dependencyManagement>
 
@@ -976,6 +1006,7 @@
           <configuration>
             <source>${javac.version}</source>
             <target>${targetJavaVersion}</target>
+            <useIncrementalCompilation>false</useIncrementalCompilation>
           </configuration>
         </plugin>
         <plugin>
@@ -992,6 +1023,11 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${maven-surefire-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>${maven-failsafe-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -1081,7 +1117,30 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
       </plugin>
-      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <version>${maven-remote-resources-plugin.version}</version>
+        <configuration>
+          <resourceBundles>
+            <resourceBundle>org.apache.hadoop:hadoop-build-tools:${project.version}</resourceBundle>
+          </resourceBundles>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-build-tools</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <goals>
+              <goal>process</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
        <plugin>
          <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -1144,9 +1203,10 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <reuseForks>false</reuseForks>
-          <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
+          <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
           <argLine>${maven-surefire-plugin.argLine}</argLine>
           <environmentVariables>
+            <HADOOP_COMMON_HOME>${hadoop.common.build.dir}</HADOOP_COMMON_HOME>
             <!-- HADOOP_HOME required for tests on Windows to find winutils -->
             <HADOOP_HOME>${hadoop.common.build.dir}</HADOOP_HOME>
             <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</LD_LIBRARY_PATH>
@@ -1196,7 +1256,7 @@
             <configuration>
               <rules>
                 <DependencyConvergence>
-                  <uniqueVersions>true</uniqueVersions> 
+                  <uniqueVersions>true</uniqueVersions>
                 </DependencyConvergence>
               </rules>
             </configuration>
@@ -1341,4 +1401,12 @@
       </build>
     </profile>
   </profiles>
+
+  <repositories>
+    <repository>
+      <id>dynamodblocal</id>
+      <name>AWS DynamoDB Local Release Repository</name>
+      <url>http://dynamodb-local.s3-website-us-west-2.amazonaws.com/release</url>
+    </repository>
+  </repositories>
 </project>

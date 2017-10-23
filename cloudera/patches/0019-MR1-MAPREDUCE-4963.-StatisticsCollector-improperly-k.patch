@@ -1,9 +1,10 @@
 From 314fc989df45660983c775bc40dc9f147db9e3ac Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Sat, 26 Jan 2013 04:29:54 +0000
-Subject: [PATCH 019/924] MR1: MAPREDUCE-4963. StatisticsCollector improperly
- keeps track of Last Day and Last Hour statistics
- for new TaskTrackers. (rkanter via tucu)
+Subject: [PATCH 0019/2639] MR1: MAPREDUCE-4963. StatisticsCollector
+ improperly keeps track of Last Day and Last Hour
+ statistics for new TaskTrackers. (rkanter via
+ tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1438843 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit dd62cd17b0f975d22504162316072180fa03b141)

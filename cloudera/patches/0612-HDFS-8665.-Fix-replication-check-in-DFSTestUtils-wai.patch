@@ -1,7 +1,7 @@
 From d24777be46d1b44bf7fc619e8b5251671bb88655 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Thu, 25 Jun 2015 17:29:24 -0700
-Subject: [PATCH 612/924] HDFS-8665. Fix replication check in
+Subject: [PATCH 0612/2639] HDFS-8665. Fix replication check in
  DFSTestUtils#waitForReplication.
 
 (cherry picked from commit ff0e5e572f5dcf7b49381cbe901360f6e171d423)

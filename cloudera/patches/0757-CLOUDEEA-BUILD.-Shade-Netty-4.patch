@@ -1,7 +1,7 @@
-From 1a48ace290ba41eecefa82bf5b164c9ff9b61bfc Mon Sep 17 00:00:00 2001
+From b1b5e14e1ee9c6d8e8b22a0900f119fd4f93b987 Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Fri, 28 Aug 2015 17:07:09 -0700
-Subject: [PATCH 757/924] CLOUDEEA-BUILD. Shade Netty 4.
+Subject: [PATCH 0757/2639] CLOUDEEA-BUILD. Shade Netty 4.
 
 Change-Id: I3b91c1f6e233b5954f10b11c518f2ff69744e7c5
 ---
@@ -28,7 +28,7 @@ Change-Id: I3b91c1f6e233b5954f10b11c518f2ff69744e7c5
  create mode 100644 hadoop-common-project/cloudera-netty/pom.xml
 
 diff --git a/hadoop-client/pom.xml b/hadoop-client/pom.xml
-index 7d980d9..db0c8c4 100644
+index c0d57d3..ce3e147 100644
 --- a/hadoop-client/pom.xml
 +++ b/hadoop-client/pom.xml
 @@ -199,6 +199,10 @@
@@ -77,7 +77,7 @@ index 7d980d9..db0c8c4 100644
  
 diff --git a/hadoop-common-project/cloudera-netty/pom.xml b/hadoop-common-project/cloudera-netty/pom.xml
 new file mode 100644
-index 0000000..33f07d8
+index 0000000..7167d2f
 --- /dev/null
 +++ b/hadoop-common-project/cloudera-netty/pom.xml
 @@ -0,0 +1,76 @@
@@ -103,12 +103,12 @@ index 0000000..33f07d8
 +  <parent>
 +    <groupId>org.apache.hadoop</groupId>
 +    <artifactId>hadoop-project</artifactId>
-+    <version>2.6.0-cdh5.5.0-SNAPSHOT</version>
++    <version>2.6.0-cdh5.7.0-SNAPSHOT</version>
 +    <relativePath>../../hadoop-project</relativePath>
 +  </parent>
 +  <groupId>org.apache.hadoop</groupId>
 +  <artifactId>cloudera-netty-all</artifactId>
-+  <version>2.6.0-cdh5.5.0-SNAPSHOT</version>
++  <version>2.6.0-cdh5.7.0-SNAPSHOT</version>
 +  <packaging>jar</packaging>
 +
 +  <name>Netty Cloudera Dependencies</name>
@@ -158,7 +158,7 @@ index 0000000..33f07d8
 +
 +</project>
 diff --git a/hadoop-common-project/hadoop-nfs/pom.xml b/hadoop-common-project/hadoop-nfs/pom.xml
-index 0b5c94d..98baabb 100644
+index da447d3..9a2d8aa 100644
 --- a/hadoop-common-project/hadoop-nfs/pom.xml
 +++ b/hadoop-common-project/hadoop-nfs/pom.xml
 @@ -83,6 +83,17 @@
@@ -180,7 +180,7 @@ index 0b5c94d..98baabb 100644
        <artifactId>netty</artifactId>
        <scope>compile</scope>
 diff --git a/hadoop-common-project/pom.xml b/hadoop-common-project/pom.xml
-index 127a9fa..a8a32a6 100644
+index c39e754..e29b4fe 100644
 --- a/hadoop-common-project/pom.xml
 +++ b/hadoop-common-project/pom.xml
 @@ -38,6 +38,7 @@
@@ -192,7 +192,7 @@ index 127a9fa..a8a32a6 100644
  
    <build>
 diff --git a/hadoop-hdfs-project/hadoop-hdfs-nfs/pom.xml b/hadoop-hdfs-project/hadoop-hdfs-nfs/pom.xml
-index ec90a4f..1405893 100644
+index 5cef3b8..3ca8855 100644
 --- a/hadoop-hdfs-project/hadoop-hdfs-nfs/pom.xml
 +++ b/hadoop-hdfs-project/hadoop-hdfs-nfs/pom.xml
 @@ -47,6 +47,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -208,7 +208,7 @@ index ec90a4f..1405893 100644
        <artifactId>netty</artifactId>
        <scope>compile</scope>
 diff --git a/hadoop-hdfs-project/hadoop-hdfs/pom.xml b/hadoop-hdfs-project/hadoop-hdfs/pom.xml
-index 2f620f5..4556703 100644
+index 3169692..b7c6f7d 100644
 --- a/hadoop-hdfs-project/hadoop-hdfs/pom.xml
 +++ b/hadoop-hdfs-project/hadoop-hdfs/pom.xml
 @@ -181,13 +181,19 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -595,7 +595,7 @@ index 217d6b5..79a9640 100644
  import javax.servlet.ServletContext;
  
 diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/pom.xml b/hadoop-mapreduce-project/hadoop-mapreduce-client/pom.xml
-index 877616d..3180009 100644
+index 4be36eb..ba9b0e9 100644
 --- a/hadoop-mapreduce-project/hadoop-mapreduce-client/pom.xml
 +++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/pom.xml
 @@ -130,6 +130,17 @@
@@ -617,7 +617,7 @@ index 877616d..3180009 100644
        <artifactId>netty</artifactId>
      </dependency>
 diff --git a/hadoop-mapreduce-project/pom.xml b/hadoop-mapreduce-project/pom.xml
-index 5b745df..60d5d07 100644
+index 58045fd..78de41f 100644
 --- a/hadoop-mapreduce-project/pom.xml
 +++ b/hadoop-mapreduce-project/pom.xml
 @@ -64,6 +64,10 @@
@@ -632,7 +632,7 @@ index 5b745df..60d5d07 100644
            <artifactId>velocity</artifactId>
          </exclusion>
 diff --git a/hadoop-project/pom.xml b/hadoop-project/pom.xml
-index ddc86c3..00f2814 100644
+index ee3e35f..27f9e55 100644
 --- a/hadoop-project/pom.xml
 +++ b/hadoop-project/pom.xml
 @@ -549,15 +549,15 @@

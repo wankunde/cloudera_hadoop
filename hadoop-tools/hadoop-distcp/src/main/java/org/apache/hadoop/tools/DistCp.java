@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -33,6 +34,7 @@ import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
+import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.CopyListing.*;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.apache.hadoop.tools.mapred.CopyOutputFormat;
@@ -72,6 +74,24 @@ public class DistCp extends Configured implements Tool {
   private boolean submitted;
   private FileSystem jobFS;
 
+  private void prepareFileListing(Job job) throws Exception {
+    if (inputOptions.shouldUseSnapshotDiff()) {
+      // When "-diff" or "-rdiff" is passed, do sync() first, then
+      // create copyListing based on snapshot diff.
+      DistCpSync distCpSync = new DistCpSync(inputOptions, getConf());
+      if (distCpSync.sync()) {
+        createInputFileListingWithDiff(job, distCpSync);
+      } else {
+        throw new Exception("DistCp sync failed, input options: "
+            + inputOptions);
+      }
+    } else {
+      // When no "-diff" or "-rdiff" is passed, create copyListing
+      // in regular way.
+      createInputFileListing(job);
+    }
+  }
+
   /**
    * Public Constructor. Creates DistCp object with specified input-parameters.
    * (E.g. source-paths, target-location, etc.)
@@ -109,6 +129,7 @@ public class DistCp extends Configured implements Tool {
     
     try {
       inputOptions = (OptionsParser.parse(argv));
+      setOptionsForSplitLargeFile();
       setTargetPathExists();
       LOG.info("Input Options: " + inputOptions);
     } catch (Throwable e) {
@@ -157,20 +178,7 @@ public class DistCp extends Configured implements Tool {
         jobFS = metaFolder.getFileSystem(getConf());
         job = createJob();
       }
-      if (inputOptions.shouldUseDiff()) {
-        DistCpSync distCpSync = new DistCpSync(inputOptions, getConf());
-        if (distCpSync.sync()) {
-          createInputFileListingWithDiff(job, distCpSync);
-        } else {
-          inputOptions.disableUsingDiff();
-        }
-      }
-
-      // Fallback to default DistCp if without "diff" option or sync failed.
-      if (!inputOptions.shouldUseDiff()) {
-        createInputFileListing(job);
-      }
-
+      prepareFileListing(job);
       job.submit();
       submitted = true;
     } finally {
@@ -180,8 +188,8 @@ public class DistCp extends Configured implements Tool {
     }
 
     String jobID = job.getJobID().toString();
-    job.getConfiguration().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID, jobID);
-    
+    job.getConfiguration().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID,
+        jobID);
     LOG.info("DistCp job-id: " + jobID);
     if (inputOptions.shouldBlock() && !job.waitForCompletion(true)) {
       throw new IOException("DistCp failure: Job " + jobID + " has failed: "
@@ -202,6 +210,56 @@ public class DistCp extends Configured implements Tool {
     getConf().setBoolean(DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, 
         targetExists);
   }
+
+  /**
+   * Check if concat is supported by fs.
+   * Throws UnsupportedOperationException if not.
+   */
+  private void checkConcatSupport(FileSystem fs) {
+    try {
+      Path[] src = null;
+      Path tgt = null;
+      fs.concat(tgt, src);
+    } catch (UnsupportedOperationException use) {
+      throw new UnsupportedOperationException(
+          DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch() +
+          " is not supported since the target file system doesn't" +
+          " support concat.", use);
+    } catch (Exception e) {
+      // Ignore other exception
+    }
+  }
+
+  /**
+   * Set up needed options for splitting large files.
+   */
+  private void setOptionsForSplitLargeFile() throws IOException {
+    if (!inputOptions.splitLargeFile()) {
+      return;
+    }
+    Path target = inputOptions.getTargetPath();
+    FileSystem targetFS = target.getFileSystem(getConf());
+    checkConcatSupport(targetFS);
+
+    LOG.info("Enabling preserving blocksize since "
+        + DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch() + " is passed.");
+    inputOptions.preserve(FileAttribute.BLOCKSIZE);
+
+    LOG.info("Set " +
+        DistCpOptionSwitch.APPEND.getSwitch()
+        + " to false since " + DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch()
+        + " is passed.");
+    inputOptions.setAppend(false);
+
+    LOG.info("Set " +
+        DistCpConstants.CONF_LABEL_SIMPLE_LISTING_RANDOMIZE_FILES
+        + " to false since " + DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch()
+        + " is passed.");
+    getConf().setBoolean(
+        DistCpConstants.CONF_LABEL_SIMPLE_LISTING_RANDOMIZE_FILES, false);
+  }
+
+
   /**
    * Create Job object for submitting it, with all the configuration
    *
@@ -245,8 +303,14 @@ public class DistCp extends Configured implements Tool {
    */
   private void setupSSLConfig(Job job) throws IOException  {
     Configuration configuration = job.getConfiguration();
-    Path sslConfigPath = new Path(configuration.
-        getResource(inputOptions.getSslConfigurationFile()).toString());
+    URL sslFileUrl = configuration.getResource(inputOptions
+        .getSslConfigurationFile());
+    if (sslFileUrl == null) {
+      throw new IOException(
+          "Given ssl configuration file doesn't exist in class path : "
+              + inputOptions.getSslConfigurationFile());
+    }
+    Path sslConfigPath = new Path(sslFileUrl.toString());
 
     addSSLFilesToDistCache(job, sslConfigPath);
     configuration.set(DistCpConstants.CONF_LABEL_SSL_CONF, sslConfigPath.getName());

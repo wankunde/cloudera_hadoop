@@ -1,7 +1,7 @@
 From 5ea70265c39bd68660d7acac92b871bb828b1c73 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 17 Dec 2014 10:31:19 -0800
-Subject: [PATCH 431/924] HADOOP-11421. Add IOUtils#listDirectory (cmccabe)
+Subject: [PATCH 0431/2639] HADOOP-11421. Add IOUtils#listDirectory (cmccabe)
 
 (cherry picked from commit 9937eef7f7f04a7dd3d504ae7ec5852d488a1f6a)
 (cherry picked from commit 883ad3bf5a6b8870537030fb55e8f58677012631)

@@ -1,7 +1,7 @@
 From af00b7cc91bd7615fc8c4ed224b68739b7e6c721 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Fri, 16 Jan 2015 10:52:01 -0800
-Subject: [PATCH 428/924] HDFS-7632. MiniDFSCluster configures DataNode data
+Subject: [PATCH 0428/2639] HDFS-7632. MiniDFSCluster configures DataNode data
  directories incorrectly if using more than 1
  DataNode and more than 2 storage locations per
  DataNode. Contributed by Chris Nauroth.

@@ -1,9 +1,9 @@
 From 586e765d77a1c1979bb2fefd113a90d632ab8351 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Mon, 17 Nov 2014 17:31:42 -0800
-Subject: [PATCH 297/924] =?UTF-8?q?HDFS-6982.=20nntop:=20top=C2=AD-like=20to?=
- =?UTF-8?q?ol=20for=20name=20node=20users.=20(Maysam=20Yabandeh=20via=20wang?=
- =?UTF-8?q?)?=
+Subject: [PATCH 0297/2639] =?UTF-8?q?HDFS-6982.=20nntop:=20top=C2=AD-like=20?=
+ =?UTF-8?q?tool=20for=20name=20node=20users.=20(Maysam=20Yabandeh=20via=20wa?=
+ =?UTF-8?q?ng)?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

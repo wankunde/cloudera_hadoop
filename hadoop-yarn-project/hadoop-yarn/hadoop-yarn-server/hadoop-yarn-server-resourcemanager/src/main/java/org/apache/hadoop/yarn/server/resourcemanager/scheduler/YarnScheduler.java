@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -45,6 +46,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 /**
  * This interface is used by the components to talk to the
@@ -97,6 +99,10 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @Public
   @Stable
   public Resource getMaximumResourceCapability();
+
+  @Private
+  @Evolving
+  ResourceCalculator getResourceCalculator();
 
   /**
    * Get the number of nodes available in the cluster.
@@ -272,4 +278,21 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @return an EnumSet containing the resource types
    */
   public EnumSet<SchedulerResourceTypes> getSchedulingResourceTypes();
+
+  /**
+   * Get SchedulerNode corresponds to nodeId.
+   *
+   * @param nodeId the node id of RMNode
+   *
+   * @return SchedulerNode corresponds to nodeId
+   */
+  SchedulerNode getSchedulerNode(NodeId nodeId);
+
+  /**
+   * Normalize a resource request.
+   *
+   * @param requestedResource the resource to be normalized
+   * @return the normalized resource
+   */
+  public void normalizeResource(ResourceRequest requestedResource);
 }

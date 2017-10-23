@@ -1,7 +1,7 @@
 From cb734964028230718ac1a9e305691c3a04a223ce Mon Sep 17 00:00:00 2001
 From: Zhe Zhang <zhezhang@cloudera.com>
 Date: Fri, 27 Feb 2015 11:42:58 -0800
-Subject: [PATCH 411/924] CLOUDERA-BUILD. Add proto-web.xml which is part of
+Subject: [PATCH 0411/2639] CLOUDERA-BUILD. Add proto-web.xml which is part of
  HADOOP-10563. This is required in order to build
  the backport of HDFS-7424 (Add web UI for NFS
  gateway)

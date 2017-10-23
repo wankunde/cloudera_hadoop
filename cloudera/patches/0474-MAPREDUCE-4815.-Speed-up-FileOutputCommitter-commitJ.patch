@@ -1,7 +1,7 @@
 From 16b2de27321db7ce2395c08baccfdec5562017f0 Mon Sep 17 00:00:00 2001
 From: Gera Shegalov <gera@apache.org>
 Date: Tue, 10 Mar 2015 11:12:48 -0700
-Subject: [PATCH 474/924] MAPREDUCE-4815. Speed up
+Subject: [PATCH 0474/2639] MAPREDUCE-4815. Speed up
  FileOutputCommitter#commitJob for many output
  files. (Siqi Li via gera)
 

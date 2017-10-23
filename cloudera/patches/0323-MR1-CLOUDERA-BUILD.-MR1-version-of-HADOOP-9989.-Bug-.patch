@@ -1,8 +1,8 @@
 From 6c737a4f5f8210f80e7f120925aff49be903e7a4 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Thu, 29 Jan 2015 18:50:36 -0800
-Subject: [PATCH 323/924] MR1: CLOUDERA-BUILD. MR1 version of HADOOP-9989. Bug
- introduced in HADOOP-9374, which parses the
+Subject: [PATCH 0323/2639] MR1: CLOUDERA-BUILD. MR1 version of HADOOP-9989.
+ Bug introduced in HADOOP-9374, which parses the
  -tokenCacheFile as binary file but set it to the
  configuration as JSON file. (zxu via tucu)
 

@@ -1,7 +1,7 @@
 From a367c596da71a8f79365210438fe4cb98c462730 Mon Sep 17 00:00:00 2001
 From: Tsz-Wo Nicholas Sze <szetszwo@hortonworks.com>
 Date: Tue, 28 Apr 2015 13:05:33 -0700
-Subject: [PATCH 591/924] HDFS-8204. Mover/Balancer should not schedule two
+Subject: [PATCH 0591/2639] HDFS-8204. Mover/Balancer should not schedule two
  replicas to the same datanode.  Contributed by
  Walter Su
 

@@ -1,9 +1,9 @@
 From 88aa2d3631a8173e4949481a4f68d485c4f3283b Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 4 Feb 2015 11:59:18 -0800
-Subject: [PATCH 443/924] HDFS-7719. BlockPoolSliceStorage#removeVolumes fails
- to remove some in-memory state associated with
- volumes. (Lei (Eddy) Xu via Colin P. McCabe)
+Subject: [PATCH 0443/2639] HDFS-7719. BlockPoolSliceStorage#removeVolumes
+ fails to remove some in-memory state associated
+ with volumes. (Lei (Eddy) Xu via Colin P. McCabe)
 
 (cherry picked from commit 40a415799b1ff3602fbb461765f8b36f1133bda2)
 (cherry picked from commit 76c0757c6e95c187911c71e80943a8023b9b0695)

@@ -1,8 +1,8 @@
 From a93b1a8ffe0da77c43158a8d135037d5cd325fae Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Tue, 23 Sep 2014 13:38:03 -0700
-Subject: [PATCH 185/924] CLOUDERA-BUILD. Relax HDFS-6776 requirement so user
- doesn't need to upgrade insecure cluster
+Subject: [PATCH 0185/2639] CLOUDERA-BUILD. Relax HDFS-6776 requirement so
+ user doesn't need to upgrade insecure cluster
 
 (cherry picked from commit 91007d2020e671bc9f1cdbf78b7a480093c974c0)
 ---

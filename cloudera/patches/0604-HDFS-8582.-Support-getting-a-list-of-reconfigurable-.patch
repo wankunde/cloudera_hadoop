@@ -1,10 +1,10 @@
 From 721d2357fe4c201264301a1e560e872781857d0b Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 19 Jun 2015 19:14:05 -0700
-Subject: [PATCH 604/924] HDFS-8582. Support getting a list of reconfigurable
- config properties and do not generate spurious
- reconfig warnings (Lei (Eddy) Xu via Colin P. 
- McCabe)
+Subject: [PATCH 0604/2639] HDFS-8582. Support getting a list of
+ reconfigurable config properties and do not
+ generate spurious reconfig warnings (Lei (Eddy)
+ Xu via Colin P.  McCabe)
 
 (cherry picked from commit d112d183242f447d4b742139f3a4ea531a997f45)
 (cherry picked from commit c94579f845d8f1e58475d00d20b3298e1361f6cd)

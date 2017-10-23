@@ -1,9 +1,9 @@
 From 33ffe432a94a5dad34cd930e6dbf363eff077550 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Wed, 17 Apr 2013 15:27:34 -0700
-Subject: [PATCH 167/924] CLOUDERA-BUILD. Add changes to hadoop build to
- specify JDK1.7 as target (cherry picked from commit
- 2564488ef8ac30c5edeb8706d0bd13ff145f6e33)
+Subject: [PATCH 0167/2639] CLOUDERA-BUILD. Add changes to hadoop build to
+ specify JDK1.7 as target (cherry picked from
+ commit 2564488ef8ac30c5edeb8706d0bd13ff145f6e33)
 
 (cherry picked from commit 269c2ad6f2116530d408ec9ae2aaff54d303a1a1)
 

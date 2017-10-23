@@ -1,9 +1,9 @@
 From 1fd70ef615f436f48a415b767e5ac44d3d27184b Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 6 Oct 2014 15:29:09 -0700
-Subject: [PATCH 651/924] HDFS-7194 Fix findbugs "inefficient new String
- constructor" warning in DFSClient#PATH (yzhang via
- cmccabe)
+Subject: [PATCH 0651/2639] HDFS-7194 Fix findbugs "inefficient new String
+ constructor" warning in DFSClient#PATH (yzhang
+ via cmccabe)
 
 (cherry picked from commit 8dc6abf2f4218b2d84b2c2dc7d18623d897c362d)
 (cherry picked from commit eeb39dc21853f2e670d6be76d8fe3f002d559f42)

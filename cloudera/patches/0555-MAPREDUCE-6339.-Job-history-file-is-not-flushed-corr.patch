@@ -1,10 +1,10 @@
 From a4a3f112db56f1b647b44d7c918ef43388483f37 Mon Sep 17 00:00:00 2001
 From: Devaraj K <devaraj@apache.org>
 Date: Thu, 30 Apr 2015 12:33:22 +0530
-Subject: [PATCH 555/924] MAPREDUCE-6339. Job history file is not flushed
+Subject: [PATCH 0555/2639] MAPREDUCE-6339. Job history file is not flushed
  correctly because isTimerActive flag is not set
- true when flushTimerTask is scheduled. Contributed
- by zhihai xu.
+ true when flushTimerTask is scheduled.
+ Contributed by zhihai xu.
 
 (cherry picked from commit f5b38477f9d0827b238fadd260c1dd2889531fd4)
 

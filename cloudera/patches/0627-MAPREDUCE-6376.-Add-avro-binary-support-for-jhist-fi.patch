@@ -1,7 +1,7 @@
 From b8be756a4d85d7de0b739191b9b79ae7d701e9ec Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Wed, 1 Jul 2015 16:00:03 +0000
-Subject: [PATCH 627/924] MAPREDUCE-6376. Add avro binary support for jhist
+Subject: [PATCH 0627/2639] MAPREDUCE-6376. Add avro binary support for jhist
  files. Contributed by Ray Chiang
 
 (cherry picked from commit 2ac87df578accb6e612f70ded76271cb5082ee10)

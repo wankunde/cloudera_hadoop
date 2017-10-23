@@ -1,10 +1,10 @@
 From abd9e0425862e2a5f19b5e2c5308729de78b01e9 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Fri, 13 Feb 2015 20:20:07 +0000
-Subject: [PATCH 698/924] YARN-2847. Linux native container executor segfaults
- if default banned user detected. Contributed by
- Olaf Flebbe (cherry picked from commit
- 1a0f508b6386b1c26ec606f6d73afddaa191b7d8)
+Subject: [PATCH 0698/2639] YARN-2847. Linux native container executor
+ segfaults if default banned user detected.
+ Contributed by Olaf Flebbe (cherry picked from
+ commit 1a0f508b6386b1c26ec606f6d73afddaa191b7d8)
 
 (cherry picked from commit c9cd58d711dceeb0d3f12ec72cdc2eb7bb95b694)
 ---

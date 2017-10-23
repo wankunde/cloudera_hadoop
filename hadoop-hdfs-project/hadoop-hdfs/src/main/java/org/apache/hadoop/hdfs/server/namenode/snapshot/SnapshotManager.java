@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE_DEFAULT;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -29,6 +34,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
@@ -43,6 +51,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 import com.google.common.base.Preconditions;
@@ -60,20 +69,47 @@ import com.google.common.base.Preconditions;
  * if necessary.
  */
 public class SnapshotManager implements SnapshotStatsMXBean {
-  private boolean allowNestedSnapshots = false;
+  public static final Log LOG = LogFactory.getLog(SnapshotManager.class);
+
   private final FSDirectory fsdir;
-  private static final int SNAPSHOT_ID_BIT_WIDTH = 24;
+  private final boolean captureOpenFiles;
+  /**
+   * If skipCaptureAccessTimeOnlyChange is set to true, if accessTime
+   * of a file changed but there is no other modification made to the file,
+   * it will not be captured in next snapshot. However, if there is other
+   * modification made to the file, the last access time will be captured
+   * together with the modification in next snapshot.
+   */
+  private boolean skipCaptureAccessTimeOnlyChange = false;
 
   private final AtomicInteger numSnapshots = new AtomicInteger();
+  private static final int SNAPSHOT_ID_BIT_WIDTH = 24;
 
+  private boolean allowNestedSnapshots = false;
   private int snapshotCounter = 0;
   
   /** All snapshottable directories in the namesystem. */
   private final Map<Long, INodeDirectory> snapshottables =
       new HashMap<Long, INodeDirectory>();
 
-  public SnapshotManager(final FSDirectory fsdir) {
+  public SnapshotManager(final Configuration conf, final FSDirectory fsdir) {
     this.fsdir = fsdir;
+    this.captureOpenFiles = conf.getBoolean(
+        DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES,
+        DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT);
+    this.skipCaptureAccessTimeOnlyChange = conf.getBoolean(
+        DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE,
+        DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE_DEFAULT);
+    LOG.info("Loaded config captureOpenFiles: " + captureOpenFiles
+        + "skipCaptureAccessTimeOnlyChange: " +
+        skipCaptureAccessTimeOnlyChange);
+  }
+
+  /**
+   * @return skipCaptureAccessTimeOnlyChange
+   */
+  public boolean getSkipCaptureAccessTimeOnlyChange() {
+    return skipCaptureAccessTimeOnlyChange;
   }
 
   public void initAuthorizationProvider() {
@@ -222,7 +258,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *           snapshot with the given name for the directory, and/or 3)
    *           snapshot number exceeds quota
    */
-  public String createSnapshot(final String path, String snapshotName
+  public String createSnapshot(final LeaseManager leaseManager,
+      final String path, String snapshotName
       ) throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(path);
 
@@ -237,8 +274,9 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
 
     AuthorizationProvider.get().createSnapshot(srcRoot, snapshotCounter);
-    srcRoot.addSnapshot(snapshotCounter, snapshotName);
-      
+    srcRoot.addSnapshot(snapshotCounter, snapshotName,
+        leaseManager, this.captureOpenFiles);
+
     //create success, update id
     snapshotCounter++;
     numSnapshots.getAndIncrement();
@@ -249,7 +287,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * Delete a snapshot for a snapshottable directory
    * @param path Path to the directory where the snapshot was taken
    * @param snapshotName Name of the snapshot to be deleted
-   * @param collectedBlocks Used to collect information to update blocksMap 
+   * @param collectedBlocks Used to collect information to update blocksMap
    * @throws IOException
    */
   public void deleteSnapshot(final String path, final String snapshotName,
@@ -295,7 +333,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   public int getNumSnapshots() {
     return numSnapshots.get();
   }
-  
+
   void setNumSnapshots(int num) {
     numSnapshots.set(num);
   }

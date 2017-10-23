@@ -26,8 +26,10 @@ import static org.apache.hadoop.util.Time.now;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -39,6 +41,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
@@ -52,6 +56,7 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -75,7 +80,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ZoneEncryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
@@ -85,6 +93,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
+import org.apache.hadoop.hdfs.server.namenode.ReencryptionUpdater.FileEdekInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
@@ -96,6 +105,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -106,6 +119,8 @@ import org.apache.hadoop.security.AccessControlException;
  **/
 @InterfaceAudience.Private
 public class FSDirectory implements Closeable {
+  static final Logger LOG = LoggerFactory.getLogger(FSDirectory.class);
+
   private static INodeDirectory createRoot(FSNamesystem namesystem) {
     final INodeDirectory r = new INodeDirectory(
         INodeId.ROOT_INODE_ID,
@@ -152,6 +167,15 @@ public class FSDirectory implements Closeable {
   // lock to protect the directory and BlockMap
   private final ReentrantReadWriteLock dirLock;
 
+  private final boolean isPermissionEnabled;
+  private final String fsOwnerShortUserName;
+  private final String supergroup;
+
+  /**
+   * Support for POSIX ACL inheritance. Not final for testing purpose.
+   */
+  private boolean posixAclInheritanceEnabled;
+
   // utility methods to acquire and release read lock and write lock
   void readLock() {
     this.dirLock.readLock().lock();
@@ -194,10 +218,19 @@ public class FSDirectory implements Closeable {
    */
   private final NameCache<ByteArray> nameCache;
 
-  FSDirectory(FSNamesystem ns, Configuration conf) {
+  FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
+    this.isPermissionEnabled = conf.getBoolean(
+      DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
+      DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
+    this.fsOwnerShortUserName =
+      UserGroupInformation.getCurrentUser().getShortUserName();
+    this.supergroup = conf.get(
+      DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
+      DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
+
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
     this.lsLimit = configuredLimit>0 ?
@@ -219,6 +252,11 @@ public class FSDirectory implements Closeable {
     this.inodeXAttrsLimit = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_DEFAULT);
+
+    this.posixAclInheritanceEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_KEY,
+        DFSConfigKeys.DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_DEFAULT);
+    LOG.info("POSIX ACL inheritance enabled? " + posixAclInheritanceEnabled);
 
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
@@ -243,12 +281,16 @@ public class FSDirectory implements Closeable {
     ezManager = new EncryptionZoneManager(this, conf);
   }
     
-  private FSNamesystem getFSNamesystem() {
+  FSNamesystem getFSNamesystem() {
     return namesystem;
   }
 
   private BlockManager getBlockManager() {
     return getFSNamesystem().getBlockManager();
+  }
+
+  KeyProviderCryptoExtension getProvider() {
+    return getFSNamesystem().getProvider();
   }
 
   /** @return the root directory inode. */
@@ -258,6 +300,17 @@ public class FSDirectory implements Closeable {
 
   long getContentSleepMicroSec() {
     return contentSleepMicroSec;
+  }
+
+  @VisibleForTesting
+  public boolean isPosixAclInheritanceEnabled() {
+    return posixAclInheritanceEnabled;
+  }
+
+  @VisibleForTesting
+  public void setPosixAclInheritanceEnabled(
+      boolean posixAclInheritanceEnabled) {
+    this.posixAclInheritanceEnabled = posixAclInheritanceEnabled;
   }
 
   /**
@@ -324,7 +377,7 @@ public class FSDirectory implements Closeable {
     boolean added = false;
     writeLock();
     try {
-      added = addINode(path, newNode);
+      added = addINode(path, newNode, permissions.getPermission());
     } finally {
       writeUnlock();
     }
@@ -365,7 +418,7 @@ public class FSDirectory implements Closeable {
     }
 
     try {
-      if (addINode(path, newNode)) {
+      if (addINode(path, newNode, permissions.getPermission())) {
         if (aclEntries != null) {
           AclStorage.updateINodeAcl(newNode, aclEntries,
             Snapshot.CURRENT_STATE_ID);
@@ -741,16 +794,19 @@ public class FSDirectory implements Closeable {
           undoRemoveDst = false;
           if (removedNum > 0) {
             List<INode> removedINodes = new ChunkedArrayList<INode>();
+            List<Long> removedUCFiles = new ChunkedArrayList<>();
             if (!removedDst.isInLatestSnapshot(dstIIP.getLatestSnapshotId())) {
-              removedDst.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+              removedDst.destroyAndCollectBlocks(collectedBlocks,
+                  removedINodes, removedUCFiles);
               filesDeleted = true;
             } else {
               filesDeleted = removedDst.cleanSubtree(Snapshot.CURRENT_STATE_ID,
-                  dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes)
+                  dstIIP.getLatestSnapshotId(), collectedBlocks,
+                  removedINodes, removedUCFiles)
                   .get(Quota.NAMESPACE) >= 0;
             }
             getFSNamesystem().removePathAndBlocks(src, null, 
-                removedINodes, false);
+                removedUCFiles, removedINodes, false);
           }
         }
 
@@ -860,6 +916,29 @@ public class FSDirectory implements Closeable {
     checkSnapshot(srcInode, null);
   }
 
+  /**
+   * This is a wrapper for resolvePath(). If the path passed
+   * is prefixed with /.reserved/raw, then it checks to ensure that the caller
+   * has super user has super user privileges.
+   *
+   * @param pc The permission checker used when resolving path.
+   * @param path The path to resolve.
+   * @param pathComponents path components corresponding to the path
+   * @return if the path indicates an inode, return path after replacing up to
+   *         <inodeid> with the corresponding path of the inode, else the path
+   *         in {@code src} as is. If the path refers to a path in the "raw"
+   *         directory, return the non-raw pathname.
+   * @throws FileNotFoundException
+   * @throws AccessControlException
+   */
+  String resolvePath(FSPermissionChecker pc, String path, byte[][] pathComponents)
+      throws FileNotFoundException, AccessControlException {
+    if (isReservedRawName(path) && isPermissionEnabled) {
+      pc.checkSuperuserPrivilege();
+    }
+    return resolvePath(path, pathComponents, this);
+  }
+
   private class RenameOperation {
     private final INodesInPath srcIIP;
     private final INodesInPath dstIIP;
@@ -936,8 +1015,6 @@ public class FSDirectory implements Closeable {
       srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshotId());
       final INode dstParent = dstIIP.getINode(-2);
       dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshotId());
-      // update moved lease with new filename
-      getFSNamesystem().unprotectedChangeLease(src, dst);
     }
 
     void restoreSource() throws QuotaExceededException {
@@ -990,7 +1067,7 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException
    * @throws SnapshotAccessControlException 
    */
-  Block[] setReplication(String src, short replication, short[] blockRepls)
+  BlockInfo[] setReplication(String src, short replication, short[] blockRepls)
       throws QuotaExceededException, UnresolvedLinkException,
       SnapshotAccessControlException {
     writeLock();
@@ -1001,7 +1078,7 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  Block[] unprotectedSetReplication(String src, short replication,
+  BlockInfo[] unprotectedSetReplication(String src, short replication,
       short[] blockRepls) throws QuotaExceededException,
       UnresolvedLinkException, SnapshotAccessControlException {
     assert hasWriteLock();
@@ -1241,7 +1318,8 @@ public class FSDirectory implements Closeable {
    * @return the number of files that have been removed
    */
   long delete(String src, BlocksMapUpdateInfo collectedBlocks,
-              List<INode> removedINodes, long mtime) throws IOException {
+      List<INode> removedINodes, List<Long> removedUCFiles,
+      long mtime) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
@@ -1256,7 +1334,7 @@ public class FSDirectory implements Closeable {
         List<INodeDirectory> snapshottableDirs = new ArrayList<INodeDirectory>();
         checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
         filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
-            removedINodes, mtime);
+            removedINodes, removedUCFiles, mtime);
         namesystem.removeSnapshottableDirs(snapshottableDirs);
       }
     } finally {
@@ -1318,6 +1396,7 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     List<INode> removedINodes = new ChunkedArrayList<INode>();
+    List<Long> removedUCFiles = new ChunkedArrayList<>();
 
     final INodesInPath inodesInPath = getINodesInPath4Write(
         normalizePath(src), false);
@@ -1326,13 +1405,13 @@ public class FSDirectory implements Closeable {
       List<INodeDirectory> snapshottableDirs = new ArrayList<INodeDirectory>();
       checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
       filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
-          removedINodes, mtime);
+          removedINodes, removedUCFiles, mtime);
       namesystem.removeSnapshottableDirs(snapshottableDirs); 
     }
 
     if (filesRemoved >= 0) {
-      getFSNamesystem().removePathAndBlocks(src, collectedBlocks, 
-          removedINodes, false);
+      getFSNamesystem().removePathAndBlocks(src, collectedBlocks,
+          removedUCFiles, removedINodes, false);
     }
   }
   
@@ -1342,11 +1421,12 @@ public class FSDirectory implements Closeable {
    * @param iip the inodes resolved from the path
    * @param collectedBlocks blocks collected from the deleted path
    * @param removedINodes inodes that should be removed from {@link #inodeMap}
+   * @param removedUCFiles inodes whose leases need to be released
    * @param mtime the time the inode is removed
    * @return the number of inodes deleted; 0 if no inodes are deleted.
    */ 
   long unprotectedDelete(INodesInPath iip, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes, long mtime) {
+      List<INode> removedINodes, List<Long> removedUCFiles, long mtime) {
     assert hasWriteLock();
 
     // check if target node exists
@@ -1376,10 +1456,11 @@ public class FSDirectory implements Closeable {
     
     // collect block and update quota
     if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
-      targetNode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      targetNode.destroyAndCollectBlocks(collectedBlocks,
+          removedINodes, removedUCFiles);
     } else {
       Quota.Counts counts = targetNode.cleanSubtree(Snapshot.CURRENT_STATE_ID,
-          latestSnapshot, collectedBlocks, removedINodes);
+          latestSnapshot, collectedBlocks, removedINodes, removedUCFiles);
       removed = counts.get(Quota.NAMESPACE);
       updateCountNoQuotaCheck(iip, iip.length() - 1,
           -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
@@ -1540,6 +1621,39 @@ public class FSDirectory implements Closeable {
     }
     return new DirectoryListing(
         listing, snapshots.size() - skipSize - numOfListing);
+  }
+
+  /** Get a collection of full snapshot paths given file and snapshot dir.
+   * @param lsf a list of snapshottable features
+   * @param file full path of the file
+   * @return collection of full paths of snapshot of the file
+   */
+  Collection<String> getSnapshotFiles(
+      List<DirectorySnapshottableFeature> lsf,
+      String file) throws IOException {
+    ArrayList<String> snaps = new ArrayList<>();
+    for (DirectorySnapshottableFeature sf : lsf) {
+      // for each snapshottable dir e.g. /dir1, /dir2
+      final ReadOnlyList<Snapshot> lsnap = sf.getSnapshotList();
+      for (Snapshot s : lsnap) {
+        // for each snapshot name under snapshottable dir
+        // e.g. /dir1/.snapshot/s1, /dir1/.snapshot/s2
+        final String dirName = s.getRoot().getRootFullPathName();
+        if (!file.startsWith(dirName)) {
+          // file not in current snapshot root dir, no need to check other snaps
+          break;
+        }
+        String snapname = s.getRoot().getFullPathName();
+        if (dirName.equals(Path.SEPARATOR)) { // handle rootDir
+          snapname += Path.SEPARATOR;
+        }
+        snapname += file.substring(file.indexOf(dirName) + dirName.length());
+        if (getFSNamesystem().getFileInfo(snapname, true) != null) {
+          snaps.add(snapname);
+        }
+      }
+    }
+    return snaps;
   }
 
   /** Get the file info for a specific file.
@@ -1817,42 +1931,6 @@ public class FSDirectory implements Closeable {
     return fullPathName.toString();
   }
 
-  /**
-   * @return the relative path of an inode from one of its ancestors,
-   *         represented by an array of inodes.
-   */
-  private static INode[] getRelativePathINodes(INode inode, INode ancestor) {
-    // calculate the depth of this inode from the ancestor
-    int depth = 0;
-    for (INode i = inode; i != null && !i.equals(ancestor); i = i.getParent()) {
-      depth++;
-    }
-    INode[] inodes = new INode[depth];
-
-    // fill up the inodes in the path from this inode to root
-    for (int i = 0; i < depth; i++) {
-      if (inode == null) {
-        NameNode.stateChangeLog.warn("Could not get full path."
-            + " Corresponding file might have deleted already.");
-        return null;
-      }
-      inodes[depth-i-1] = inode;
-      inode = inode.getParent();
-    }
-    return inodes;
-  }
-  
-  private static INode[] getFullPathINodes(INode inode) {
-    return getRelativePathINodes(inode, null);
-  }
-  
-  /** Return the full path name of the specified inode */
-  static String getFullPathName(INode inode) {
-    INode[] inodes = getFullPathINodes(inode);
-    // inodes can be null only when its called without holding lock
-    return inodes == null ? "" : getFullPathName(inodes, inodes.length - 1);
-  }
-
   INode unprotectedMkdir(long inodeId, String src, PermissionStatus permissions,
                           List<AclEntry> aclEntries, long timestamp)
       throws QuotaExceededException, UnresolvedLinkException, AclException {
@@ -1877,7 +1955,7 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     final INodeDirectory dir = new INodeDirectory(inodeId, name, permission,
         timestamp);
-    if (addChild(inodesInPath, pos, dir, true)) {
+    if (addChild(inodesInPath, pos, dir, permission.getPermission(), true)) {
       if (aclEntries != null) {
         AclStorage.updateINodeAcl(dir, aclEntries, Snapshot.CURRENT_STATE_ID);
       }
@@ -1888,16 +1966,20 @@ public class FSDirectory implements Closeable {
   /**
    * Add the given child to the namespace.
    * @param src The full path name of the child node.
+   * @param child the new INode to add
+   * @param modes create modes
    * @throws QuotaExceededException is thrown if it violates quota limit
    */
-  private boolean addINode(String src, INode child
-      ) throws QuotaExceededException, UnresolvedLinkException {
+  @VisibleForTesting
+  boolean addINode(String src, INode child, FsPermission modes)
+      throws QuotaExceededException, UnresolvedLinkException {
     byte[][] components = INode.getPathComponents(src);
     child.setLocalName(components[components.length-1]);
     cacheName(child);
     writeLock();
     try {
-      return addLastINode(getExistingPathINodes(components), child, true);
+      return addLastINode(getExistingPathINodes(components), child, modes,
+          true);
     } finally {
       writeUnlock();
     }
@@ -2069,16 +2151,51 @@ public class FSDirectory implements Closeable {
       }
     }
   }
-  
+
   /**
-   * The same as {@link #addChild(INodesInPath, int, INode, boolean)}
-   * with pos = length - 1.
+   * Turn on HDFS-6962 POSIX ACL inheritance when the property
+   * {@link DFSConfigKeys#DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_KEY} is
+   * true and a compatible client has sent both masked and unmasked create
+   * modes.
+   *
+   * @param child INode newly created child
+   * @param modes create modes
+   */
+  private void copyINodeDefaultAcl(INode child, FsPermission modes) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("child: {}, posixAclInheritanceEnabled: {}, modes: {}",
+          child, posixAclInheritanceEnabled, modes);
+    }
+
+    if (posixAclInheritanceEnabled && modes != null &&
+        modes.getUnmasked() != null) {
+      //
+      // HDFS-6962: POSIX ACL inheritance
+      //
+      child.setPermission(modes.getUnmasked());
+      if (!AclStorage.copyINodeDefaultAcl(child)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("{}: no parent default ACL to inherit", child);
+        }
+        child.setPermission(modes.getMasked());
+      }
+    } else {
+      //
+      // Old behavior before HDFS-6962
+      //
+      AclStorage.copyINodeDefaultAcl(child);
+    }
+  }
+
+  /**
+   * The same as {@link #addChild} with pos = length - 1.
    */
   @VisibleForTesting
-  public boolean addLastINode(INodesInPath inodesInPath,
-      INode inode, boolean checkQuota) throws QuotaExceededException {
+  public boolean addLastINode(INodesInPath inodesInPath, INode inode,
+                              FsPermission modes, boolean checkQuota)
+      throws QuotaExceededException {
     final int pos = inodesInPath.getINodes().length - 1;
-    return addChild(inodesInPath, pos, inode, checkQuota);
+    return addChild(inodesInPath, pos, inode, modes, checkQuota);
   }
 
   /** Add a node child to the inodes at index pos. 
@@ -2087,8 +2204,9 @@ public class FSDirectory implements Closeable {
    *         otherwise return true;
    * @throws QuotaExceededException is thrown if it violates quota limit
    */
-  private boolean addChild(INodesInPath iip, int pos,
-      INode child, boolean checkQuota) throws QuotaExceededException {
+  private boolean addChild(INodesInPath iip, int pos, INode child,
+                           FsPermission modes, boolean checkQuota)
+      throws QuotaExceededException {
     final INode[] inodes = iip.getINodes();
     // Disallow creation of /.reserved. This may be created when loading
     // editlog/fsimage during upgrade since /.reserved was a valid name in older
@@ -2133,7 +2251,7 @@ public class FSDirectory implements Closeable {
     } else {
       iip.setINode(pos - 1, child.getParent());
       if (!isRename) {
-        AclStorage.copyINodeDefaultAcl(child);
+        copyINodeDefaultAcl(child, modes);
       }
       addToInodeMap(child);
     }
@@ -2142,7 +2260,8 @@ public class FSDirectory implements Closeable {
   
   private boolean addLastINodeNoQuotaCheck(INodesInPath inodesInPath, INode i) {
     try {
-      return addLastINode(inodesInPath, i, false);
+      // All callers do not have create modes to pass.
+      return addLastINode(inodesInPath, i, null, false);
     } catch (QuotaExceededException e) {
       NameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e);
     }
@@ -2195,7 +2314,10 @@ public class FSDirectory implements Closeable {
 
             new ContentSummaryComputationContext(this, getFSNamesystem(),
             contentCountLimit, contentSleepMicroSec);
-        ContentSummary cs = targetNode.computeAndConvertContentSummary(cscc);
+        final byte[][] components = INode.getPathComponents(src);
+        final INodesInPath iip = INodesInPath.resolve(rootDir, components);
+        ContentSummary cs = targetNode.computeAndConvertContentSummary(
+            iip.getPathSnapshotId(), cscc);
         yieldCount += cscc.getYieldCount();
         return cs;
       }
@@ -2221,30 +2343,51 @@ public class FSDirectory implements Closeable {
       inodeMap.put(inode);
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
-        if (xaf != null) {
-          final List<XAttr> xattrs = xaf.getXAttrs();
-          for (XAttr xattr : xattrs) {
-            final String xaName = XAttrHelper.getPrefixName(xattr);
-            if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-              try {
-                final HdfsProtos.ZoneEncryptionInfoProto ezProto =
-                    HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
-                        xattr.getValue());
-                ezManager.unprotectedAddEncryptionZone(inode.getId(),
-                    PBHelper.convert(ezProto.getSuite()),
-                    PBHelper.convert(ezProto.getCryptoProtocolVersion()),
-                    ezProto.getKeyName());
-              } catch (InvalidProtocolBufferException e) {
-                NameNode.LOG.warn("Error parsing protocol buffer of " +
-                    "EZ XAttr " + xattr.getName());
-              }
-            }
+        addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
+      }
+    }
+  }
+
+  private void addEncryptionZone(INodeWithAdditionalFields inode,
+      XAttrFeature xaf) {
+    if (xaf == null) {
+      return;
+    }
+    final List<XAttr> xattrs = xaf.getXAttrs();
+    for (XAttr xattr : xattrs) {
+      final String xaName = XAttrHelper.getPrefixName(xattr);
+      if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
+        try {
+          final HdfsProtos.ZoneEncryptionInfoProto ezProto =
+              HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
+                  xattr.getValue());
+          ezManager.unprotectedAddEncryptionZone(inode.getId(),
+              PBHelper.convert(ezProto.getSuite()),
+              PBHelper.convert(ezProto.getCryptoProtocolVersion()),
+              ezProto.getKeyName());
+          if (ezProto.hasReencryptionProto()) {
+            final ReencryptionInfoProto reProto = ezProto.getReencryptionProto();
+            // inodes parents may not be loaded if this is done during fsimage
+            // loading so cannot set full path now. Pass in null to indicate that.
+            ezManager.getReencryptionStatus()
+                .updateZoneStatus(inode.getId(), null, reProto);
           }
+        } catch (InvalidProtocolBufferException e) {
+          NameNode.LOG.warn("Error parsing protocol buffer of " +
+              "EZ XAttr " + xattr.getName() + " dir:" + inode.getFullPathName());
         }
       }
     }
   }
   
+  /**
+   * This is to handle encryption zone for rootDir when loading from
+   * fsimage, and should only be called during NN restart.
+   */
+  public final void addRootDirToEncryptionZone(XAttrFeature xaf) {
+    addEncryptionZone(rootDir, xaf);
+  }
+
   /**
    * This method is always called with writeLock of FSDirectory held.
    */
@@ -2387,18 +2530,16 @@ public class FSDirectory implements Closeable {
       inode = inode.setModificationTime(mtime, latest);
       status = true;
     }
-    if (atime != -1) {
-      long inodeTime = inode.getAccessTime();
-
-      // if the last access time update was within the last precision interval, then
-      // no need to store access time
-      if (atime <= inodeTime + getFSNamesystem().getAccessTimePrecision() && !force) {
-        status =  false;
-      } else {
-        inode.setAccessTime(atime, latest);
-        status = true;
-      }
-    } 
+    // if the last access time update was within the last precision interval,
+    // then no need to store access time
+    if (atime != -1 && (status || force
+        || (atime > inode.getAccessTime()
+        + getFSNamesystem().getAccessTimePrecision()))) {
+      inode.setAccessTime(atime, latest,
+          getFSNamesystem().getSnapshotManager().
+          getSkipCaptureAccessTimeOnlyChange());
+      status = true;
+    }
     return status;
   }
 
@@ -2586,7 +2727,7 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     final INodeSymlink symlink = new INodeSymlink(id, null, perm, mtime, atime,
         target);
-    return addINode(path, symlink) ? symlink : null;
+    return addINode(path, symlink, perm.getPermission()) ? symlink : null;
   }
 
   List<AclEntry> modifyAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
@@ -2717,9 +2858,11 @@ public class FSDirectory implements Closeable {
       INode inode = resolveLastINode(src, iip);
       int snapshotId = iip.getPathSnapshotId();
       List<AclEntry> acl = AclStorage.readINodeAcl(inode, snapshotId);
+      FsPermission fsPermission = inode.getFsPermission(snapshotId);
       return new AclStatus.Builder()
           .owner(inode.getUserName()).group(inode.getGroupName())
-          .stickyBit(inode.getFsPermission(snapshotId).getStickyBit())
+          .stickyBit(fsPermission.getStickyBit())
+          .setPermission(fsPermission)
           .addEntries(acl).build();
     } finally {
       readUnlock();
@@ -2859,11 +3002,173 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  List<XAttr> reencryptEncryptionZone(final INodesInPath iip,
+      final String keyVersionName) throws IOException {
+    assert keyVersionName != null;
+    return ezManager.reencryptEncryptionZone(iip, keyVersionName);
+  }
+
+  List<XAttr> cancelReencryptEncryptionZone(final INodesInPath iip)
+      throws IOException {
+    return ezManager.cancelReencryptEncryptionZone(iip);
+  }
+
+  BatchedListEntries<ZoneReencryptionStatus> listReencryptionStatus(
+      final long prevId) throws IOException {
+    readLock();
+    try {
+      return ezManager.listReencryptionStatus(prevId);
+    } finally {
+      readUnlock();
+    }
+  }
+
+  /**
+   * Update re-encryption progress (submitted). Caller should
+   * logSync after calling this, outside of the FSN lock.
+   * <p>
+   * The reencryption status is updated during SetXAttrs.
+   */
+  XAttr updateReencryptionSubmitted(final INodesInPath iip,
+      final String ezKeyVersionName) throws IOException {
+    assert hasWriteLock();
+    Preconditions.checkNotNull(ezKeyVersionName, "ezKeyVersionName is null.");
+    final ZoneEncryptionInfoProto zoneProto = getZoneEncryptionInfoProto(iip);
+    Preconditions.checkNotNull(zoneProto, "ZoneEncryptionInfoProto is null.");
+
+    final ReencryptionInfoProto newProto = PBHelper
+        .convert(ezKeyVersionName, Time.now(), false, 0, 0, null, null);
+    final ZoneEncryptionInfoProto newZoneProto = PBHelper
+        .convert(PBHelper.convert(zoneProto.getSuite()),
+            PBHelper.convert(zoneProto.getCryptoProtocolVersion()),
+            zoneProto.getKeyName(), newProto);
+
+    final XAttr xattr = XAttrHelper
+        .buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, newZoneProto.toByteArray());
+    final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+    xattrs.add(xattr);
+    unprotectedSetXAttrs(iip.getPath(), xattrs,
+        EnumSet.of(XAttrSetFlag.REPLACE));
+    return xattr;
+  }
+
+  /**
+   * Update re-encryption progress (start, checkpoint). Caller should
+   * logSync after calling this, outside of the FSN lock.
+   * <p>
+   * The reencryption status is updated during SetXAttrs.
+   * Original reencryption status is passed in to get existing information
+   * such as ezkeyVersionName and submissionTime.
+   */
+  XAttr updateReencryptionProgress(final INode zoneNode,
+      final ZoneReencryptionStatus origStatus, final String lastFile,
+      final long numReencrypted, final long numFailures) throws IOException {
+    assert hasWriteLock();
+    Preconditions.checkNotNull(zoneNode, "Zone node is null");
+    INodesInPath iip = INodesInPath.fromINode(zoneNode);
+    final ZoneEncryptionInfoProto zoneProto = getZoneEncryptionInfoProto(iip);
+    Preconditions.checkNotNull(zoneProto, "ZoneEncryptionInfoProto is null.");
+    Preconditions.checkNotNull(origStatus, "Null status for " + iip.getPath());
+
+    final ReencryptionInfoProto newProto = PBHelper
+        .convert(origStatus.getEzKeyVersionName(),
+            origStatus.getSubmissionTime(), false,
+            origStatus.getFilesReencrypted() + numReencrypted,
+            origStatus.getNumReencryptionFailures() + numFailures, null,
+            lastFile);
+
+    final ZoneEncryptionInfoProto newZoneProto = PBHelper
+        .convert(PBHelper.convert(zoneProto.getSuite()),
+            PBHelper.convert(zoneProto.getCryptoProtocolVersion()),
+            zoneProto.getKeyName(), newProto);
+
+    final XAttr xattr = XAttrHelper
+        .buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, newZoneProto.toByteArray());
+    final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+    xattrs.add(xattr);
+    unprotectedSetXAttrs(iip.getPath(), xattrs,
+        EnumSet.of(XAttrSetFlag.REPLACE));
+    return xattr;
+  }
+
+  /**
+   * Log re-encrypt complete (cancel, or 100% re-encrypt) to edits.
+   * Caller should logSync after calling this, outside of the FSN lock.
+   * <p>
+   * Original reencryption status is passed in to get existing information,
+   * this should include whether it is finished due to cancellation.
+   * The reencryption status is updated during SetXAttrs for completion time.
+   */
+  List<XAttr> updateReencryptionFinish(final INodesInPath zoneIIP,
+      final ZoneReencryptionStatus origStatus) throws IOException {
+    assert origStatus != null;
+    assert hasWriteLock();
+    ezManager.getReencryptionStatus()
+        .markZoneCompleted(zoneIIP.getLastINode().getId());
+    final XAttr xattr =
+        generateNewXAttrForReencryptionFinish(zoneIIP, origStatus);
+    final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+    xattrs.add(xattr);
+    unprotectedSetXAttrs(zoneIIP.getPath(), xattrs,
+        EnumSet.of(XAttrSetFlag.REPLACE));
+    return xattrs;
+  }
+
+  XAttr generateNewXAttrForReencryptionFinish(final INodesInPath iip,
+      final ZoneReencryptionStatus status) throws IOException {
+    final ZoneEncryptionInfoProto zoneProto = getZoneEncryptionInfoProto(iip);
+    final ReencryptionInfoProto newRiProto = PBHelper
+        .convert(status.getEzKeyVersionName(), status.getSubmissionTime(),
+            status.isCanceled(), status.getFilesReencrypted(),
+            status.getNumReencryptionFailures(), Time.now(), null);
+
+    final ZoneEncryptionInfoProto newZoneProto = PBHelper
+        .convert(PBHelper.convert(zoneProto.getSuite()),
+            PBHelper.convert(zoneProto.getCryptoProtocolVersion()),
+            zoneProto.getKeyName(), newRiProto);
+
+    final XAttr xattr = XAttrHelper
+        .buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, newZoneProto.toByteArray());
+    return xattr;
+  }
+
+  private ZoneEncryptionInfoProto getZoneEncryptionInfoProto(
+      final INodesInPath iip) throws IOException {
+    final XAttr fileXAttr = unprotectedGetXAttrByName(iip.getLastINode(),
+        Snapshot.CURRENT_STATE_ID, CRYPTO_XATTR_ENCRYPTION_ZONE);
+    if (fileXAttr == null) {
+      throw new IOException(
+          "Could not find reencryption XAttr for file " + iip.getPath());
+    }
+    try {
+      return ZoneEncryptionInfoProto.parseFrom(fileXAttr.getValue());
+    } catch (InvalidProtocolBufferException e) {
+      throw new IOException(
+          "Could not parse file encryption info for " + "inode " + iip
+              .getPath(), e);
+    }
+  }
+
+  /**
+   * Save the batch's edeks to file xattrs.
+   */
+  void saveFileXAttrsForBatch(List<FileEdekInfo> batch) {
+    assert getFSNamesystem().hasWriteLock();
+    if (batch != null && !batch.isEmpty()) {
+      for (FileEdekInfo entry : batch) {
+        final INode inode = getInode(entry.getInodeId());
+        Preconditions.checkNotNull(inode);
+        getFSNamesystem().getEditLog().logSetXAttrs(inode.getFullPathName(),
+            inode.getXAttrFeature().getXAttrs(), false);
+      }
+    }
+  }
+
   /**
    * Set the FileEncryptionInfo for an INode.
    */
-  void setFileEncryptionInfo(String src, FileEncryptionInfo info)
-      throws IOException {
+  void setFileEncryptionInfo(String src, FileEncryptionInfo info,
+      final XAttrSetFlag flag) throws IOException {
     // Make the PB for the xattr
     final HdfsProtos.PerFileEncryptionInfoProto proto =
         PBHelper.convertPerFileEncInfo(info);
@@ -2875,7 +3180,7 @@ public class FSDirectory implements Closeable {
 
     writeLock();
     try {
-      unprotectedSetXAttrs(src, xAttrs, EnumSet.of(XAttrSetFlag.CREATE));
+      unprotectedSetXAttrs(src, xAttrs, EnumSet.of(flag));
     } finally {
       writeUnlock();
     }
@@ -2897,7 +3202,7 @@ public class FSDirectory implements Closeable {
    */
   FileEncryptionInfo getFileEncryptionInfo(INode inode, int snapshotId,
       INodesInPath iip) throws IOException {
-    if (!inode.isFile()) {
+    if (!inode.isFile() || !ezManager.hasCreatedEncryptionZone()) {
       return null;
     }
     readLock();
@@ -2945,6 +3250,57 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  /**
+   * Get the current key version name for the given EZ. This will first drain
+   * the provider's local cache, then generate a new edek.
+   * <p>
+   * The encryption key version of the newly generated edek will be used as
+   * the target key version of this re-encryption - meaning all edeks'
+   * keyVersion are compared with it, and only sent to the KMS for re-encryption
+   * when the version is different.
+   * <p>
+   * Note: KeyProvider has a getCurrentKey interface, but that is under
+   * a different ACL. HDFS should not try to operate on additional ACLs, but
+   * rather use the generate ACL it already has.
+   */
+  String getCurrentKeyVersion(final String zone) throws IOException {
+    assert getProvider() != null;
+    assert !hasReadLock();
+    final String keyName = getKeyNameForZone(zone);
+    if (keyName == null) {
+      throw new IOException(zone + " is not an encryption zone.");
+    }
+    // drain the local cache of the key provider.
+    // Do not invalidateCache on the server, since that's the responsibility
+    // when rolling the key version.
+    getProvider().drain(keyName);
+    final EncryptedKeyVersion edek;
+    try {
+      edek = getProvider().generateEncryptedKey(keyName);
+    } catch (GeneralSecurityException gse) {
+      throw new IOException(gse);
+    }
+    Preconditions.checkNotNull(edek);
+    return edek.getEncryptionKeyVersionName();
+  }
+
+  /**
+   * Resolve the zone to an inode, find the encryption zone info associated with
+   * that inode, and return the key name. Does not contact the KMS.
+   */
+  String getKeyNameForZone(final String zone) throws IOException {
+    assert getProvider() != null;
+    final INodesInPath iip;
+    readLock();
+    try {
+      iip = getINodesInPath(zone, false);
+      ezManager.checkEncryptionZoneRoot(iip.getLastINode(), zone);
+      return ezManager.getKeyName(iip);
+    } finally {
+      readUnlock();
+    }
+  }
+
   void setXAttrs(final String src, final List<XAttr> xAttrs,
       final EnumSet<XAttrSetFlag> flag) throws IOException {
     writeLock();
@@ -2980,6 +3336,12 @@ public class FSDirectory implements Closeable {
             PBHelper.convert(ezProto.getSuite()),
             PBHelper.convert(ezProto.getCryptoProtocolVersion()),
             ezProto.getKeyName());
+
+        if (ezProto.hasReencryptionProto()) {
+          ReencryptionInfoProto reProto = ezProto.getReencryptionProto();
+          ezManager.getReencryptionStatus()
+              .updateZoneStatus(inode.getId(), iip.getPath(), reProto);
+        }
       }
 
       if (!isFile && SECURITY_XATTR_UNREADABLE_BY_SUPERUSER.equals(xaName)) {
@@ -3339,5 +3701,77 @@ public class FSDirectory implements Closeable {
               "Modification on a read-only snapshot is disallowed");
     }
     return inodesInPath;
+  }
+
+  FSPermissionChecker getPermissionChecker()
+    throws AccessControlException {
+    try {
+      return new FSPermissionChecker(fsOwnerShortUserName, supergroup,
+          NameNode.getRemoteUser());
+    } catch (IOException ioe) {
+      throw new AccessControlException(ioe);
+    }
+  }
+
+  void checkOwner(FSPermissionChecker pc, String path)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, true, null, null, null, null);
+  }
+
+  void checkPathAccess(FSPermissionChecker pc, String path,
+                       FsAction access)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, false, null, null, access, null);
+  }
+  void checkParentAccess(
+      FSPermissionChecker pc, String path, FsAction access)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, false, null, access, null, null);
+  }
+
+  void checkAncestorAccess(
+      FSPermissionChecker pc, String path, FsAction access)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, false, access, null, null, null);
+  }
+
+  void checkTraverse(FSPermissionChecker pc, String path)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, false, null, null, null, null);
+  }
+
+  /**
+   * Check whether current user have permissions to access the path. For more
+   * details of the parameters, see
+   * {@link FSPermissionChecker#checkPermission}.
+   */
+  private void checkPermission(
+    FSPermissionChecker pc, String path, boolean doCheckOwner,
+    FsAction ancestorAccess, FsAction parentAccess, FsAction access,
+    FsAction subAccess)
+    throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, doCheckOwner, ancestorAccess,
+        parentAccess, access, subAccess, false, true);
+  }
+
+  /**
+   * Check whether current user have permissions to access the path. For more
+   * details of the parameters, see
+   * {@link FSPermissionChecker#checkPermission}.
+   */
+  void checkPermission(
+      FSPermissionChecker pc, String path, boolean doCheckOwner,
+      FsAction ancestorAccess, FsAction parentAccess, FsAction access,
+      FsAction subAccess, boolean ignoreEmptyDir, boolean resolveLink)
+      throws AccessControlException, UnresolvedLinkException {
+    if (!pc.isSuperUser()) {
+      readLock();
+      try {
+        pc.checkPermission(path, this, doCheckOwner, ancestorAccess,
+            parentAccess, access, subAccess, ignoreEmptyDir, resolveLink);
+      } finally {
+        readUnlock();
+      }
+    }
   }
 }

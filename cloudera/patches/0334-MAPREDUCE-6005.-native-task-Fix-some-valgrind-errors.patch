@@ -1,7 +1,7 @@
 From 8711f15c0f99029a640e76bcea7714d8bf4b11a2 Mon Sep 17 00:00:00 2001
 From: Binglin Chang <bchang@apache.org>
 Date: Mon, 4 Aug 2014 06:19:51 +0000
-Subject: [PATCH 334/924] MAPREDUCE-6005. native-task: Fix some valgrind
+Subject: [PATCH 0334/2639] MAPREDUCE-6005. native-task: Fix some valgrind
  errors (Binglin Chang)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1615489 13f79535-47bb-0310-9956-ffa450edef68

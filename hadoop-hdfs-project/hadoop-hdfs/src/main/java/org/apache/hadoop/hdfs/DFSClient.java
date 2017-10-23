@@ -51,6 +51,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPAC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
@@ -59,6 +61,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_EXCLUDE_NODE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 
@@ -136,6 +140,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -161,18 +166,24 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
+import org.apache.hadoop.hdfs.protocol.ReencryptionStatusIterator;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
@@ -208,6 +219,7 @@ import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
@@ -242,6 +254,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     DataEncryptionKeyFactory {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
+  private static final String DFS_KMS_PREFIX = "dfs-kms-";
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
 
   private final Configuration conf;
@@ -260,7 +273,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   final SocketFactory socketFactory;
   final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
   final FileSystem.Statistics stats;
-  private final String authority;
+  private final URI namenodeUri;
   private final Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
   private DataEncryptionKey encryptionKey;
@@ -294,6 +307,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     final int writeMaxPackets;
     final ByteArrayManager.Conf writeByteArrayManagerConf;
     final int socketTimeout;
+    final int socketSendBufferSize;
     final int socketCacheCapacity;
     final long socketCacheExpiry;
     final long excludedNodesCacheExpiry;
@@ -339,9 +353,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     private final List<Class<? extends ReplicaAccessorBuilder>>
       replicaAccessorBuilderClasses;
 
+    private final boolean dataTransferTcpNoDelay;
+
     public Conf(Configuration conf) {
       // The hdfsTimeout is currently the same as the ipc timeout 
-      hdfsTimeout = Client.getTimeout(conf);
+      hdfsTimeout = Client.getRpcTimeout(conf);
       maxFailoverAttempts = conf.getInt(
           DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY,
           DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT);
@@ -364,8 +380,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
       defaultChecksumOpt = getChecksumOptFromConf(conf);
+      dataTransferTcpNoDelay = conf.getBoolean(
+          DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY,
+          DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT);
       socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
           HdfsServerConstants.READ_TIMEOUT);
+      socketSendBufferSize = conf.getInt(DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY,
+          DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_DEFAULT);
       /** dfs.write.packet.size is an internal config variable */
       writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
           DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
@@ -550,7 +571,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return domainSocketDataTraffic;
     }
 
-    private DataChecksum.Type getChecksumType(Configuration conf) {
+    static private DataChecksum.Type getChecksumType(Configuration conf) {
       final String checksum = conf.get(
           DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY,
           DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT);
@@ -573,7 +594,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
 
     // Construct a checksum option from conf
-    private ChecksumOpt getChecksumOptFromConf(Configuration conf) {
+    public static ChecksumOpt getChecksumOptFromConf(Configuration conf) {
       DataChecksum.Type type = getChecksumType(conf);
       int bytesPerChecksum = conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY,
           DFS_BYTES_PER_CHECKSUM_DEFAULT);
@@ -598,6 +619,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
             + ", effective=null");
       }
       return dataChecksum;
+    }
+
+    /**
+     * @return whether TCP_NODELAY should be set on client sockets
+     */
+    public boolean getDataTransferTcpNoDelay() {
+      return dataTransferTcpNoDelay;
     }
   }
  
@@ -675,7 +703,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
     this.ugi = UserGroupInformation.getCurrentUser();
     
-    this.authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
+    this.namenodeUri = nameNodeUri;
     this.clientName = "DFSClient_" + dfsClientConf.taskId + "_" + 
         DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
     int numResponseToDrop = conf.getInt(
@@ -843,8 +871,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *  until the first output stream is created. The same instance will
    *  be returned until all output streams are closed.
    */
-  public LeaseRenewer getLeaseRenewer() throws IOException {
-      return LeaseRenewer.getInstance(authority, ugi, this);
+  public LeaseRenewer getLeaseRenewer() {
+    return LeaseRenewer.getInstance(
+        namenodeUri != null ? namenodeUri.getAuthority() : "null", ugi, this);
   }
 
   /** Get a lease and start automatic renewal */
@@ -854,7 +883,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Stop renewal of lease for the file. */
-  void endFileLease(final long inodeId) throws IOException {
+  void endFileLease(final long inodeId) {
     getLeaseRenewer().closeFile(inodeId, this);
   }
     
@@ -1721,7 +1750,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (permission == null) {
       permission = FsPermission.getFileDefault();
     }
-    FsPermission masked = permission.applyUMask(dfsClientConf.uMask);
+    FsPermission masked = FsCreateModes.applyUMask(permission,
+        dfsClientConf.uMask);
     if(LOG.isDebugEnabled()) {
       LOG.debug(src + ": masked=" + masked);
     }
@@ -1799,8 +1829,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throws IOException {
     TraceScope scope = newPathTraceScope("createSymlink", target);
     try {
-      FsPermission dirPerm = 
-          FsPermission.getDefault().applyUMask(dfsClientConf.uMask); 
+      FsPermission dirPerm = FsCreateModes.applyUMask(
+          FsPermission.getDefault(), dfsClientConf.uMask);
       namenode.createSymlink(target, link, dirPerm, createParent);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
@@ -1837,9 +1867,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /** Method to get stream returned by append call */
   private DFSOutputStream callAppend(String src,
       int buffersize, Progressable progress) throws IOException {
-    LocatedBlock lastBlock = null;
+    LastBlockWithStatus lastBlockWithStatus = null;
     try {
-      lastBlock = namenode.append(src, clientName);
+      lastBlockWithStatus = namenode.append(src, clientName);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
@@ -1849,9 +1879,15 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     }
-    HdfsFileStatus newStat = getFileInfo(src);
+    HdfsFileStatus newStat = lastBlockWithStatus.getFileStatus();
+    if (newStat == null) {
+      DFSClient.LOG.debug("NameNode is on an older version, request file " +
+          "info with additional RPC call for file: " + src);
+      newStat = getFileInfo(src);
+    }
     return DFSOutputStream.newStreamForAppend(this, src, buffersize, progress,
-        lastBlock, newStat, dfsClientConf.createChecksum());
+        lastBlockWithStatus.getLastBlock(), newStat,
+        dfsClientConf.createChecksum());
   }
   
   /**
@@ -2175,6 +2211,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  @VisibleForTesting
+  public DataEncryptionKey getEncryptionKey() {
+    return encryptionKey;
+  }
+
   /**
    * Get the checksum of the whole file of a range of the file. Note that the
    * range always starts from the beginning of the file.
@@ -2373,6 +2414,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         LOG.debug("Connecting to datanode " + dnAddr);
       }
       NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
+      sock.setTcpNoDelay(getConf().getDataTransferTcpNoDelay());
       sock.setSoTimeout(timeout);
   
       OutputStream unbufOut = NetUtils.getOutputStream(sock);
@@ -3038,7 +3080,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (permission == null) {
       permission = FsPermission.getDefault();
     }
-    FsPermission masked = permission.applyUMask(dfsClientConf.uMask);
+    FsPermission masked = FsCreateModes.applyUMask(permission,
+        dfsClientConf.uMask);
     return primitiveMkdir(src, masked, createParent);
   }
 
@@ -3060,8 +3103,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     throws IOException {
     checkOpen();
     if (absPermission == null) {
-      absPermission = 
-        FsPermission.getDefault().applyUMask(dfsClientConf.uMask);
+      absPermission = FsCreateModes.applyUMask(FsPermission.getDefault(),
+          dfsClientConf.uMask);
     } 
 
     if(LOG.isDebugEnabled()) {
@@ -3358,7 +3401,25 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return new EncryptionZoneIterator(namenode, tracer);
   }
 
-  public void setXAttr(String src, String name, byte[] value, 
+  public void reencryptEncryptionZone(String zone, ReencryptAction action)
+      throws IOException {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("reencryptEncryptionZone",
+        zone)) {
+      namenode.reencryptEncryptionZone(zone, action);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          SafeModeException.class, UnresolvedPathException.class);
+    }
+  }
+
+  public RemoteIterator<ZoneReencryptionStatus> listReencryptionStatus()
+      throws IOException {
+    checkOpen();
+    return new ReencryptionStatusIterator(namenode, tracer);
+  }
+
+  public void setXAttr(String src, String name, byte[] value,
       EnumSet<XAttrSetFlag> flag) throws IOException {
     checkOpen();
     TraceScope scope = newPathTraceScope("setXAttr", src);
@@ -3493,9 +3554,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         getRandomLocalInterfaceAddr(),
         dfsClientConf.socketTimeout);
       peer = TcpPeerServer.peerFromSocketAndKey(saslClient, sock, this,
-          blockToken, datanodeId);
-      peer.setReadTimeout(dfsClientConf.socketTimeout);
-      peer.setWriteTimeout(dfsClientConf.socketTimeout);
+          blockToken, datanodeId, dfsClientConf.socketTimeout);
       success = true;
       return peer;
     } finally {
@@ -3566,8 +3625,55 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return HEDGED_READ_METRIC;
   }
 
-  public KeyProvider getKeyProvider() {
-    return clientContext.getKeyProviderCache().get(conf);
+  /**
+   * Returns a key to map namenode uri to key provider uri.
+   * Tasks will lookup this key to find key Provider.
+   */
+  public Text getKeyProviderMapKey() {
+    return new Text(DFS_KMS_PREFIX + namenodeUri.getScheme()
+        +"://" + namenodeUri.getAuthority());
+  }
+
+  /**
+   * The key provider uri is searched in the following order.
+   * 1. If there is a mapping in Credential's secrets map for namenode uri.
+   * 2. From namenode getServerDefaults rpc.
+   * 3. Finally fallback to local conf.
+   * @return keyProviderUri if found from either of above 3 cases,
+   * null otherwise
+   * @throws IOException
+   */
+  URI getKeyProviderUri() throws IOException {
+    URI keyProviderUri = null;
+    // Lookup the secret in credentials object for namenodeuri.
+    Credentials credentials = ugi.getCredentials();
+    byte[] keyProviderUriBytes = credentials.getSecretKey(getKeyProviderMapKey());
+    if(keyProviderUriBytes != null) {
+      keyProviderUri =
+          URI.create(DFSUtil.bytes2String(keyProviderUriBytes));
+      return keyProviderUri;
+    }
+
+    // Query the namenode for the key provider uri.
+    FsServerDefaults serverDefaults = getServerDefaults();
+    if (serverDefaults.getKeyProviderUri() != null) {
+      if (!serverDefaults.getKeyProviderUri().isEmpty()) {
+        keyProviderUri = URI.create(serverDefaults.getKeyProviderUri());
+      }
+      return keyProviderUri;
+    }
+
+    // Last thing is to trust its own conf to be backwards compatible.
+    String keyProviderUriStr = conf.getTrimmed(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
+    if (keyProviderUriStr != null && !keyProviderUriStr.isEmpty()) {
+      keyProviderUri = URI.create(keyProviderUriStr);
+    }
+    return keyProviderUri;
+  }
+
+  public KeyProvider getKeyProvider() throws IOException {
+    return clientContext.getKeyProviderCache().get(conf, getKeyProviderUri());
   }
 
   @VisibleForTesting
@@ -3581,11 +3687,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Probe for encryption enabled on this filesystem.
-   * See {@link DFSUtil#isHDFSEncryptionEnabled(Configuration)}
    * @return true if encryption is enabled
    */
-  public boolean isHDFSEncryptionEnabled() {
-    return DFSUtil.isHDFSEncryptionEnabled(this.conf);
+  boolean isHDFSEncryptionEnabled() throws IOException {
+    return getKeyProviderUri() != null;
   }
 
   /**
@@ -3622,7 +3727,36 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return scope;
   }
 
+  /**
+   * Full detailed tracing for read requests: path, position in the file,
+   * and length.
+   *
+   * @param reqLen requested length
+   */
+  TraceScope newReaderTraceScope(String description, String path, long pos,
+      int reqLen) {
+    TraceScope scope = newPathTraceScope(description, path);
+    scope.addKVAnnotation("pos", Long.toString(pos));
+    scope.addKVAnnotation("reqLen", Integer.toString(reqLen));
+    return scope;
+  }
+
+  /** Add the returned length info to the scope. */
+  void addRetLenToReaderScope(TraceScope scope, int retLen) {
+    scope.addKVAnnotation("retLen", Integer.toString(retLen));
+  }
+
   Tracer getTracer() {
     return tracer;
+  }
+
+  /**
+   * Get a remote iterator to the open files list managed by NameNode.
+   *
+   * @throws IOException
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
+    checkOpen();
+    return new OpenFilesIterator(namenode, tracer);
   }
 }

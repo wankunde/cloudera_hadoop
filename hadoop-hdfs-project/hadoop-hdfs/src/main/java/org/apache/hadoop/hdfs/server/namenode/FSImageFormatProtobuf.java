@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.util.Time.monotonicNow;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -38,8 +40,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -56,12 +59,12 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FSImageFormatPBSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.CompressorStream;
 import org.apache.hadoop.util.LimitInputStream;
 import org.apache.hadoop.util.Time;
 
@@ -74,7 +77,8 @@ import com.google.protobuf.CodedOutputStream;
  */
 @InterfaceAudience.Private
 public final class FSImageFormatProtobuf {
-  private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(FSImageFormatProtobuf.class);
 
   public static final class LoaderContext {
     private String[] stringTable;
@@ -179,7 +183,7 @@ public final class FSImageFormatProtobuf {
       try {
         loadInternal(raFile, fin);
         long end = Time.monotonicNow();
-        LOG.info("Loaded FSImage in " + (end - start) / 1000 + " seconds.");
+        LOG.info("Loaded FSImage in {} seconds.", (end - start) / 1000);
       } finally {
         fin.close();
         raFile.close();
@@ -251,7 +255,7 @@ public final class FSImageFormatProtobuf {
         case INODE: {
           currentStep = new Step(StepType.INODES);
           prog.beginStep(Phase.LOADING_FSIMAGE, currentStep);
-          inodeLoader.loadINodeSection(in);
+          inodeLoader.loadINodeSection(in, prog, currentStep);
         }
           break;
         case INODE_REFERENCE:
@@ -273,19 +277,19 @@ public final class FSImageFormatProtobuf {
           prog.endStep(Phase.LOADING_FSIMAGE, currentStep);
           Step step = new Step(StepType.DELEGATION_TOKENS);
           prog.beginStep(Phase.LOADING_FSIMAGE, step);
-          loadSecretManagerSection(in);
+          loadSecretManagerSection(in, prog, step);
           prog.endStep(Phase.LOADING_FSIMAGE, step);
         }
           break;
         case CACHE_MANAGER: {
           Step step = new Step(StepType.CACHE_POOLS);
           prog.beginStep(Phase.LOADING_FSIMAGE, step);
-          loadCacheManagerSection(in);
+          loadCacheManagerSection(in, prog, step);
           prog.endStep(Phase.LOADING_FSIMAGE, step);
         }
           break;
         default:
-          LOG.warn("Unrecognized section " + n);
+          LOG.warn("Unrecognized section {}", n);
           break;
         }
       }
@@ -316,7 +320,8 @@ public final class FSImageFormatProtobuf {
       }
     }
 
-    private void loadSecretManagerSection(InputStream in) throws IOException {
+    private void loadSecretManagerSection(InputStream in, StartupProgress prog,
+        Step currentStep) throws IOException {
       SecretManagerSection s = SecretManagerSection.parseDelimitedFrom(in);
       int numKeys = s.getNumKeys(), numTokens = s.getNumTokens();
       ArrayList<SecretManagerSection.DelegationKey> keys = Lists
@@ -327,20 +332,30 @@ public final class FSImageFormatProtobuf {
       for (int i = 0; i < numKeys; ++i)
         keys.add(SecretManagerSection.DelegationKey.parseDelimitedFrom(in));
 
-      for (int i = 0; i < numTokens; ++i)
+      prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numTokens);
+      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
+      for (int i = 0; i < numTokens; ++i) {
         tokens.add(SecretManagerSection.PersistToken.parseDelimitedFrom(in));
+        counter.increment();
+      }
 
       fsn.loadSecretManagerState(s, keys, tokens);
     }
 
-    private void loadCacheManagerSection(InputStream in) throws IOException {
+    private void loadCacheManagerSection(InputStream in, StartupProgress prog,
+        Step currentStep) throws IOException {
       CacheManagerSection s = CacheManagerSection.parseDelimitedFrom(in);
-      ArrayList<CachePoolInfoProto> pools = Lists.newArrayListWithCapacity(s
-          .getNumPools());
+      int numPools = s.getNumPools();
+      ArrayList<CachePoolInfoProto> pools = Lists
+          .newArrayListWithCapacity(numPools);
       ArrayList<CacheDirectiveInfoProto> directives = Lists
           .newArrayListWithCapacity(s.getNumDirectives());
-      for (int i = 0; i < s.getNumPools(); ++i)
+      prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numPools);
+      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
+      for (int i = 0; i < numPools; ++i) {
         pools.add(CachePoolInfoProto.parseDelimitedFrom(in));
+        counter.increment();
+      }
       for (int i = 0; i < s.getNumDirectives(); ++i)
         directives.add(CacheDirectiveInfoProto.parseDelimitedFrom(in));
       fsn.getCacheManager().loadState(
@@ -398,7 +413,7 @@ public final class FSImageFormatProtobuf {
 
     private void flushSectionOutputStream() throws IOException {
       if (codec != null) {
-        ((CompressorStream) sectionOutputStream).finish();
+        ((CompressionOutputStream) sectionOutputStream).finish();
       }
       sectionOutputStream.flush();
     }
@@ -407,7 +422,11 @@ public final class FSImageFormatProtobuf {
       FileOutputStream fout = new FileOutputStream(file);
       fileChannel = fout.getChannel();
       try {
-        saveInternal(fout, compression, file.getAbsolutePath().toString());
+        LOG.info("Saving image file {} using {}", file, compression);
+        long startTime = monotonicNow();
+        saveInternal(fout, compression, file.getAbsolutePath());
+        LOG.info("Image file {} of size {} bytes saved in {} seconds.", file,
+            file.length(), (monotonicNow() - startTime) / 1000);
       } finally {
         fout.close();
       }
@@ -436,7 +455,11 @@ public final class FSImageFormatProtobuf {
           this, summary, context, context.getSourceNamesystem());
 
       snapshotSaver.serializeSnapshotSection(sectionOutputStream);
-      snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
+      // Skip snapshot-related sections when there is no snapshot.
+      if (context.getSourceNamesystem().getSnapshotManager()
+          .getNumSnapshots() > 0) {
+        snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
+      }
       snapshotSaver.serializeINodeReferenceSection(sectionOutputStream);
     }
 

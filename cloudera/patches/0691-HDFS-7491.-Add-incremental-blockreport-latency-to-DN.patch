@@ -1,8 +1,8 @@
 From d81338183a243aaf8f445089a31ffd87954ab414 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Wed, 11 Mar 2015 14:11:19 -0700
-Subject: [PATCH 691/924] HDFS-7491. Add incremental blockreport latency to DN
- metrics. Contributed by Ming Ma.
+Subject: [PATCH 0691/2639] HDFS-7491. Add incremental blockreport latency to
+ DN metrics. Contributed by Ming Ma.
 
 (cherry picked from commit fb34f45727e63ea55377fe90241328025307d818)
 (cherry picked from commit 5e99b7cd2fdf49803703f00463754aa6c56a52a8)

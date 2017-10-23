@@ -1,8 +1,8 @@
 From 0c394ee939a49340e658613acf28a4a64ca694e3 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Wed, 23 Jan 2013 15:51:14 -0800
-Subject: [PATCH 010/924] MR1: CLOUDERA-BUILD. Backport MAPREDUCE-4562 to MR1
- for compatibility with MR2
+Subject: [PATCH 0010/2639] MR1: CLOUDERA-BUILD. Backport MAPREDUCE-4562 to
+ MR1 for compatibility with MR2
 
 Reason: Compatibility with MR2
 Ref: CDH-9978

@@ -1,9 +1,9 @@
 From e0b4f943bbe7fc82f0eaad13042816f3d70a8493 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Wed, 1 Jul 2015 19:47:58 -0700
-Subject: [PATCH 668/924] HADOOP-12172. FsShell mkdir -p makes an unnecessary
- check for the existence of the parent. Contributed
- by Chris Nauroth.
+Subject: [PATCH 0668/2639] HADOOP-12172. FsShell mkdir -p makes an
+ unnecessary check for the existence of the
+ parent. Contributed by Chris Nauroth.
 
 (cherry picked from commit f3796224bfdfd88e2428cc8a9915bdfdc62b48f3)
 (cherry picked from commit 0d94a293a8baa4f4eaeb7015b6e23de2286a20e2)

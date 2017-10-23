@@ -1,9 +1,9 @@
 From 9688691e5106bac8fcd5cf1cfd7a8f78cbfca664 Mon Sep 17 00:00:00 2001
 From: Binglin Chang <bchang@apache.org>
 Date: Tue, 2 Sep 2014 11:00:48 +0800
-Subject: [PATCH 344/924] MAPREDUCE-6058. native-task: KVTest and LargeKVTest
- should check mr job is sucessful (Contributed by
- Binglin Chang)
+Subject: [PATCH 0344/2639] MAPREDUCE-6058. native-task: KVTest and
+ LargeKVTest should check mr job is sucessful
+ (Contributed by Binglin Chang)
 
 (cherry picked from commit 17cd0faaceb8f9ce00b8c2c200e810f78f36c671)
 (cherry picked from commit 2bad78ff98f927d9500bcab8afb6ac877675e2c6)

@@ -1,7 +1,7 @@
 From fce9ffd49e32e3ad81d6ebe74aefb39be8e0c92a Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 27 Jan 2015 17:04:20 -0800
-Subject: [PATCH 638/924] HDFS-7675. Remove unused member
+Subject: [PATCH 0638/2639] HDFS-7675. Remove unused member
  DFSClient.spanReceiverHost (cmccabe)
 
 (cherry picked from commit d12dd47f4516fe125221ae073f1bc88b702b122f)

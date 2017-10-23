@@ -1,7 +1,7 @@
 From 58dfeab4db47dabac7f8f9db6981975819d53306 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Fri, 5 Dec 2014 18:20:19 -0800
-Subject: [PATCH 285/924] HADOOP-11343. Overflow is not properly handled in
+Subject: [PATCH 0285/2639] HADOOP-11343. Overflow is not properly handled in
  caclulating final iv for AES CTR. Contributed by
  Jerry Chen.
 

@@ -1,7 +1,7 @@
 From 44a73a84d50612f44192a1856bfec1530e2644e9 Mon Sep 17 00:00:00 2001
 From: "Aaron T. Myers" <atm@apache.org>
 Date: Wed, 5 Nov 2014 18:15:12 -0800
-Subject: [PATCH 231/924] HADOOP-11187 NameNode - KMS communication fails
+Subject: [PATCH 0231/2639] HADOOP-11187 NameNode - KMS communication fails
  after a long period of inactivity. Contributed by
  Arun Suresh.
 

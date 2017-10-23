@@ -1,7 +1,7 @@
 From 747d40aa7d7403649c1eabfcedb38c3bad87a74c Mon Sep 17 00:00:00 2001
 From: Mark Grover <grover.markgrover@gmail.com>
 Date: Wed, 19 Dec 2012 17:54:39 -0800
-Subject: [PATCH 139/924] MR1: CLOUDERA-BUILD. CDH-8545: Package Job Tracker
+Subject: [PATCH 0139/2639] MR1: CLOUDERA-BUILD. CDH-8545: Package Job Tracker
  High Availability
 
 (cherry picked from commit 8fca711ea5add34ca61c08579beb62959ab4504b)

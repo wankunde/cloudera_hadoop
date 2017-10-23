@@ -1,7 +1,7 @@
 From 52d3a229f0f593e004f59c721b950a25d851b527 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 3 Apr 2013 22:29:22 +0000
-Subject: [PATCH 051/924] MR1: MAPREDUCE-2817. MiniRMCluster hardcodes
+Subject: [PATCH 0051/2639] MR1: MAPREDUCE-2817. MiniRMCluster hardcodes
  'mapred.local.dir' configuration to
  'build/test/mapred/local'. (rkanter via tucu)
 

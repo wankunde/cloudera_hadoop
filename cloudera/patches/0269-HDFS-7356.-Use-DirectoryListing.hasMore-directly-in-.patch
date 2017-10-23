@@ -1,7 +1,7 @@
 From fddd51333eabf03fcfe6c91062e6792ddfaf179a Mon Sep 17 00:00:00 2001
 From: Jing Zhao <jing9@apache.org>
 Date: Tue, 4 Nov 2014 15:04:26 -0800
-Subject: [PATCH 269/924] HDFS-7356. Use DirectoryListing.hasMore() directly
+Subject: [PATCH 0269/2639] HDFS-7356. Use DirectoryListing.hasMore() directly
  in nfs. Contributed by Li Lu.
 
 Conflicts:

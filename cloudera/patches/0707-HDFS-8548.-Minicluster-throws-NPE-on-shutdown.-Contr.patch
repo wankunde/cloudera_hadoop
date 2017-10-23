@@ -1,7 +1,7 @@
 From a863d02e25f19c0f1eca294ef27b59b871a20429 Mon Sep 17 00:00:00 2001
 From: Xiaoyu Yao <xyao@apache.org>
 Date: Tue, 16 Jun 2015 13:52:50 -0700
-Subject: [PATCH 707/924] HDFS-8548. Minicluster throws NPE on shutdown.
+Subject: [PATCH 0707/2639] HDFS-8548. Minicluster throws NPE on shutdown.
  Contributed by surendra singh lilhore.
 
 (cherry picked from commit 6a76250b39f33466bdc8dabab33070c90aa1a389)

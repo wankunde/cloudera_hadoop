@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -60,7 +61,7 @@ public interface RMContext {
   
   ConcurrentMap<ApplicationId, ByteBuffer> getSystemCredentialsForApps();
 
-  ConcurrentMap<String, RMNode> getInactiveRMNodes();
+  ConcurrentMap<NodeId, RMNode> getInactiveRMNodes();
 
   ConcurrentMap<NodeId, RMNode> getRMNodes();
 
@@ -121,4 +122,8 @@ public interface RMContext {
   ReservationSystem getReservationSystem();
 
   boolean isSchedulerReadyForAllocatingContainers();
+  
+  Configuration getYarnConfiguration();
+
+  ResourceManager getResourceManager();
 }

@@ -1,9 +1,9 @@
 From c9082249a1fc6d68396a24e104f598aa345b48ee Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Wed, 28 Jan 2015 13:45:07 -0800
-Subject: [PATCH 265/924] Revert "MAPREDUCE-5785. Derive heap size or
- mapreduce.*.memory.mb automatically. (Gera Shegalov
- and Karthik Kambatla via kasha)"
+Subject: [PATCH 0265/2639] Revert "MAPREDUCE-5785. Derive heap size or
+ mapreduce.*.memory.mb automatically. (Gera
+ Shegalov and Karthik Kambatla via kasha)"
 
 This reverts commit 482ff51f59c4dbb73d321230e335fc2fe3987de1.
 ---

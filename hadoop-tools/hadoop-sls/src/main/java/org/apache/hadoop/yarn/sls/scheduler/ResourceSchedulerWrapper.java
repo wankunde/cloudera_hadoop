@@ -84,6 +84,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.web.SLSWebApp;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.log4j.Logger;
 
@@ -868,6 +869,11 @@ public class ResourceSchedulerWrapper
   }
 
   @Override
+  public ResourceCalculator getResourceCalculator() {
+    return scheduler.getResourceCalculator();
+  }
+
+  @Override
   public int getNumClusterNodes() {
     return scheduler.getNumClusterNodes();
   }
@@ -920,7 +926,7 @@ public class ResourceSchedulerWrapper
   @LimitedPrivate("yarn")
   @Unstable
   public Resource getClusterResource() {
-    return null;
+    return super.getClusterResource();
   }
 
   @Override

@@ -1,8 +1,8 @@
 From 3abcaba695a05680b0830fd1e98bdf59a8d6a4d7 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Tue, 13 Jan 2015 16:10:28 -0800
-Subject: [PATCH 439/924] HDFS-7470. SecondaryNameNode need twice memory when
- calling reloadFromImageFile. Contributed by
+Subject: [PATCH 0439/2639] HDFS-7470. SecondaryNameNode need twice memory
+ when calling reloadFromImageFile. Contributed by
  zhaoyunjiong.
 
 (cherry picked from commit 85aec75ce53445e1abf840076d2e10f1e3c6d69b)

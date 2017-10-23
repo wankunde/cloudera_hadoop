@@ -77,6 +77,18 @@
   </property>
 
   <property>
+    <description>Number of threads used to launch/cleanup AM.</description>
+    <name>yarn.resourcemanager.amlauncher.thread-count</name>
+    <value>50</value>
+  </property>
+
+  <property>
+    <description>Retry times to connect with NM.</description>
+    <name>yarn.resourcemanager.nodemanager-connect-retries</name>
+    <value>10</value>
+  </property>
+
+  <property>
     <description>The expiry interval for application master reporting.</description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
@@ -222,6 +234,19 @@
   </property>
 
   <property>
+    <description>
+      The resource manager will log all commands being executed to the RM log
+      if this property is true. Commands may contain sensitive information,
+      such as application or service passwords, making logging the commands a
+      security risk. In cases where the cluster may be running applications with
+      such commands this property should be set to false. Commands are only
+      logged at the debug level.
+    </description>
+    <name>yarn.resourcemanager.amlauncher.log.command</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The class to use as the resource scheduler.</description>
     <name>yarn.resourcemanager.scheduler.class</name>
     <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</value>
@@ -263,6 +288,25 @@
     <description>Enable RM to recover state after starting. If true, then 
       yarn.resourcemanager.store.class must be specified. </description>
     <name>yarn.resourcemanager.recovery.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Should RM fail fast if it encounters any errors. By defalt, it
+      points to ${yarn.fail-fast}. Errors include:
+      1) exceptions when state-store write/read operations fails.
+    </description>
+    <name>yarn.resourcemanager.fail-fast</name>
+    <value>${yarn.fail-fast}</value>
+  </property>
+
+  <property>
+    <description>Should YARN fail fast if it encounters any errors.
+      This is a global config for all other components including RM,NM etc.
+      If no value is set for component-specific config (e.g yarn.resourcemanager.fail-fast),
+      this value will be the default.
+    </description>
+    <name>yarn.fail-fast</name>
     <value>false</value>
   </property>
 
@@ -808,6 +852,16 @@
   </property>
 
   <property>
+    <description>
+      The permissions settings used for the creation of container
+      directories when using DefaultContainerExecutor.  This follows
+      standard user/group/all permissions format.
+    </description>
+    <name>yarn.nodemanager.default-container-executor.log-dirs.permissions</name>
+    <value>710</value>
+  </property>
+
+  <property>
     <description>Whether to enable log aggregation. Log aggregation collects
       each container's logs and moves these logs onto a file-system, for e.g.
       HDFS, after the application completes. Users can configure the
@@ -898,6 +952,14 @@
   </property>
 
   <property>
+    <description>
+    Thread pool size for LogAggregationService in Node Manager.
+    </description>
+    <name>yarn.nodemanager.logaggregation.threadpool-size-max</name>
+    <value>100</value>
+  </property>
+
+  <property>
     <description>Percentage of CPU that can be allocated
     for containers. This setting allows users to limit the amount of
     CPU that YARN containers use. Currently functional only
@@ -968,7 +1030,7 @@
     <description>The maximum percentage of disk space utilization allowed after 
     which a disk is marked as bad. Values can range from 0.0 to 100.0. 
     If the value is greater than or equal to 100, the nodemanager will check 
-    for full disk. This applies to yarn-nodemanager.local-dirs and 
+    for full disk. This applies to yarn-nodemanager.local-dirs and
     yarn.nodemanager.log-dirs.</description>
     <name>yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage</name>
     <value>90.0</value>
@@ -987,7 +1049,7 @@
 
   <property>
     <description>The minimum space that must be available on a disk for
-    it to be used. This applies to yarn-nodemanager.local-dirs and 
+    it to be used. This applies to yarn-nodemanager.local-dirs and
     yarn.nodemanager.log-dirs.</description>
     <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb</name>
     <value>0</value>
@@ -1032,21 +1094,22 @@
   </property>
 
   <property>
-    <description>This determines which of the two modes that LCE should use on a non-secure
-    cluster.  If this value is set to true, then all containers will be launched as the user 
-    specified in yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user.  If 
-    this value is set to false, then containers will run as the user who submitted the 
-    application.
-    </description>
+    <description>This determines which of the two modes that LCE should use on
+      a non-secure cluster.  If this value is set to true, then all containers
+      will be launched as the user specified in
+      yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user.  If
+      this value is set to false, then containers will run as the user who
+      submitted the application.</description>
     <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users</name>
     <value>true</value>
   </property>
 
   <property>
-    <description>The UNIX user that containers will run as when Linux-container-executor
-    is used in nonsecure mode (a use case for this is using cgroups) if the
-    yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users is set 
-    to true.</description>
+    <description>The UNIX user that containers will run as when
+      Linux-container-executor is used in nonsecure mode (a use case for this
+      is using cgroups) if the
+      yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users is
+      set to true.</description>
     <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user</name>
     <value>nobody</value>
   </property>
@@ -1118,13 +1181,33 @@
   <property>
     <description>Max time to wait to establish a connection to NM</description>
     <name>yarn.client.nodemanager-connect.max-wait-ms</name>
-    <value>900000</value>
+    <value>180000</value>
   </property>
 
   <property>
     <description>Time interval between each attempt to connect to NM</description>
     <name>yarn.client.nodemanager-connect.retry-interval-ms</name>
     <value>10000</value>
+  </property>
+
+  <property>
+    <description>
+      Max time to wait for NM to connect to RM.
+      When not set, proxy will fall back to use value of
+      yarn.resourcemanager.connect.max-wait.ms.
+    </description>
+    <name>yarn.nodemanager.resourcemanager.connect.max-wait.ms</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Time interval between each NM attempt to connect to RM.
+      When not set, proxy will fall back to use value of
+      yarn.resourcemanager.connect.retry-interval.ms.
+    </description>
+    <name>yarn.nodemanager.resourcemanager.connect.retry-interval.ms</name>
+    <value></value>
   </property>
 
   <property>
@@ -1164,6 +1247,21 @@
     <value>${hadoop.tmp.dir}/yarn-nm-recovery</value>
   </property>
 
+  <property>
+    <description>
+        The delay time ms to unregister container metrics after completion.
+    </description>
+    <name>yarn.nodemanager.container-metrics.unregister-delay-ms</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>The time in seconds between full compactions of the NM state
+        database. Setting the interval to zero disables the full compaction
+        cycles.</description>
+    <name>yarn.nodemanager.recovery.compaction-interval-secs</name>
+    <value>3600</value>
+  </property>
   <!--Docker configuration-->
 
   <property>
@@ -1562,4 +1660,20 @@
     <name>yarn.am.blacklisting.disable-failure-threshold</name>
     <value>0.8f</value>
   </property>
+
+  <property>
+    <description>
+      Defines the limit of the diagnostics message of an application
+      attempt, in kilo characters (character count * 1024).
+      When using ZooKeeper to store application state behavior, it's
+      important to limit the size of the diagnostic messages to
+      prevent YARN from overwhelming ZooKeeper. In cases where
+      yarn.resourcemanager.state-store.max-completed-applications is set to
+      a large number, it may be desirable to reduce the value of this property
+      to limit the total data stored.
+    </description>
+    <name>yarn.app.attempt.diagnostics.limit.kc</name>
+    <value>64</value>
+  </property>
+
 </configuration>

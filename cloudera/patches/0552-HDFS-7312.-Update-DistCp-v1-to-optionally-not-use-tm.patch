@@ -1,7 +1,7 @@
 From c571ef4c1889034a7db7dcdbcb2be21dd819bbb7 Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Tue, 21 Apr 2015 13:43:02 -0700
-Subject: [PATCH 552/924] HDFS-7312. Update DistCp v1 to optionally not use
+Subject: [PATCH 0552/2639] HDFS-7312. Update DistCp v1 to optionally not use
  tmp location. (Joseph Prosser via yzhangal)
 
 (cherry-picked from commit 22543d34bc5ca83c242fae075d42d705a4c0c34d)

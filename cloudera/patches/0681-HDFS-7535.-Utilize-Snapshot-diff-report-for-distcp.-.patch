@@ -1,8 +1,8 @@
 From f676705c54182c05c739dd1e6785b4d399a6f0bc Mon Sep 17 00:00:00 2001
 From: Jing Zhao <jing9@apache.org>
 Date: Wed, 4 Mar 2015 10:30:53 -0800
-Subject: [PATCH 681/924] HDFS-7535. Utilize Snapshot diff report for distcp.
- Contributed by Jing Zhao.
+Subject: [PATCH 0681/2639] HDFS-7535. Utilize Snapshot diff report for
+ distcp. Contributed by Jing Zhao.
 
 (cherry picked from commit ed70fa142cabdbc1065e4dbbc95e99c8850c4751)
 ---

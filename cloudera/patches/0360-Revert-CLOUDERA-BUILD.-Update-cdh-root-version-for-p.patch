@@ -1,10 +1,10 @@
 From f7d070434f9c59c4a962c263b854280697a26e1e Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Mon, 9 Feb 2015 10:41:55 -0800
-Subject: [PATCH 360/924] Revert "CLOUDERA-BUILD. Update cdh-root version for
- packaging job." in preparation for Hadoop rebase.
- The previous pom changes were required to get the
- on-demand-packaging job to run.
+Subject: [PATCH 0360/2639] Revert "CLOUDERA-BUILD. Update cdh-root version
+ for packaging job." in preparation for Hadoop
+ rebase. The previous pom changes were required to
+ get the on-demand-packaging job to run.
 
 This reverts commit 697e99a14ef55701ce930399c555132c19794024.
 ---

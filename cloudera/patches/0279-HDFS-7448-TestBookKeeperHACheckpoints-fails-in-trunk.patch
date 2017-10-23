@@ -1,8 +1,8 @@
 From 95cccab18ae13868f12500a086930a3de0402080 Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Tue, 2 Dec 2014 15:04:26 +0000
-Subject: [PATCH 279/924] HDFS-7448 TestBookKeeperHACheckpoints fails in trunk
- build (cherry picked from commit
+Subject: [PATCH 0279/2639] HDFS-7448 TestBookKeeperHACheckpoints fails in
+ trunk build (cherry picked from commit
  75d53456ea79b38b0e99303f7b298036b027f337)
 
 (cherry picked from commit bd63bf6c2597695e68bd824ec30725619e9fca18)

@@ -1,8 +1,9 @@
 From 3e1a374dcb5c7d28807619a00891338e309fef45 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Tue, 28 Oct 2014 16:27:28 -0700
-Subject: [PATCH 217/924] HDFS-7301. TestMissingBlocksAlert should use MXBeans
- instead of old web UI. Contributed by Zhe Zhang.
+Subject: [PATCH 0217/2639] HDFS-7301. TestMissingBlocksAlert should use
+ MXBeans instead of old web UI. Contributed by Zhe
+ Zhang.
 
 Conflicts:
 	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt

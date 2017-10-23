@@ -318,7 +318,10 @@ public class LineReader implements Closeable {
             break;
           }
         } else if (delPosn != 0) {
-          bufferPosn--;
+          bufferPosn -= delPosn;
+          if(bufferPosn < -1) {
+            bufferPosn = -1;
+          }
           delPosn = 0;
         }
       }
@@ -333,6 +336,10 @@ public class LineReader implements Closeable {
         //appending the ambiguous characters (refer case 2.2)
         str.append(recordDelimiterBytes, 0, ambiguousByteCount);
         ambiguousByteCount = 0;
+        // since it is now certain that the split did not split a delimiter we
+        // should not read the next record: clear the flag otherwise duplicate
+        // records could be generated
+        unsetNeedAdditionalRecordAfterSplit();
       }
       if (appendLength > 0) {
         str.append(buffer, startPosn, appendLength);
@@ -379,5 +386,10 @@ public class LineReader implements Closeable {
 
   protected int getBufferSize() {
     return bufferSize;
+  }
+
+  protected void unsetNeedAdditionalRecordAfterSplit() {
+    // needed for custom multi byte line delimiters only
+    // see MAPREDUCE-6549 for details
   }
 }

@@ -1,7 +1,7 @@
 From aa4be428f8f5c06d932476c2513635a6209188fe Mon Sep 17 00:00:00 2001
 From: "Aaron T. Myers" <atm@apache.org>
 Date: Fri, 21 Nov 2014 16:34:08 -0800
-Subject: [PATCH 368/924] HDFS-7331. Add Datanode network counts to datanode
+Subject: [PATCH 0368/2639] HDFS-7331. Add Datanode network counts to datanode
  jmx page. Contributed by Charles Lamb. (cherry
  picked from commit
  ffa8c1a1b437cf0dc6d98a9b29161d12919e5afa) (cherry

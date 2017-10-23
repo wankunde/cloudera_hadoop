@@ -1,7 +1,7 @@
 From bd910866d5eea38fc1719e27ff0ad18e4c6acabd Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 19 Nov 2014 20:15:40 -0800
-Subject: [PATCH 252/924] YARN-2315. FairScheduler: Set current capacity in
+Subject: [PATCH 0252/2639] YARN-2315. FairScheduler: Set current capacity in
  addition to capacity. (Zhihai Xu via kasha)
 
 (cherry picked from commit a9a0cc3679432774154a07d3157ffa0a43e0bf01)

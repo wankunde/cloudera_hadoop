@@ -1,8 +1,8 @@
 From c8fd30a41189b67e3ca0abb4d113c2fac46acef1 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Sat, 10 Jan 2015 09:18:33 -0800
-Subject: [PATCH 504/924] HDFS-7596. NameNode should prune dead storages from
- storageMap. Contributed by Arpit Agarwal.
+Subject: [PATCH 0504/2639] HDFS-7596. NameNode should prune dead storages
+ from storageMap. Contributed by Arpit Agarwal.
 
 (cherry picked from commit ef3c3a832c2f0c1e5ccdda2ff8ef84902912955f)
 (cherry picked from commit 75e4e55e12b2faa521af7c23fddcba06a9ce661d)

@@ -75,7 +75,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RollingUpgradeFinalizeOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RollingUpgradeOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RollingUpgradeStartOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetAclOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
@@ -110,7 +112,7 @@ import com.google.common.collect.Lists;
 @InterfaceStability.Evolving
 public class FSEditLog implements LogsPurgeable {
 
-  static final Log LOG = LogFactory.getLog(FSEditLog.class);
+  public static final Log LOG = LogFactory.getLog(FSEditLog.class);
 
   /**
    * State machine for edit log.
@@ -147,14 +149,16 @@ public class FSEditLog implements LogsPurgeable {
   private EditLogOutputStream editLogStream = null;
 
   // a monotonically increasing counter that represents transactionIds.
-  private long txid = 0;
+  // All of the threads which update/increment txid are synchronized,
+  // so make txid volatile instead of AtomicLong.
+  private volatile long txid = 0;
 
   // stores the last synced transactionId.
   private long synctxid = 0;
 
   // the first txid of the log that's currently open for writing.
   // If this value is N, we are currently writing to edits_inprogress_N
-  private long curSegmentTxId = HdfsConstants.INVALID_TXID;
+  private volatile long curSegmentTxId = HdfsConstants.INVALID_TXID;
 
   // the time of printing the statistics to the log file.
   private long lastPrintTime;
@@ -173,17 +177,11 @@ public class FSEditLog implements LogsPurgeable {
 
   private final NNStorage storage;
   private final Configuration conf;
-  
+
   private final List<URI> editsDirs;
 
-  private final ThreadLocal<OpInstanceCache> cache =
-      new ThreadLocal<OpInstanceCache>() {
-    @Override
-    protected OpInstanceCache initialValue() {
-      return new OpInstanceCache();
-    }
-  };
-  
+  protected final OpInstanceCache cache = new OpInstanceCache();
+
   /**
    * The edit directories that are shared between primary and secondary.
    */
@@ -211,6 +209,17 @@ public class FSEditLog implements LogsPurgeable {
       return new TransactionId(Long.MAX_VALUE);
     }
   };
+
+  static FSEditLog newInstance(Configuration conf, NNStorage storage,
+      List<URI> editsDirs) {
+    boolean asyncEditLogging = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
+        DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING_DEFAULT);
+    LOG.info("Edit logging is async:" + asyncEditLogging);
+    return asyncEditLogging
+        ? new FSEditLogAsync(conf, storage, editsDirs)
+        : new FSEditLog(conf, storage, editsDirs);
+  }
 
   /**
    * Constructor for FSEditLog. Underlying journals are constructed, but 
@@ -325,12 +334,33 @@ public class FSEditLog implements LogsPurgeable {
     return state == State.IN_SEGMENT ||
       state == State.BETWEEN_LOG_SEGMENTS;
   }
-  
+
+  /**
+   * Return true if the log is currently open in write mode.
+   * This method is not synchronized and must be used only for metrics.
+   * @return true if the log is currently open in write mode, regardless
+   * of whether it actually has an open segment.
+   */
+  boolean isOpenForWriteWithoutLock() {
+    return state == State.IN_SEGMENT ||
+        state == State.BETWEEN_LOG_SEGMENTS;
+  }
+
   /**
    * @return true if the log is open in write mode and has a segment open
    * ready to take edits.
    */
   synchronized boolean isSegmentOpen() {
+    return state == State.IN_SEGMENT;
+  }
+
+  /**
+   * Return true the state is IN_SEGMENT.
+   * This method is not synchronized and must be used only for metrics.
+   * @return true if the log is open in write mode and has a segment open
+   * ready to take edits.
+   */
+  boolean isSegmentOpenWithoutLock() {
     return state == State.IN_SEGMENT;
   }
 
@@ -404,39 +434,47 @@ public class FSEditLog implements LogsPurgeable {
   }
 
   /**
-   * Write an operation to the edit log. Do not sync to persistent
-   * store yet.
+   * Write an operation to the edit log.
+   * <p/>
+   * Additionally, this will sync the edit log if required by the underlying
+   * edit stream's automatic sync policy (e.g. when the buffer is full, or
+   * if a time interval has elapsed).
    */
   void logEdit(final FSEditLogOp op) {
+    boolean needsSync = false;
     synchronized (this) {
       assert isOpenForWrite() :
         "bad state: " + state;
       
       // wait if an automatic sync is scheduled
       waitIfAutoSyncScheduled();
-      
-      long start = beginTransaction();
-      op.setTransactionId(txid);
 
-      try {
-        editLogStream.write(op);
-      } catch (IOException ex) {
-        // All journals failed, it is handled in logSync.
-      } finally {
-        op.reset();
-      }
-
-      endTransaction(start);
-      
       // check if it is time to schedule an automatic sync
-      if (!shouldForceSync()) {
-        return;
+      needsSync = doEditTransaction(op);
+      if (needsSync) {
+        isAutoSyncScheduled = true;
       }
-      isAutoSyncScheduled = true;
     }
-    
-    // sync buffered edit log entries to persistent store
-    logSync();
+
+    // Sync the log if an automatic sync is required.
+    if (needsSync) {
+      logSync();
+    }
+  }
+
+  synchronized boolean doEditTransaction(final FSEditLogOp op) {
+    long start = beginTransaction();
+    op.setTransactionId(txid);
+
+    try {
+      editLogStream.write(op);
+    } catch (IOException ex) {
+      // All journals failed, it is handled in logSync.
+    } finally {
+      op.reset();
+    }
+    endTransaction(start);
+    return shouldForceSync();
   }
 
   /**
@@ -501,7 +539,16 @@ public class FSEditLog implements LogsPurgeable {
   public synchronized long getLastWrittenTxId() {
     return txid;
   }
-  
+
+  /**
+   * Return the transaction ID of the last transaction written to the log.
+   * This method is not synchronized and must be used only for metrics.
+   * @return The transaction ID of the last transaction written to the log
+   */
+  long getLastWrittenTxIdWithoutLock() {
+    return txid;
+  }
+
   /**
    * @return the first transaction ID in the current log segment
    */
@@ -510,7 +557,16 @@ public class FSEditLog implements LogsPurgeable {
         "Bad state: %s", state);
     return curSegmentTxId;
   }
-  
+
+  /**
+   * Return the first transaction ID in the current log segment.
+   * This method is not synchronized and must be used only for metrics.
+   * @return The first transaction ID in the current log segment
+   */
+  long getCurSegmentTxIdWithoutLock() {
+    return curSegmentTxId;
+  }
+
   /**
    * Set the transaction ID to use for the next transaction written.
    */
@@ -533,15 +589,18 @@ public class FSEditLog implements LogsPurgeable {
    * else more operations can start writing while this is in progress.
    */
   void logSyncAll() {
-    // Record the most recent transaction ID as our own id
-    synchronized (this) {
-      TransactionId id = myTransactionId.get();
-      id.txid = txid;
-    }
-    // Then make sure we're synced up to this point
-    logSync();
+    // Make sure we're synced up to the most recent transaction ID.
+    long lastWrittenTxId = getLastWrittenTxId();
+    LOG.info("logSyncAll toSyncToTxId=" + lastWrittenTxId
+        + " lastSyncedTxid=" + synctxid
+        + " mostRecentTxid=" + txid);
+    logSync(lastWrittenTxId);
+    lastWrittenTxId = getLastWrittenTxId();
+    LOG.info("Done logSyncAll lastWrittenTxId=" + lastWrittenTxId
+        + " lastSyncedTxid=" + synctxid
+        + " mostRecentTxid=" + txid);
   }
-  
+
   /**
    * Sync all modifications done by this thread.
    *
@@ -571,12 +630,14 @@ public class FSEditLog implements LogsPurgeable {
    * waitForSyncToFinish() before assuming they are running alone.
    */
   public void logSync() {
-    long syncStart = 0;
+    // Fetch the transactionId of this thread.
+    logSync(myTransactionId.get().txid);
+  }
 
-    // Fetch the transactionId of this thread. 
-    long mytxid = myTransactionId.get().txid;
-    
+  protected void logSync(long mytxid) {
+    long syncStart = 0;
     boolean sync = false;
+    long editsBatchedInSync = 0;
     try {
       EditLogOutputStream logStream = null;
       synchronized (this) {
@@ -595,19 +656,17 @@ public class FSEditLog implements LogsPurgeable {
           // If this transaction was already flushed, then nothing to do
           //
           if (mytxid <= synctxid) {
-            numTransactionsBatchedInSync++;
-            if (metrics != null) {
-              // Metrics is non-null only when used inside name node
-              metrics.incrTransactionsBatchedInSync();
-            }
             return;
           }
-     
-          // now, this thread will do the sync
+
+          // now, this thread will do the sync.  track if other edits were
+          // included in the sync - ie. batched.  if this is the only edit
+          // synced then the batched count is 0
+          editsBatchedInSync = txid - synctxid - 1;
           syncStart = txid;
           isSyncRunning = true;
           sync = true;
-  
+
           // swap buffers
           try {
             if (journalSet.isEmpty()) {
@@ -656,6 +715,8 @@ public class FSEditLog implements LogsPurgeable {
   
       if (metrics != null) { // Metrics non-null only when used inside name node
         metrics.addSync(elapsed);
+        metrics.incrTransactionsBatchedInSync(editsBatchedInSync);
+        numTransactionsBatchedInSync += editsBatchedInSync;
       }
       
     } finally {
@@ -718,7 +779,7 @@ public class FSEditLog implements LogsPurgeable {
   public void logOpenFile(String path, INodeFile newNode, boolean overwrite,
       boolean toLogRpcIds) {
     Preconditions.checkArgument(newNode.isUnderConstruction());
-    PermissionStatus permissions = newNode.getPermissionStatus();
+    PermissionStatus permissions = newNode.getFsimagePermissionStatus();
     AddOp op = AddOp.getInstance(cache.get())
       .setInodeId(newNode.getId())
       .setPath(path)
@@ -734,7 +795,7 @@ public class FSEditLog implements LogsPurgeable {
       .setOverwrite(overwrite)
       .setStoragePolicyId(newNode.getLocalStoragePolicyID());
 
-    AclFeature f = newNode.getAclFeature();
+    AclFeature f = newNode.getFsimageAclFeature();
     if (f != null) {
       op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
     }
@@ -759,7 +820,7 @@ public class FSEditLog implements LogsPurgeable {
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
       .setBlocks(newNode.getBlocks())
-      .setPermissionStatus(newNode.getPermissionStatus());
+      .setPermissionStatus(newNode.getFsimagePermissionStatus());
     
     logEdit(op);
   }
@@ -788,14 +849,14 @@ public class FSEditLog implements LogsPurgeable {
    * Add create directory record to edit log
    */
   public void logMkDir(String path, INode newNode) {
-    PermissionStatus permissions = newNode.getPermissionStatus();
+    PermissionStatus permissions = newNode.getFsimagePermissionStatus();
     MkdirOp op = MkdirOp.getInstance(cache.get())
       .setInodeId(newNode.getId())
       .setPath(path)
       .setTimestamp(newNode.getModificationTime())
       .setPermissionStatus(permissions);
 
-    AclFeature f = newNode.getAclFeature();
+    AclFeature f = newNode.getFsimageAclFeature();
     if (f != null) {
       op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
     }
@@ -960,7 +1021,7 @@ public class FSEditLog implements LogsPurgeable {
       .setValue(value)
       .setModificationTime(mtime)
       .setAccessTime(atime)
-      .setPermissionStatus(node.getPermissionStatus());
+      .setPermissionStatus(node.getFsimagePermissionStatus());
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
@@ -1092,13 +1153,13 @@ public class FSEditLog implements LogsPurgeable {
   }
 
   void logStartRollingUpgrade(long startTime) {
-    RollingUpgradeOp op = RollingUpgradeOp.getStartInstance(cache.get());
+    RollingUpgradeStartOp op = RollingUpgradeStartOp.getInstance(cache.get());
     op.setTime(startTime);
     logEdit(op);
   }
 
   void logFinalizeRollingUpgrade(long finalizeTime) {
-    RollingUpgradeOp op = RollingUpgradeOp.getFinalizeInstance(cache.get());
+    RollingUpgradeOp op = RollingUpgradeFinalizeOp.getInstance(cache.get());
     op.setTime(finalizeTime);
     logEdit(op);
   }
@@ -1129,7 +1190,9 @@ public class FSEditLog implements LogsPurgeable {
   /**
    * Get all the journals this edit log is currently operating on.
    */
-  synchronized List<JournalAndStream> getJournals() {
+  List<JournalAndStream> getJournals() {
+    // The list implementation is CopyOnWriteArrayList,
+    // so we don't need to synchronize this method.
     return journalSet.getAllJournalStreams();
   }
   
@@ -1137,7 +1200,7 @@ public class FSEditLog implements LogsPurgeable {
    * Used only by tests.
    */
   @VisibleForTesting
-  synchronized public JournalSet getJournalSet() {
+  public JournalSet getJournalSet() {
     return journalSet;
   }
   
@@ -1161,11 +1224,13 @@ public class FSEditLog implements LogsPurgeable {
       throws IOException {
     return journalSet.getEditLogManifest(fromTxId);
   }
- 
+
   /**
    * Finalizes the current edit log and opens a new log segment.
-   * @return the transaction id of the BEGIN_LOG_SEGMENT transaction
-   * in the new log.
+   *
+   * @param layoutVersion The layout version of the new edit log segment.
+   * @return the transaction id of the BEGIN_LOG_SEGMENT transaction in the new
+   * log.
    */
   synchronized long rollEditLog() throws IOException {
     LOG.info("Rolling edit logs");
@@ -1225,20 +1290,25 @@ public class FSEditLog implements LogsPurgeable {
    * Transitions from IN_SEGMENT state to BETWEEN_LOG_SEGMENTS state.
    */
   public synchronized void endCurrentLogSegment(boolean writeEndTxn) {
-    LOG.info("Ending log segment " + curSegmentTxId);
+    LOG.info("Ending log segment " + curSegmentTxId +
+        ", " + getLastWrittenTxId());
     Preconditions.checkState(isSegmentOpen(),
         "Bad state: %s", state);
     
     if (writeEndTxn) {
       logEdit(LogSegmentOp.getInstance(cache.get(), 
           FSEditLogOpCodes.OP_END_LOG_SEGMENT));
-      logSync();
     }
+    // always sync to ensure all edits are flushed.
+    logSyncAll();
 
     printStatistics(true);
     
     final long lastTxId = getLastWrittenTxId();
-    
+    final long lastSyncedTxId = getSyncTxId();
+    Preconditions.checkArgument(lastTxId == lastSyncedTxId,
+        "LastWrittenTxId %s is expected to be the same as lastSyncedTxId %s",
+        lastTxId, lastSyncedTxId);
     try {
       journalSet.finalizeLogSegment(curSegmentTxId, lastTxId);
       editLogStream = null;
@@ -1609,4 +1679,9 @@ public class FSEditLog implements LogsPurgeable {
     }
   }
 
+  @VisibleForTesting
+  // needed by async impl to restart thread when edit log is replaced by a
+  // spy because a spy is a shallow copy
+  public void restart() {
+  }
 }

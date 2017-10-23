@@ -1,9 +1,9 @@
 From abae20ecdcfb78a61a9bad38c94964e9ac114beb Mon Sep 17 00:00:00 2001
 From: Akira Ajisaka <aajisaka@apache.org>
 Date: Wed, 18 Mar 2015 15:43:10 +0900
-Subject: [PATCH 667/924] HADOOP-11659. o.a.h.FileSystem.Cache#remove should
- use a single hash map lookup. Contributed by Brahma
- Reddy Battula.
+Subject: [PATCH 0667/2639] HADOOP-11659. o.a.h.FileSystem.Cache#remove should
+ use a single hash map lookup. Contributed by
+ Brahma Reddy Battula.
 
 (cherry picked from commit 34117325b29f0f1bdbe21343e7fd07e9ad0af907)
 (cherry picked from commit 18740f9383858543f4390626e7bbec37ca450cce)

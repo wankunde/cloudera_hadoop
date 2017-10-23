@@ -1,7 +1,7 @@
 From 12531a2746935040a031180bf8500480ffe33aac Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Thu, 30 Oct 2014 11:03:13 -0700
-Subject: [PATCH 437/924] HDFS-3342. SocketTimeoutException in
+Subject: [PATCH 0437/2639] HDFS-3342. SocketTimeoutException in
  BlockSender.sendChunks could have a better error
  message. Contributed by Yongjun Zhang.
 

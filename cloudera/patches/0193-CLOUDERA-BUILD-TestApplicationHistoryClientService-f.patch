@@ -1,8 +1,9 @@
 From ef63befb6c2fc79dcf94127aa39f0f78072a031b Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Fri, 14 Nov 2014 15:20:00 -0800
-Subject: [PATCH 193/924] CLOUDERA-BUILD: TestApplicationHistoryClientService
- fails on JDK8 (equivalent to YARN-2766)
+Subject: [PATCH 0193/2639] CLOUDERA-BUILD:
+ TestApplicationHistoryClientService fails on JDK8
+ (equivalent to YARN-2766)
 
 (cherry picked from commit 20bb62b66fbfacb9cf35fac93f91fc3c17e4d35f)
 ---

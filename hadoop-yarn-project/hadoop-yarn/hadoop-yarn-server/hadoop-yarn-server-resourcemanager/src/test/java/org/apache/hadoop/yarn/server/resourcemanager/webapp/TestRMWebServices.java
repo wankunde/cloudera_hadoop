@@ -38,7 +38,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
@@ -56,7 +55,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -99,10 +97,6 @@ public class TestRMWebServices extends JerseyTest {
           ResourceScheduler.class);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      bind(RMContext.class).toInstance(rm.getRMContext());
-      bind(ApplicationACLsManager.class).toInstance(
-          rm.getApplicationACLsManager());
-      bind(QueueACLsManager.class).toInstance(rm.getQueueACLsManager());
       serve("/*").with(GuiceContainer.class);
     }
   });
@@ -285,6 +279,8 @@ public class TestRMWebServices extends JerseyTest {
           WebServicesTestUtils.getXmlLong(element, "startedOn"),
           WebServicesTestUtils.getXmlString(element, "state"),
           WebServicesTestUtils.getXmlString(element, "haState"),
+          WebServicesTestUtils.getXmlString(
+              element, "haZooKeeperConnectionState"),
           WebServicesTestUtils.getXmlString(element, "hadoopVersionBuiltOn"),
           WebServicesTestUtils.getXmlString(element, "hadoopBuildVersion"),
           WebServicesTestUtils.getXmlString(element, "hadoopVersion"),
@@ -300,9 +296,10 @@ public class TestRMWebServices extends JerseyTest {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject info = json.getJSONObject("clusterInfo");
-    assertEquals("incorrect number of elements", 11, info.length());
+    assertEquals("incorrect number of elements", 12, info.length());
     verifyClusterGeneric(info.getLong("id"), info.getLong("startedOn"),
         info.getString("state"), info.getString("haState"),
+        info.getString("haZooKeeperConnectionState"),
         info.getString("hadoopVersionBuiltOn"),
         info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"),
         info.getString("resourceManagerVersionBuiltOn"),
@@ -312,7 +309,8 @@ public class TestRMWebServices extends JerseyTest {
   }
 
   public void verifyClusterGeneric(long clusterid, long startedon,
-      String state, String haState, String hadoopVersionBuiltOn,
+      String state, String haState, String haZooKeeperConnectionState,
+      String hadoopVersionBuiltOn,
       String hadoopBuildVersion, String hadoopVersion,
       String resourceManagerVersionBuiltOn, String resourceManagerBuildVersion,
       String resourceManagerVersion) {
@@ -424,7 +422,7 @@ public class TestRMWebServices extends JerseyTest {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject clusterinfo = json.getJSONObject("clusterMetrics");
-    assertEquals("incorrect number of elements", 23, clusterinfo.length());
+    assertEquals("incorrect number of elements", 24, clusterinfo.length());
     verifyClusterMetrics(
         clusterinfo.getInt("appsSubmitted"), clusterinfo.getInt("appsCompleted"),
         clusterinfo.getInt("reservedMB"), clusterinfo.getInt("availableMB"),

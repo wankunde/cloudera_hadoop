@@ -1,7 +1,7 @@
-From 72cb8c89241c9201b2423b8dcaa9ba22e998bae9 Mon Sep 17 00:00:00 2001
+From 905c0fabbbad0268c3cd1b6663f2c0e0a91cb26b Mon Sep 17 00:00:00 2001
 From: Lei Xu <lei@cloudera.com>
 Date: Sat, 29 Aug 2015 09:57:27 -0700
-Subject: [PATCH 734/924] HADOOP-12346. Increase some default timeouts /
+Subject: [PATCH 0734/2639] HADOOP-12346. Increase some default timeouts /
  retries for S3a connector. (Sean Mackrory via Lei
  (Eddy) Xu)
 

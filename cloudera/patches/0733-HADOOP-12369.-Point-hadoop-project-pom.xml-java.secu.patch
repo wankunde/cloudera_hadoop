@@ -1,7 +1,7 @@
-From 7c0432b31e1299d002c152b4dbf425c54e16789c Mon Sep 17 00:00:00 2001
+From 07ced5d81e99041cbb9d833fdf63e24828de12d9 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 1 Sep 2015 10:57:32 -0700
-Subject: [PATCH 733/924] HADOOP-12369. Point hadoop-project/pom.xml
+Subject: [PATCH 0733/2639] HADOOP-12369. Point hadoop-project/pom.xml
  java.security.krb5.conf within target folder.
 
 (cherry picked from commit 0eb9b1932590ba6c60ac996d03269dffb4e095cc)
@@ -14,7 +14,7 @@ Change-Id: I2902fcfbf2c919229410d560279049a3950a3112
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/hadoop-project/pom.xml b/hadoop-project/pom.xml
-index 43d049a..da88637 100644
+index 226720d..7029258 100644
 --- a/hadoop-project/pom.xml
 +++ b/hadoop-project/pom.xml
 @@ -1154,7 +1154,7 @@
@@ -27,7 +27,7 @@ index 43d049a..da88637 100644
              <require.test.libhadoop>${require.test.libhadoop}</require.test.libhadoop>
            </systemPropertyVariables>
 diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-registry/pom.xml b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-registry/pom.xml
-index df5194a..be5dfa0 100644
+index 8bf1ea2..6b79439 100644
 --- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-registry/pom.xml
 +++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-registry/pom.xml
 @@ -198,7 +198,7 @@

@@ -1,7 +1,7 @@
-From 95df425005d8d23e376a8edc7f2095145725beb9 Mon Sep 17 00:00:00 2001
+From c285fac0b56ca8ff332c4d6b3fbfbebb94e9827e Mon Sep 17 00:00:00 2001
 From: Tsuyoshi Ozawa <ozawa@apache.org>
 Date: Mon, 6 Apr 2015 20:13:21 +0900
-Subject: [PATCH 737/924] YARN-2666.
+Subject: [PATCH 0737/2639] YARN-2666.
  TestFairScheduler.testContinuousScheduling fails
  Intermittently. Contributed by Zhihai Xu.
 

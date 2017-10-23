@@ -1,7 +1,7 @@
-From 9b83c43e8f065aed3875f41e8bf046d1486fe391 Mon Sep 17 00:00:00 2001
+From 96c0c7d0e2e93321306e6d355d28aaec5a8ef2bd Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Tue, 28 Oct 2014 16:53:53 -0700
-Subject: [PATCH 744/924] HDFS-7280. Use netty 4 in WebImageViewer.
+Subject: [PATCH 0744/2639] HDFS-7280. Use netty 4 in WebImageViewer.
  Contributed by Haohui Mai.
 
 (cherry picked from commit 675bca2968700d3627449700b827c3771827cef8)
@@ -24,7 +24,7 @@ Change-Id: I8728f92476e4bc9437c2bb7be390fea44b3e3084
  7 files changed, 154 insertions(+), 133 deletions(-)
 
 diff --git a/hadoop-hdfs-project/hadoop-hdfs/pom.xml b/hadoop-hdfs-project/hadoop-hdfs/pom.xml
-index e0baa3c..525bc91 100644
+index 725e26d..66ed7d5 100644
 --- a/hadoop-hdfs-project/hadoop-hdfs/pom.xml
 +++ b/hadoop-hdfs-project/hadoop-hdfs/pom.xml
 @@ -182,7 +182,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -480,7 +480,7 @@ index 7b4804a..56963a6 100644
    }
  }
 diff --git a/hadoop-project/pom.xml b/hadoop-project/pom.xml
-index da88637..ddc86c3 100644
+index 7029258..ee3e35f 100644
 --- a/hadoop-project/pom.xml
 +++ b/hadoop-project/pom.xml
 @@ -555,6 +555,12 @@

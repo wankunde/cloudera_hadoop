@@ -1,7 +1,7 @@
 From 1179c28bc1a93c0982e2b342b04e9582c88dd788 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Fri, 5 Sep 2014 13:41:18 -0700
-Subject: [PATCH 350/924] MAPREDUCE-6074. native-task: Fix release audit
+Subject: [PATCH 0350/2639] MAPREDUCE-6074. native-task: Fix release audit
  warnings
 
 (cherry picked from commit 7c91f9b1484d487e792dca051fbd418697049422)

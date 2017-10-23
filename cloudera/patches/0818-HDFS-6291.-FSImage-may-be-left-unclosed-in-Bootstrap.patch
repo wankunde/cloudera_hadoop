@@ -1,9 +1,9 @@
-From 2c74ec46ca552a52ac17672b7d6a11212d3e08b1 Mon Sep 17 00:00:00 2001
+From bb4cdf48b540842b37b08fb4cdbf51757da17f10 Mon Sep 17 00:00:00 2001
 From: Vinayakumar B <vinayakumarb@apache.org>
 Date: Fri, 8 May 2015 11:25:24 +0530
-Subject: [PATCH 818/924] HDFS-6291. FSImage may be left unclosed in
- BootstrapStandby#doRun() ( Contributed by Sanghyun
- Yun)
+Subject: [PATCH 0818/2639] HDFS-6291. FSImage may be left unclosed in
+ BootstrapStandby#doRun() ( Contributed by
+ Sanghyun Yun)
 
 (cherry picked from commit e5e492a9631ff78302fccedcb64d7b64b9407991)
 (cherry picked from commit 089d420a824ced46b806d0e5156999f0abad66aa)
@@ -12,7 +12,6 @@ Conflicts:
 	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt
 
 Change-Id: I5a32ff71624009b2713f44e1d2c372a831913aa5
-(cherry picked from commit bb4cdf48b540842b37b08fb4cdbf51757da17f10)
 ---
  .../hdfs/server/namenode/ha/BootstrapStandby.java  |    3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)

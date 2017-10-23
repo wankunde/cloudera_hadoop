@@ -1,7 +1,7 @@
 From 18422f8c1b0ad837635bdb5535be5cba79ce6c25 Mon Sep 17 00:00:00 2001
 From: Mahadev Konar <mahadev@apache.org>
 Date: Mon, 1 Aug 2011 21:41:20 +0000
-Subject: [PATCH 067/924] MR1: MAPREDUCE-2494. Make the distributed cache
+Subject: [PATCH 0067/2639] MR1: MAPREDUCE-2494. Make the distributed cache
  delete entires using LRU priority. (Robert Joseph
  Evans via mahadev)
 
@@ -283,7 +283,7 @@ index 4fdcc98..1609118 100644
          cacheDir.subdirs = 1;
          properties.put(cacheStatus.getBaseDir(), cacheDir);
 diff --git a/hadoop-mapreduce1-project/src/test/org/apache/hadoop/filecache/TestTrackerDistributedCacheManager.java b/hadoop-mapreduce1-project/src/test/org/apache/hadoop/filecache/TestTrackerDistributedCacheManager.java
-index 8c88393..d8d7bbe 100644
+index 8c88393..d8d7bbe4 100644
 --- a/hadoop-mapreduce1-project/src/test/org/apache/hadoop/filecache/TestTrackerDistributedCacheManager.java
 +++ b/hadoop-mapreduce1-project/src/test/org/apache/hadoop/filecache/TestTrackerDistributedCacheManager.java
 @@ -46,7 +46,6 @@

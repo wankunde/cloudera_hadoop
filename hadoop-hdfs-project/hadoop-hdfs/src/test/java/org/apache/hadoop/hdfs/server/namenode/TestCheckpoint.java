@@ -44,7 +44,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
-import com.google.common.io.Files;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -643,6 +642,22 @@ public class TestCheckpoint {
         });
   }
 
+  private void checkTempImages(NNStorage storage) throws IOException {
+    List<File> dirs = new ArrayList<File>();
+    dirs.add(storage.getStorageDir(0).getCurrentDir());
+    dirs.add(storage.getStorageDir(1).getCurrentDir());
+
+    for (File dir : dirs) {
+      File[] list = dir.listFiles();
+      for (File f : list) {
+        // Throw an exception if a temp image file is found.
+        if(f.getName().contains(NNStorage.NameNodeFile.IMAGE_NEW.getName())) {
+          throw new IOException("Found " + f);
+        }
+      }
+    }
+  }
+
   /**
    * Simulate 2NN failing to send the whole file (error type 3)
    * The length header in the HTTP transfer should prevent
@@ -704,6 +719,9 @@ public class TestCheckpoint {
         GenericTestUtils.assertExceptionContains(exceptionSubstring, e);
       }
       Mockito.reset(faultInjector);
+      // Make sure there is no temporary files left around.
+      checkTempImages(cluster.getNameNode().getFSImage().getStorage());
+      checkTempImages(secondary.getFSImage().getStorage());
       secondary.shutdown(); // secondary namenode crash!
       secondary = null;
 
@@ -1984,7 +2002,7 @@ public class TestCheckpoint {
         .when(dstImage).toColonSeparatedString();
 
       try {
-        TransferFsImage.downloadImageToStorage(fsName, 0, dstImage, false);
+        TransferFsImage.downloadImageToStorage(fsName, 0, dstImage, false, false);
         fail("Storage info was not verified");
       } catch (IOException ioe) {
         String msg = StringUtils.stringifyException(ioe);
@@ -2413,7 +2431,10 @@ public class TestCheckpoint {
   public void testLegacyOivImage() throws Exception {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
-    File tmpDir = Files.createTempDir();
+    File tmpDir = new File(MiniDFSCluster.getBaseDirectory(),
+        "testLegacyOivImage");
+    tmpDir.mkdirs();
+
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY,
         tmpDir.getAbsolutePath());

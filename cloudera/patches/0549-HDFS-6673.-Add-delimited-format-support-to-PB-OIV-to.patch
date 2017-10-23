@@ -1,7 +1,7 @@
 From 33d5a77955e72ec0a54695b6ca2482e9cdc8283a Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Wed, 28 Jan 2015 12:36:29 -0800
-Subject: [PATCH 549/924] HDFS-6673. Add delimited format support to PB OIV
+Subject: [PATCH 0549/2639] HDFS-6673. Add delimited format support to PB OIV
  tool. Contributed by Eddy Xu.
 
 (cherry picked from commit caf7298e49f646a40023af999f62d61846fde5e2)

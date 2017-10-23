@@ -1,9 +1,10 @@
 From 95a223f1bb7ef3c141e615003ff38e3340ad552c Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@apache.org>
 Date: Wed, 19 Aug 2015 19:00:51 -0700
-Subject: [PATCH 727/924] HADOOP-12317. Applications fail on NM restart on
+Subject: [PATCH 0727/2639] HADOOP-12317. Applications fail on NM restart on
  some linux distro because NM container recovery
- declares AM container as LOST (adhoot via rkanter)
+ declares AM container as LOST (adhoot via
+ rkanter)
 
 (cherry picked from commit 1e06299df82b98795124fe8a33578c111e744ff4)
 (cherry picked from commit acf241242dc6948b257de7e197418cac0b80ae84)

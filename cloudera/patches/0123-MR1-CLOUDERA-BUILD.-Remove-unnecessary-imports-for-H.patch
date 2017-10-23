@@ -1,8 +1,8 @@
 From e5bceeae44cc7ccbf30f46f13d5573b7cb79c4db Mon Sep 17 00:00:00 2001
 From: Andrew Wang <andrew.wang@cloudera.com>
 Date: Mon, 20 Jan 2014 15:12:02 -0800
-Subject: [PATCH 123/924] MR1: CLOUDERA-BUILD. Remove unnecessary imports for
- HftpFileSystem causing compile errors.
+Subject: [PATCH 0123/2639] MR1: CLOUDERA-BUILD. Remove unnecessary imports
+ for HftpFileSystem causing compile errors.
 
 (cherry picked from commit fcb10c34d32cdb65b9e48e2c7ac1433293cb180d)
 (cherry picked from commit da36dfd0afe994ce1abfe775e3a10263231f89ad)

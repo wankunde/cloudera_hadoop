@@ -1,7 +1,7 @@
 From 4c6d73648240f70467d2772a4a0dea5590a21d39 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 24 Jul 2014 08:20:25 +0000
-Subject: [PATCH 330/924] MAPREDUCE-5997. native-task: Use DirectBufferPool
+Subject: [PATCH 0330/2639] MAPREDUCE-5997. native-task: Use DirectBufferPool
  from Hadoop Common. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1613034 13f79535-47bb-0310-9956-ffa450edef68

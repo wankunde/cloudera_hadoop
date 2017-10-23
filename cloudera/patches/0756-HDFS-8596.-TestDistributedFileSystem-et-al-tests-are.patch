@@ -1,9 +1,10 @@
-From f4106960483377efc8a84873a166c91c1ad9ba30 Mon Sep 17 00:00:00 2001
+From 5a0bcfa6be95d02e00cd6a2036fb871b3cdea492 Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Sun, 14 Jun 2015 11:20:32 -0700
-Subject: [PATCH 756/924] HDFS-8596. TestDistributedFileSystem et al tests are
- broken in branch-2 due to incorrect setting of
- "datanode" attribute. Contributed by Yongjun Zhang.
+Subject: [PATCH 0756/2639] HDFS-8596. TestDistributedFileSystem et al tests
+ are broken in branch-2 due to incorrect setting
+ of "datanode" attribute. Contributed by Yongjun
+ Zhang.
 
 (cherry picked from commit b0dc291961410b6ac2b275cdcff4b95d75727e8d)
 

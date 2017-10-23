@@ -1,7 +1,7 @@
 From 8c83b87b641ff02074f31434d4a53a87bc95b03b Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 14 Aug 2014 04:56:43 +0000
-Subject: [PATCH 340/924] MAPREDUCE-6035. native-task: sources/test-sources
+Subject: [PATCH 0340/2639] MAPREDUCE-6035. native-task: sources/test-sources
  jar distribution. Contributed by Manu Zhang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1617879 13f79535-47bb-0310-9956-ffa450edef68

@@ -1,9 +1,9 @@
 From 2d41c544082962d6bf10e8b99556102cb57811d0 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Wed, 11 Feb 2015 16:33:43 +0000
-Subject: [PATCH 494/924] YARN-3074. Nodemanager dies when localizer runner
- tries to write to a full disk. Contributed by Varun
- Saxena (cherry picked from commit
+Subject: [PATCH 0494/2639] YARN-3074. Nodemanager dies when localizer runner
+ tries to write to a full disk. Contributed by
+ Varun Saxena (cherry picked from commit
  b379972ab39551d4b57436a54c0098a63742c7e1)
 
 (cherry picked from commit 38333c8f29d38aa4481ae173c46fc3b31a56050d)

@@ -1,8 +1,8 @@
-From 8433dd9318a1174309cef565c2d281a1cce7c4fd Mon Sep 17 00:00:00 2001
+From 2c40b81a15c0d08cedd3fe27f99008c611dd76ce Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Tue, 14 Apr 2015 10:19:30 -0700
-Subject: [PATCH 742/924] HDFS-8055. NullPointerException when topology script
- is missing. Contributed by Anu Engineer.
+Subject: [PATCH 0742/2639] HDFS-8055. NullPointerException when topology
+ script is missing. Contributed by Anu Engineer.
 
 (cherry picked from commit fef596df038112cbbc86c4dc49314e274fca0190)
 (cherry picked from commit c7ebecfff5b609a66914b40f95294ad87a2afcc7)

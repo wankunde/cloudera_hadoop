@@ -1,9 +1,10 @@
 From fe4067159f919598176e96adf890b7d18fcea890 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Sat, 30 May 2015 13:36:24 -0700
-Subject: [PATCH 584/924] YARN-3467. Expose allocatedMB, allocatedVCores, and
- runningContainers metrics on running Applications
- in RM Web UI. (Anubhav Dhoot via kasha)
+Subject: [PATCH 0584/2639] YARN-3467. Expose allocatedMB, allocatedVCores,
+ and runningContainers metrics on running
+ Applications in RM Web UI. (Anubhav Dhoot via
+ kasha)
 
 (cherry picked from commit a8acdd65b3f0e8633050a1100136fd5e02ebdcfa)
 (cherry picked from commit 6c80e599d1f158d429a5f3ed707c6326837a8835)

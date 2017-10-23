@@ -1,9 +1,9 @@
 From 6ce71533aa3e408763357301d077dbe1ff855b8e Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 13 May 2015 14:29:05 -0700
-Subject: [PATCH 569/924] HDFS-8380. Always call addStoredBlock on blocks
- which have been shifted from one storage to another
- (cmccabe)
+Subject: [PATCH 0569/2639] HDFS-8380. Always call addStoredBlock on blocks
+ which have been shifted from one storage to
+ another (cmccabe)
 
 (cherry picked from commit 281d47a96937bc329b1b4051ffcb8f5fcac98354)
 (cherry picked from commit 52da75180a949f671db4ea394e380b2e55df3854)

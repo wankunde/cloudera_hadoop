@@ -1,8 +1,8 @@
 From f15449ba30f447282e9d5b87f4ac6bd756854cb0 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Tue, 9 Dec 2014 10:38:24 -0800
-Subject: [PATCH 375/924] HADOOP-10476. Bumping the findbugs version to 3.0.0.
- Contributed by Haohui Mai.
+Subject: [PATCH 0375/2639] HADOOP-10476. Bumping the findbugs version to
+ 3.0.0. Contributed by Haohui Mai.
 
 (cherry picked from commit c9e9f82ec6a76bd80fc04ec301a4c9b3d28306c9)
 ---

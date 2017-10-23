@@ -1,7 +1,7 @@
 From 1156f2b84b6b69e3faf09dbea2d149ecf2af8a69 Mon Sep 17 00:00:00 2001
 From: Binglin Chang <bchang@apache.org>
 Date: Tue, 2 Sep 2014 16:26:09 +0800
-Subject: [PATCH 345/924] MAPREDUCE-6056. native-task: move system test
+Subject: [PATCH 0345/2639] MAPREDUCE-6056. native-task: move system test
  working dir to target dir and cleanup test config
  xml files (Manu Zhang via bchang)
 

@@ -1,9 +1,9 @@
 From 6a0b456c210d6fe30c885d76f9118fb076a9ba7b Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Fri, 23 Jan 2015 12:11:15 -0800
-Subject: [PATCH 310/924] HADOOP-11482. Use correct UGI when KMSClientProvider
- is called by a proxy user. Contributed by Arun
- Suresh.
+Subject: [PATCH 0310/2639] HADOOP-11482. Use correct UGI when
+ KMSClientProvider is called by a proxy user.
+ Contributed by Arun Suresh.
 
 (cherry picked from commit 4b00935643f6c3656ccbd7eeb54884738bc12c2e)
 (cherry picked from commit 7b69719455a1a374c9417417ef0c8d7ba6bf593f)

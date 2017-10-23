@@ -1,7 +1,7 @@
 From e119cb426e7f4fe96ec382feef5260a7350cd04b Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Fri, 14 Nov 2014 15:18:56 -0800
-Subject: [PATCH 259/924] YARN-2811. In Fair Scheduler, reservation
+Subject: [PATCH 0259/2639] YARN-2811. In Fair Scheduler, reservation
  fulfillments shouldn't ignore max share (Siqi Li
  via Sandy Ryza)
 

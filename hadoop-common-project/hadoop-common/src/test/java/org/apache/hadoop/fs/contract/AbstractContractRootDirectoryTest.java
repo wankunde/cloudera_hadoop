@@ -19,16 +19,23 @@
 package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.fs.FileStatus;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.deleteChildren;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.listChildren;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.toList;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.treeWalk;
 
 /**
  * This class does things to the root directory.
@@ -51,20 +58,48 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     Path dir = new Path("/testmkdirdepth1");
     assertPathDoesNotExist("directory already exists", dir);
     fs.mkdirs(dir);
-    ContractTestUtils.assertIsDirectory(getFileSystem(), dir);
+    assertIsDirectory(dir);
     assertPathExists("directory already exists", dir);
     assertDeleted(dir, true);
   }
 
   @Test
-  public void testRmEmptyRootDirNonRecursive() throws Throwable {
+  public void testRmEmptyRootDirRecursive() throws Throwable {
     //extra sanity checks here to avoid support calls about complete loss of data
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
     boolean deleted = getFileSystem().delete(root, true);
+    LOG.info("rm -r / of empty dir result is {}", deleted);
+    assertIsDirectory(root);
+  }
+
+  @Test
+  public void testRmEmptyRootDirNonRecursive() throws Throwable {
+    // extra sanity checks here to avoid support calls about complete loss
+    // of data
+    skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
+    Path root = new Path("/");
+    assertIsDirectory(root);
+    // make sure it is clean
+    FileSystem fs = getFileSystem();
+    deleteChildren(fs, root, true);
+    FileStatus[] children = listChildren(fs, root);
+    if (children.length > 0) {
+      StringBuilder error = new StringBuilder();
+      error.append("Deletion of child entries failed, still have")
+          .append(children.length)
+          .append(System.lineSeparator());
+      for (FileStatus child : children) {
+        error.append("  ").append(child.getPath())
+            .append(System.lineSeparator());
+      }
+      fail(error.toString());
+    }
+    // then try to delete the empty one
+    boolean deleted = fs.delete(root, false);
     LOG.info("rm / of empty dir result is {}", deleted);
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
   }
 
   @Test
@@ -75,7 +110,7 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     String touchfile = "/testRmNonEmptyRootDirNonRecursive";
     Path file = new Path(touchfile);
     ContractTestUtils.touch(getFileSystem(), file);
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
     try {
       boolean deleted = getFileSystem().delete(root, false);
       fail("non recursive delete should have raised an exception," +
@@ -83,10 +118,12 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     } catch (IOException e) {
       //expected
       handleExpectedException(e);
+      // and the file must still be present
+      assertIsFile(file);
     } finally {
       getFileSystem().delete(file, false);
     }
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
   }
 
   @Test
@@ -94,11 +131,11 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     //extra sanity checks here to avoid support calls about complete loss of data
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
     Path file = new Path("/testRmRootRecursive");
     ContractTestUtils.touch(getFileSystem(), file);
     boolean deleted = getFileSystem().delete(root, true);
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
     LOG.info("rm -rf / result is {}", deleted);
     if (deleted) {
       assertPathDoesNotExist("expected file to be deleted", file);
@@ -109,6 +146,8 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
 
   @Test
   public void testCreateFileOverRoot() throws Throwable {
+    //extra sanity checks here to avoid support calls about complete loss of data
+    skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
     byte[] dataset = dataset(1024, ' ', 'z');
     try {
@@ -123,7 +162,6 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
 
   @Test
   public void testListEmptyRootDirectory() throws IOException {
-    //extra sanity checks here to avoid support calls about complete loss of data
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     FileSystem fs = getFileSystem();
     Path root = new Path("/");
@@ -133,5 +171,41 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     }
     assertEquals("listStatus on empty root-directory returned a non-empty list",
         0, fs.listStatus(root).length);
+    assertFalse("listFiles(/, false).hasNext",
+        fs.listFiles(root, false).hasNext());
+    assertFalse("listFiles(/, true).hasNext",
+        fs.listFiles(root, true).hasNext());
+    assertFalse("listLocatedStatus(/).hasNext",
+        fs.listLocatedStatus(root).hasNext());
+    assertIsDirectory(root);
   }
+
+  @Test
+  public void testSimpleRootListing() throws IOException {
+    describe("test the nonrecursive root listing calls");
+    FileSystem fs = getFileSystem();
+    Path root = new Path("/");
+    FileStatus[] statuses = fs.listStatus(root);
+    List<LocatedFileStatus> locatedStatusList = toList(
+        fs.listLocatedStatus(root));
+    assertEquals(statuses.length, locatedStatusList.size());
+    List<LocatedFileStatus> fileList = toList(fs.listFiles(root, false));
+    assertTrue(fileList.size() <= statuses.length);
+  }
+
+  @Test
+  public void testRecursiveRootListing() throws IOException {
+    describe("test a recursive root directory listing");
+    FileSystem fs = getFileSystem();
+    Path root = new Path("/");
+    ContractTestUtils.TreeScanResults
+        listing = new ContractTestUtils.TreeScanResults(
+        fs.listFiles(root, true));
+    describe("verifying consistency with treewalk's files");
+    ContractTestUtils.TreeScanResults treeWalk = treeWalk(fs, root);
+    treeWalk.assertFieldsEquivalent("files", listing,
+        treeWalk.getFiles(),
+        listing.getFiles());
+  }
+
 }

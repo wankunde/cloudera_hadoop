@@ -1,9 +1,9 @@
 From 6b49ccf2fc8865f9d64ca1537f1dfc441dc30220 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Wed, 25 Mar 2015 11:12:27 -0700
-Subject: [PATCH 595/924] HADOOP-10670. Allow AuthenticationFilters to load
- secret from signature secret files. Contributed by
- Kai Zheng.
+Subject: [PATCH 0595/2639] HADOOP-10670. Allow AuthenticationFilters to load
+ secret from signature secret files. Contributed
+ by Kai Zheng.
 
 (cherry picked from commit 17f17dac4e2f228cb468614d436731bc8d9dcfc2)
 

@@ -1,9 +1,9 @@
 From f06189e4f776d6c9e1151d550cc98c85bb9169d5 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 5 May 2015 17:40:31 -0700
-Subject: [PATCH 649/924] HADOOP-11912. Extra configuration key used in
- TraceUtils should respect prefix (Masatake Iwasaki
- via Colin P. McCabe)
+Subject: [PATCH 0649/2639] HADOOP-11912. Extra configuration key used in
+ TraceUtils should respect prefix (Masatake
+ Iwasaki via Colin P. McCabe)
 
 (cherry picked from commit 90b384564875bb353224630e501772b46d4ca9c5)
 (cherry picked from commit 606e4f4940a78af96411dc72900b195831d077a6)

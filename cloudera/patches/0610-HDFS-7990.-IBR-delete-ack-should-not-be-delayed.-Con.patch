@@ -1,7 +1,7 @@
 From b88fb897e72934a32631c36316eba4d2fa455593 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Fri, 27 Mar 2015 09:06:23 -0500
-Subject: [PATCH 610/924] HDFS-7990. IBR delete ack should not be delayed.
+Subject: [PATCH 0610/2639] HDFS-7990. IBR delete ack should not be delayed.
  Contributed by Daryn Sharp. (cherry picked from
  commit 60882ab26d49f05cbf0686944af6559f86b3417d)
 

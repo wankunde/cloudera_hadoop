@@ -1,7 +1,7 @@
 From d53b555b6888acd44bd3c3e93ed67bd7cb3b218f Mon Sep 17 00:00:00 2001
 From: Sean Mackrory <sean@cloudera.com>
 Date: Mon, 2 Mar 2015 08:46:31 -0700
-Subject: [PATCH 442/924] CLOUDERA-BUILD. Globbing hadoop-core-*.sh may
+Subject: [PATCH 0442/2639] CLOUDERA-BUILD. Globbing hadoop-core-*.sh may
  evaluate to multiple JAR files due to versionless
  symlinks
 

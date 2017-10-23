@@ -1,9 +1,9 @@
 From 6775450a8889162e4454820cfedc2dafd9c1e04e Mon Sep 17 00:00:00 2001
 From: Ray Chiang <rchiang@cloudera.com>
 Date: Fri, 17 Apr 2015 10:45:25 -0700
-Subject: [PATCH 528/924] MR1: MAPREDUCE-3859. Fix CapacityScheduler to
- correctly compute runtime queue limits for high-ram
- jobs. Contributed by Sergey Tryuber.
+Subject: [PATCH 0528/2639] MR1: MAPREDUCE-3859. Fix CapacityScheduler to
+ correctly compute runtime queue limits for
+ high-ram jobs. Contributed by Sergey Tryuber.
 
 ---
  .../hadoop/mapred/CapacitySchedulerQueue.java      |    2 +-

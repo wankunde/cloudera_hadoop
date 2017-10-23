@@ -1,7 +1,7 @@
 From 73a74d81359b4e53305350f6bb97b51abcb942bb Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Thu, 14 Feb 2013 21:55:15 +0000
-Subject: [PATCH 036/924] MR1: MAPREDUCE-4643. Addendum, make job-history
+Subject: [PATCH 0036/2639] MR1: MAPREDUCE-4643. Addendum, make job-history
  cleanup-period configurable. (sandyr via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1446352 13f79535-47bb-0310-9956-ffa450edef68

@@ -21,7 +21,6 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.*;
@@ -35,8 +34,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
-import org.mortbay.util.ajax.JSON;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -49,6 +50,12 @@ import java.util.*;
 public class JsonUtil {
   private static final Object[] EMPTY_OBJECT_ARRAY = {};
   private static final DatanodeInfo[] EMPTY_DATANODE_INFO_ARRAY = {};
+
+  // Reuse ObjectMapper instance for improving performance.
+  // ObjectMapper is thread safe as long as we always configure instance
+  // before use. We don't have a re-entrant call pattern in WebHDFS,
+  // so we just need to worry about thread-safety.
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   /** Convert a token object to a Json string. */
   public static String toJsonString(final Token<? extends TokenIdentifier> token
@@ -95,59 +102,6 @@ public class JsonUtil {
     return (Token<BlockTokenIdentifier>)toToken(m);
   }
 
-  /** Convert a Token[] to a JSON array. */
-  private static Object[] toJsonArray(final Token<? extends TokenIdentifier>[] array
-      ) throws IOException {
-    if (array == null) {
-      return null;
-    } else if (array.length == 0) {
-      return EMPTY_OBJECT_ARRAY;
-    } else {
-      final Object[] a = new Object[array.length];
-      for(int i = 0; i < array.length; i++) {
-        a[i] = toJsonMap(array[i]);
-      }
-      return a;
-    }
-  }
-
-  /** Convert a token object to a JSON string. */
-  public static String toJsonString(final Token<? extends TokenIdentifier>[] tokens
-      ) throws IOException {
-    if (tokens == null) {
-      return null;
-    }
-
-    final Map<String, Object> m = new TreeMap<String, Object>();
-    m.put(Token.class.getSimpleName(), toJsonArray(tokens));
-    return toJsonString(Token.class.getSimpleName() + "s", m);
-  }
-
-  /** Convert an Object[] to a List<Token<?>>.  */
-  private static List<Token<?>> toTokenList(final Object[] objects) throws IOException {
-    if (objects == null) {
-      return null;
-    } else if (objects.length == 0) {
-      return Collections.emptyList();
-    } else {
-      final List<Token<?>> list = new ArrayList<Token<?>>(objects.length);
-      for(int i = 0; i < objects.length; i++) {
-        list.add(toToken((Map<?, ?>)objects[i]));
-      }
-      return list;
-    }
-  }
-
-  /** Convert a JSON map to a List<Token<?>>. */
-  public static List<Token<?>> toTokenList(final Map<?, ?> json) throws IOException {
-    if (json == null) {
-      return null;
-    }
-
-    final Map<?, ?> m = (Map<?, ?>)json.get(Token.class.getSimpleName() + "s");
-    return toTokenList((Object[])m.get(Token.class.getSimpleName()));
-  }
-
   /** Convert an exception object to a Json string. */
   public static String toJsonString(final Exception e) {
     final Map<String, Object> m = new TreeMap<String, Object>();
@@ -173,7 +127,11 @@ public class JsonUtil {
   public static String toJsonString(final String key, final Object value) {
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put(key, value);
-    return JSON.toString(m);
+    try {
+      return MAPPER.writeValueAsString(m);
+    } catch (IOException ignored) {
+    }
+    return null;
   }
 
   /** Convert a FsPermission object to a string. */
@@ -208,6 +166,16 @@ public class JsonUtil {
     if (status == null) {
       return null;
     }
+    final Map<String, Object> m = toJsonMap(status);
+    try {
+      return includeType ?
+          toJsonString(FileStatus.class, m) : MAPPER.writeValueAsString(m);
+    } catch (IOException ignored) {
+    }
+    return null;
+  }
+
+  private static Map<String, Object> toJsonMap(HdfsFileStatus status) {
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("pathSuffix", status.getLocalName());
     m.put("type", PathType.valueOf(status));
@@ -233,7 +201,7 @@ public class JsonUtil {
     m.put("fileId", status.getFileId());
     m.put("childrenNum", status.getChildrenNum());
     m.put("storagePolicy", status.getStoragePolicy());
-    return includeType ? toJsonString(FileStatus.class, m): JSON.toString(m);
+    return m;
   }
 
   /** Convert a Json map to a HdfsFileStatus object. */
@@ -249,23 +217,21 @@ public class JsonUtil {
     final byte[] symlink = type != PathType.SYMLINK? null
         : DFSUtil.string2Bytes((String)m.get("symlink"));
 
-    final long len = (Long) m.get("length");
+    final long len = ((Number) m.get("length")).longValue();
     final String owner = (String) m.get("owner");
     final String group = (String) m.get("group");
     final FsPermission permission = toFsPermission((String) m.get("permission"),
       (Boolean)m.get("aclBit"), (Boolean)m.get("encBit"));
-    final long aTime = (Long) m.get("accessTime");
-    final long mTime = (Long) m.get("modificationTime");
-    final long blockSize = (Long) m.get("blockSize");
-    final short replication = (short) (long) (Long) m.get("replication");
-    final long fileId = m.containsKey("fileId") ? (Long) m.get("fileId")
-        : INodeId.GRANDFATHER_INODE_ID;
-    Long childrenNumLong = (Long) m.get("childrenNum");
-    final int childrenNum = (childrenNumLong == null) ? -1
-            : childrenNumLong.intValue();
+    final long aTime = ((Number) m.get("accessTime")).longValue();
+    final long mTime = ((Number) m.get("modificationTime")).longValue();
+    final long blockSize = ((Number) m.get("blockSize")).longValue();
+    final short replication = ((Number) m.get("replication")).shortValue();
+    final long fileId = m.containsKey("fileId") ?
+        ((Number) m.get("fileId")).longValue() : INodeId.GRANDFATHER_INODE_ID;
+    final int childrenNum = getInt(m, "childrenNum", -1);
     final byte storagePolicy = m.containsKey("storagePolicy") ?
-        (byte) (long) (Long) m.get("storagePolicy") :
-          BlockStoragePolicySuite.ID_UNSPECIFIED;
+        (byte) ((Number) m.get("storagePolicy")).longValue() :
+        BlockStoragePolicySuite.ID_UNSPECIFIED;
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
         blockSize, mTime, aTime, permission, owner, group, symlink,
         DFSUtil.string2Bytes(localName), fileId, childrenNum, null, storagePolicy);
@@ -285,6 +251,38 @@ public class JsonUtil {
     return m;
   }
 
+  static HdfsFileStatus[] toHdfsFileStatusArray(final Map<?, ?> json) {
+    Preconditions.checkNotNull(json);
+    final Map<?, ?> rootmap =
+        (Map<?, ?>)json.get(FileStatus.class.getSimpleName() + "es");
+    final List<?> array = JsonUtil.getList(rootmap,
+        FileStatus.class.getSimpleName());
+
+    // convert FileStatus
+    Preconditions.checkNotNull(array);
+    final HdfsFileStatus[] statuses = new HdfsFileStatus[array.size()];
+    int i = 0;
+    for (Object object : array) {
+      final Map<?, ?> m = (Map<?, ?>) object;
+      statuses[i++] = JsonUtil.toFileStatus(m, false);
+    }
+    return statuses;
+  }
+
+  static DirectoryListing toDirectoryListing(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    final Map<?, ?> listing = getMap(json, "DirectoryListing");
+    final Map<?, ?> partialListing = getMap(listing, "partialListing");
+    HdfsFileStatus[] fileStatuses = toHdfsFileStatusArray(partialListing);
+
+    int remainingEntries = getInt(listing, "remainingEntries", -1);
+    Preconditions.checkState(remainingEntries != -1,
+        "remainingEntries was not set");
+    return new DirectoryListing(fileStatuses, remainingEntries);
+  }
+
   /** Convert a Json map to an ExtendedBlock object. */
   private static ExtendedBlock toExtendedBlock(final Map<?, ?> m) {
     if (m == null) {
@@ -292,9 +290,10 @@ public class JsonUtil {
     }
     
     final String blockPoolId = (String)m.get("blockPoolId");
-    final long blockId = (Long)m.get("blockId");
-    final long numBytes = (Long)m.get("numBytes");
-    final long generationStamp = (Long)m.get("generationStamp");
+    final long blockId = ((Number) m.get("blockId")).longValue();
+    final long numBytes = ((Number) m.get("numBytes")).longValue();
+    final long generationStamp =
+        ((Number) m.get("generationStamp")).longValue();
     return new ExtendedBlock(blockPoolId, blockId, numBytes, generationStamp);
   }
   
@@ -327,6 +326,9 @@ public class JsonUtil {
     m.put("xceiverCount", datanodeinfo.getXceiverCount());
     m.put("networkLocation", datanodeinfo.getNetworkLocation());
     m.put("adminState", datanodeinfo.getAdminState().name());
+    if (datanodeinfo.getUpgradeDomain() != null) {
+      m.put("upgradeDomain", datanodeinfo.getUpgradeDomain());
+    }
     return m;
   }
 
@@ -335,7 +337,7 @@ public class JsonUtil {
     if (value == null) {
       return defaultValue;
     }
-    return (int) (long) (Long) value;
+    return ((Number) value).intValue();
   }
 
   private static long getLong(Map<?, ?> m, String key, final long defaultValue) {
@@ -343,7 +345,7 @@ public class JsonUtil {
     if (value == null) {
       return defaultValue;
     }
-    return (Long) value;
+    return ((Number) value).longValue();
   }
 
   private static String getString(Map<?, ?> m, String key,
@@ -353,6 +355,24 @@ public class JsonUtil {
       return defaultValue;
     }
     return (String) value;
+  }
+
+  static List<?> getList(Map<?, ?> m, String key) {
+    Object list = m.get(key);
+    if (list instanceof List<?>) {
+      return (List<?>) list;
+    } else {
+      return null;
+    }
+  }
+
+  static Map<?, ?> getMap(Map<?, ?> m, String key) {
+    Object map = m.get(key);
+    if (map instanceof Map<?, ?>) {
+      return (Map<?, ?>) map;
+    } else {
+      return null;
+    }
   }
 
   /** Convert a Json map to an DatanodeInfo object. */
@@ -367,10 +387,9 @@ public class JsonUtil {
 
     // Handle the case of old servers (1.x, 0.23.x) sending 'name' instead
     // of ipAddr and xferPort.
+    int xferPort = getInt(m, "xferPort", -1);
     Object tmpValue = m.get("ipAddr");
     String ipAddr = (tmpValue == null) ? null : (String)tmpValue;
-    tmpValue = m.get("xferPort");
-    int xferPort = (tmpValue == null) ? -1 : (int)(long)(Long)tmpValue;
     if (ipAddr == null) {
       tmpValue = m.get("name");
       if (tmpValue != null) {
@@ -402,9 +421,9 @@ public class JsonUtil {
         (String)m.get("hostName"),
         (String)m.get("storageID"),
         xferPort,
-        (int)(long)(Long)m.get("infoPort"),
+        ((Number) m.get("infoPort")).intValue(),
         getInt(m, "infoSecurePort", 0),
-        (int)(long)(Long)m.get("ipcPort"),
+        ((Number) m.get("ipcPort")).intValue(),
 
         getLong(m, "capacity", 0l),
         getLong(m, "dfsUsed", 0l),
@@ -415,7 +434,8 @@ public class JsonUtil {
         getLong(m, "lastUpdate", 0l),
         getInt(m, "xceiverCount", 0),
         getString(m, "networkLocation", ""),
-        AdminStates.valueOf(getString(m, "adminState", "NORMAL")));
+        AdminStates.valueOf(getString(m, "adminState", "NORMAL")),
+        getString(m, "upgradeDomain", ""));
   }
 
   /** Convert a DatanodeInfo[] to a Json array. */
@@ -434,16 +454,17 @@ public class JsonUtil {
   }
 
   /** Convert an Object[] to a DatanodeInfo[]. */
-  private static DatanodeInfo[] toDatanodeInfoArray(final Object[] objects) 
+  private static DatanodeInfo[] toDatanodeInfoArray(final List<?> objects)
       throws IOException {
     if (objects == null) {
       return null;
-    } else if (objects.length == 0) {
+    } else if (objects.isEmpty()) {
       return EMPTY_DATANODE_INFO_ARRAY;
     } else {
-      final DatanodeInfo[] array = new DatanodeInfo[objects.length];
-      for(int i = 0; i < array.length; i++) {
-        array[i] = toDatanodeInfo((Map<?, ?>) objects[i]);
+      final DatanodeInfo[] array = new DatanodeInfo[objects.size()];
+      int i = 0;
+      for (Object object : objects) {
+        array[i++] = toDatanodeInfo((Map<?, ?>) object);
       }
       return array;
     }
@@ -474,16 +495,54 @@ public class JsonUtil {
 
     final ExtendedBlock b = toExtendedBlock((Map<?, ?>)m.get("block"));
     final DatanodeInfo[] locations = toDatanodeInfoArray(
-        (Object[])m.get("locations"));
-    final long startOffset = (Long)m.get("startOffset");
+        getList(m, "locations"));
+    final long startOffset = ((Number) m.get("startOffset")).longValue();
     final boolean isCorrupt = (Boolean)m.get("isCorrupt");
     final DatanodeInfo[] cachedLocations = toDatanodeInfoArray(
-        (Object[])m.get("cachedLocations"));
+        getList(m, "cachedLocations"));
 
     final LocatedBlock locatedblock = new LocatedBlock(b, locations,
         null, null, startOffset, isCorrupt, cachedLocations);
     locatedblock.setBlockToken(toBlockToken((Map<?, ?>)m.get("blockToken")));
     return locatedblock;
+  }
+
+  private static Map<String, Object> toJson(final DirectoryListing listing)
+      throws IOException {
+    final Map<String, Object> m = new TreeMap<>();
+    // Serialize FileStatus[] to a FileStatuses map
+    m.put("partialListing", toJsonMap(listing.getPartialListing()));
+    // Simple int
+    m.put("remainingEntries", listing.getRemainingEntries());
+
+    return m;
+  }
+
+  public static String toJsonString(final DirectoryListing listing) throws
+      IOException {
+
+    if (listing == null) {
+      return null;
+    }
+    return toJsonString(DirectoryListing.class, toJson(listing));
+  }
+
+  private static Map<String, Object> toJsonMap(HdfsFileStatus[] statuses) throws
+      IOException {
+    if (statuses == null) {
+      return null;
+    }
+
+    final Map<String, Object> fileStatuses = new TreeMap<>();
+    final Map<String, Object> fileStatus = new TreeMap<>();
+    fileStatuses.put("FileStatuses", fileStatus);
+    final Object[] array = new Object[statuses.length];
+    fileStatus.put("FileStatus", array);
+    for (int i = 0; i < statuses.length; i++) {
+      array[i] = toJsonMap(statuses[i]);
+    }
+
+    return fileStatuses;
   }
 
   /** Convert a LocatedBlock[] to a Json array. */
@@ -502,17 +561,17 @@ public class JsonUtil {
     }
   }
 
-  /** Convert an Object[] to a List of LocatedBlock. */
-  private static List<LocatedBlock> toLocatedBlockList(final Object[] objects
-      ) throws IOException {
+  /** Convert an List of Object to a List of LocatedBlock. */
+  private static List<LocatedBlock> toLocatedBlockList(
+      final List<?> objects) throws IOException {
     if (objects == null) {
       return null;
-    } else if (objects.length == 0) {
+    } else if (objects.isEmpty()) {
       return Collections.emptyList();
     } else {
-      final List<LocatedBlock> list = new ArrayList<LocatedBlock>(objects.length);
-      for(int i = 0; i < objects.length; i++) {
-        list.add(toLocatedBlock((Map<?, ?>)objects[i]));
+      final List<LocatedBlock> list = new ArrayList<>(objects.size());
+      for (Object object : objects) {
+        list.add(toLocatedBlock((Map<?, ?>) object));
       }
       return list;
     }
@@ -543,10 +602,10 @@ public class JsonUtil {
     }
 
     final Map<?, ?> m = (Map<?, ?>)json.get(LocatedBlocks.class.getSimpleName());
-    final long fileLength = (Long)m.get("fileLength");
+    final long fileLength = ((Number) m.get("fileLength")).longValue();
     final boolean isUnderConstruction = (Boolean)m.get("isUnderConstruction");
     final List<LocatedBlock> locatedBlocks = toLocatedBlockList(
-        (Object[])m.get("locatedBlocks"));
+        getList(m, "locatedBlocks"));
     final LocatedBlock lastLocatedBlock = toLocatedBlock(
         (Map<?, ?>)m.get("lastLocatedBlock"));
     final boolean isLastBlockComplete = (Boolean)m.get("isLastBlockComplete");
@@ -577,12 +636,12 @@ public class JsonUtil {
     }
 
     final Map<?, ?> m = (Map<?, ?>)json.get(ContentSummary.class.getSimpleName());
-    final long length = (Long)m.get("length");
-    final long fileCount = (Long)m.get("fileCount");
-    final long directoryCount = (Long)m.get("directoryCount");
-    final long quota = (Long)m.get("quota");
-    final long spaceConsumed = (Long)m.get("spaceConsumed");
-    final long spaceQuota = (Long)m.get("spaceQuota");
+    final long length = ((Number) m.get("length")).longValue();
+    final long fileCount = ((Number) m.get("fileCount")).longValue();
+    final long directoryCount = ((Number) m.get("directoryCount")).longValue();
+    final long quota = ((Number) m.get("quota")).longValue();
+    final long spaceConsumed = ((Number) m.get("spaceConsumed")).longValue();
+    final long spaceQuota = ((Number) m.get("spaceQuota")).longValue();
 
     return new ContentSummary(length, fileCount, directoryCount,
         quota, spaceConsumed, spaceQuota);
@@ -610,7 +669,7 @@ public class JsonUtil {
 
     final Map<?, ?> m = (Map<?, ?>)json.get(FileChecksum.class.getSimpleName());
     final String algorithm = (String)m.get("algorithm");
-    final int length = (int)(long)(Long)m.get("length");
+    final int length = ((Number) m.get("length")).intValue();
     final byte[] bytes = StringUtils.hexStringToByte((String)m.get("bytes"));
 
     final DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
@@ -654,11 +713,32 @@ public class JsonUtil {
     m.put("owner", status.getOwner());
     m.put("group", status.getGroup());
     m.put("stickyBit", status.isStickyBit());
-    m.put("entries", status.getEntries());
+
+    final List<String> stringEntries = new ArrayList<>();
+    for (AclEntry entry : status.getEntries()) {
+      stringEntries.add(entry.toString());
+    }
+    m.put("entries", stringEntries);
+
+    FsPermission perm = status.getPermission();
+    if (perm != null) {
+      m.put("permission", toString(perm));
+      if (perm.getAclBit()) {
+        m.put("aclBit", true);
+      }
+      if (perm.getEncryptedBit()) {
+        m.put("encBit", true);
+      }
+    }
     final Map<String, Map<String, Object>> finalMap =
         new TreeMap<String, Map<String, Object>>();
     finalMap.put(AclStatus.class.getSimpleName(), m);
-    return JSON.toString(finalMap);
+
+    try {
+      return MAPPER.writeValueAsString(finalMap);
+    } catch (IOException ignored) {
+    }
+    return null;
   }
 
   /** Convert a Json map to a AclStatus object. */
@@ -673,12 +753,17 @@ public class JsonUtil {
     aclStatusBuilder.owner((String) m.get("owner"));
     aclStatusBuilder.group((String) m.get("group"));
     aclStatusBuilder.stickyBit((Boolean) m.get("stickyBit"));
-
-    final Object[] entries = (Object[]) m.get("entries");
+    String permString = (String) m.get("permission");
+    if (permString != null) {
+      final FsPermission permission = toFsPermission(permString,
+          (Boolean) m.get("aclBit"), (Boolean) m.get("encBit"));
+      aclStatusBuilder.setPermission(permission);
+    }
+    final List<?> entries = (List<?>) m.get("entries");
 
     List<AclEntry> aclEntryList = new ArrayList<AclEntry>();
-    for (int i = 0; i < entries.length; i++) {
-      AclEntry aclEntry = AclEntry.parseAclEntry((String) entries[i], true);
+    for (Object entry : entries) {
+      AclEntry aclEntry = AclEntry.parseAclEntry((String) entry, true);
       aclEntryList.add(aclEntry);
     }
     aclStatusBuilder.addEntries(aclEntryList);
@@ -717,7 +802,7 @@ public class JsonUtil {
       final XAttrCodec encoding) throws IOException {
     final Map<String, Object> finalMap = new TreeMap<String, Object>();
     finalMap.put("XAttrs", toJsonArray(xAttrs, encoding));
-    return JSON.toString(finalMap);
+    return MAPPER.writeValueAsString(finalMap);
   }
   
   public static String toJsonString(final List<XAttr> xAttrs)
@@ -726,12 +811,22 @@ public class JsonUtil {
     for (XAttr xAttr : xAttrs) {
       names.add(XAttrHelper.getPrefixName(xAttr));
     }
-    String ret = JSON.toString(names);
+    String ret = MAPPER.writeValueAsString(names);
     final Map<String, Object> finalMap = new TreeMap<String, Object>();
     finalMap.put("XAttrNames", ret);
-    return JSON.toString(finalMap);
+    return MAPPER.writeValueAsString(finalMap);
   }
-  
+
+  static String getPath(final Map<?, ?> json)
+      throws IOException {
+    if (json == null) {
+      return null;
+    }
+
+    String path = (String) json.get("Path");
+    return path;
+  }
+
   public static byte[] getXAttr(final Map<?, ?> json, final String name) 
       throws IOException {
     if (json == null) {
@@ -745,14 +840,13 @@ public class JsonUtil {
     
     return null;
   }
-  
+
   public static Map<String, byte[]> toXAttrs(final Map<?, ?> json) 
       throws IOException {
     if (json == null) {
       return null;
     }
-    
-    return toXAttrMap((Object[])json.get("XAttrs"));
+    return toXAttrMap(getList(json, "XAttrs"));
   }
   
   public static List<String> toXAttrNames(final Map<?, ?> json)
@@ -762,27 +856,27 @@ public class JsonUtil {
     }
 
     final String namesInJson = (String) json.get("XAttrNames");
-    final Object[] xattrs = (Object[]) JSON.parse(namesInJson);
-    final List<String> names = Lists.newArrayListWithCapacity(json.keySet()
-        .size());
+    ObjectReader reader = new ObjectMapper().reader(List.class);
+    final List<Object> xattrs = reader.readValue(namesInJson);
+    final List<String> names =
+      Lists.newArrayListWithCapacity(json.keySet().size());
 
-    for (int i = 0; i < xattrs.length; i++) {
-      names.add((String) (xattrs[i]));
+    for (Object xattr : xattrs) {
+      names.add((String) xattr);
     }
     return names;
   }
-  
-  
-  private static Map<String, byte[]> toXAttrMap(final Object[] objects) 
+
+  private static Map<String, byte[]> toXAttrMap(final List<?> objects)
       throws IOException {
     if (objects == null) {
       return null;
-    } else if (objects.length == 0) {
+    } else if (objects.isEmpty()) {
       return Maps.newHashMap();
     } else {
       final Map<String, byte[]> xAttrs = Maps.newHashMap();
-      for(int i = 0; i < objects.length; i++) {
-        Map<?, ?> m = (Map<?, ?>) objects[i];
+      for (Object object : objects) {
+        Map<?, ?> m = (Map<?, ?>) object;
         String name = (String) m.get("name");
         String value = (String) m.get("value");
         xAttrs.put(name, decodeXAttrValue(value));

@@ -1,11 +1,11 @@
 From 808f805a5a3b4a2621ca436dcf86c62f05282a16 Mon Sep 17 00:00:00 2001
 From: Anubhav Dhoot <adhoot@cloudera.com>
 Date: Tue, 17 Feb 2015 15:49:42 -0800
-Subject: [PATCH 475/924] CLOUDERA-BUILD Revert "YARN-2743. Fixed a bug in
- ResourceManager that was causing RMDelegationToken
- identifiers to be tampered and thus causing app
- submission failures in secure mode. Contributed by
- Jian He."
+Subject: [PATCH 0475/2639] CLOUDERA-BUILD Revert "YARN-2743. Fixed a bug in
+ ResourceManager that was causing
+ RMDelegationToken identifiers to be tampered and
+ thus causing app submission failures in secure
+ mode. Contributed by Jian He."
 
 This reverts commit 259db7a726e2a571a682531d3099f2710a41134a.
 ---

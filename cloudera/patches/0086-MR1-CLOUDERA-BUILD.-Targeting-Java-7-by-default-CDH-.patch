@@ -1,7 +1,7 @@
 From 1cd368cc0708bcfd99011b4e7820727996e76787 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Thu, 19 Sep 2013 17:59:25 -0700
-Subject: [PATCH 086/924] MR1: CLOUDERA-BUILD. Targeting Java 7 by default
+Subject: [PATCH 0086/2639] MR1: CLOUDERA-BUILD. Targeting Java 7 by default
  (CDH-14356)
 
 (cherry picked from commit 0ee48ef75f980f62cef789eebbab500266e011b4)

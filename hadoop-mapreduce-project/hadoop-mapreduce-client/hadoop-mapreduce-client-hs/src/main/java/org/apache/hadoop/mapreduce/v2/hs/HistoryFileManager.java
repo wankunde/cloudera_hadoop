@@ -55,6 +55,9 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.jobhistory.JobSummary;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -66,6 +69,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownThreadsHelper;
+import org.apache.hadoop.util.concurrent.HadoopThreadPoolExecutor;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -219,13 +223,21 @@ public class HistoryFileManager extends AbstractService {
         // keeping the cache size exactly at the maximum.
         Iterator<JobId> keys = cache.navigableKeySet().iterator();
         long cutoff = System.currentTimeMillis() - maxAge;
+
+        // MAPREDUCE-6436: In order to reduce the number of logs written
+        // in case of a lot of move pending histories.
+        JobId firstInIntermediateKey = null;
+        int inIntermediateCount = 0;
+        JobId firstMoveFailedKey = null;
+        int moveFailedCount = 0;
+
         while(cache.size() > maxSize && keys.hasNext()) {
           JobId key = keys.next();
           HistoryFileInfo firstValue = cache.get(key);
           if(firstValue != null) {
             synchronized(firstValue) {
               if (firstValue.isMovePending()) {
-                if(firstValue.didMoveFail() && 
+                if(firstValue.didMoveFail() &&
                     firstValue.jobIndexInfo.getFinishTime() <= cutoff) {
                   cache.remove(key);
                   //Now lets try to delete it
@@ -236,14 +248,37 @@ public class HistoryFileManager extends AbstractService {
                     		" that could not be moved to done.", e);
                   }
                 } else {
-                  LOG.warn("Waiting to remove " + key
-                      + " from JobListCache because it is not in done yet.");
+                  if (firstValue.didMoveFail()) {
+                    if (moveFailedCount == 0) {
+                      firstMoveFailedKey = key;
+                    }
+                    moveFailedCount += 1;
+                  } else {
+                    if (inIntermediateCount == 0) {
+                      firstInIntermediateKey = key;
+                    }
+                    inIntermediateCount += 1;
+                  }
                 }
               } else {
                 cache.remove(key);
               }
             }
           }
+        }
+        // Log output only for first jobhisotry in pendings to restrict
+        // the total number of logs.
+        if (inIntermediateCount > 0) {
+          LOG.warn("Waiting to remove IN_INTERMEDIATE state histories " +
+                  "(e.g. " + firstInIntermediateKey + ") from JobListCache " +
+                  "because it is not in done yet. Total count is " +
+                  inIntermediateCount + ".");
+        }
+        if (moveFailedCount > 0) {
+          LOG.warn("Waiting to remove MOVE_FAILED state histories " +
+                  "(e.g. " + firstMoveFailedKey + ") from JobListCache " +
+                  "because it is not in done yet. Total count is " +
+                  moveFailedCount + ".");
         }
       }
       return old;
@@ -263,6 +298,14 @@ public class HistoryFileManager extends AbstractService {
     public HistoryFileInfo get(JobId jobId) {
       return cache.get(jobId);
     }
+
+    public boolean isFull() {
+      return cache.size() >= maxSize;
+    }
+
+    public int size() {
+      return cache.size();
+    }
   }
 
   /**
@@ -271,10 +314,21 @@ public class HistoryFileManager extends AbstractService {
    */
   private class UserLogDir {
     long modTime = 0;
-    
+    private long scanTime = 0;
+
     public synchronized void scanIfNeeded(FileStatus fs) {
       long newModTime = fs.getModificationTime();
-      if (modTime != newModTime) {
+      // MAPREDUCE-6680: In some Cloud FileSystem, like Azure FS or S3, file's
+      // modification time is truncated into seconds. In that case,
+      // modTime == newModTime doesn't means no file update in the directory,
+      // so we need to have additional check.
+      // Note: modTime (X second Y millisecond) could be casted to X second or
+      // X+1 second.
+      if (modTime != newModTime
+          || (scanTime/1000) == (modTime/1000)
+          || (scanTime/1000 + 1) == (modTime/1000)) {
+        // reset scanTime before scanning happens
+        scanTime = System.currentTimeMillis();
         Path p = fs.getPath();
         try {
           scanIntermediateDirectory(p);
@@ -288,16 +342,18 @@ public class HistoryFileManager extends AbstractService {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Scan not needed of " + fs.getPath());
         }
+        // reset scanTime
+        scanTime = System.currentTimeMillis();
       }
     }
   }
-  
+
   public class HistoryFileInfo {
     private Path historyFile;
     private Path confFile;
     private Path summaryFile;
     private JobIndexInfo jobIndexInfo;
-    private HistoryInfoState state;
+    private volatile HistoryInfoState state;
 
     @VisibleForTesting
     protected HistoryFileInfo(Path historyFile, Path confFile,
@@ -311,20 +367,20 @@ public class HistoryFileManager extends AbstractService {
     }
 
     @VisibleForTesting
-    synchronized boolean isMovePending() {
+    boolean isMovePending() {
       return state == HistoryInfoState.IN_INTERMEDIATE
           || state == HistoryInfoState.MOVE_FAILED;
     }
 
     @VisibleForTesting
-    synchronized boolean didMoveFail() {
+    boolean didMoveFail() {
       return state == HistoryInfoState.MOVE_FAILED;
     }
-    
+
     /**
      * @return true if the files backed by this were deleted.
      */
-    public synchronized boolean isDeleted() {
+    public boolean isDeleted() {
       return state == HistoryInfoState.DELETED;
     }
 
@@ -406,22 +462,30 @@ public class HistoryFileManager extends AbstractService {
 
     /**
      * Parse a job from the JobHistoryFile, if the underlying file is not going
-     * to be deleted.
+     * to be deleted and the number of tasks associated with the job is not
+     * greater than maxTasksForLoadedJob.
      * 
-     * @return the Job or null if the underlying file was deleted.
+     * @return null if the underlying job history file was deleted, or
+     *         an {@link UnparsedJob} object representing a partially parsed job
+     *           if the job tasks exceeds the configured maximum, or
+     *         a {@link CompletedJob} representing a fully parsed job.
      * @throws IOException
-     *           if there is an error trying to read the file.
+     *           if there is an error trying to read the file if parsed.
      */
     public synchronized Job loadJob() throws IOException {
-      return new CompletedJob(conf, jobIndexInfo.getJobId(), historyFile,
-          false, jobIndexInfo.getUser(), this, aclsMgr);
+      if(isOversized()) {
+        return new UnparsedJob(maxTasksForLoadedJob, jobIndexInfo, this);
+      } else {
+        return new CompletedJob(conf, jobIndexInfo.getJobId(), historyFile,
+            false, jobIndexInfo.getUser(), this, aclsMgr);
+      }
     }
 
     /**
-     * Return the history file.  This should only be used for testing.
+     * Return the history file.
      * @return the history file.
      */
-    synchronized Path getHistoryFile() {
+    public synchronized Path getHistoryFile() {
       return historyFile;
     }
     
@@ -451,6 +515,12 @@ public class HistoryFileManager extends AbstractService {
       Configuration jobConf = new Configuration(false);
       jobConf.addResource(fc.open(confFile), confFile.toString());
       return jobConf;
+    }
+
+    private boolean isOversized() {
+      final int totalTasks = jobIndexInfo.getNumReduces() +
+          jobIndexInfo.getNumMaps();
+      return (maxTasksForLoadedJob > 0) && (totalTasks > maxTasksForLoadedJob);
     }
   }
 
@@ -484,7 +554,12 @@ public class HistoryFileManager extends AbstractService {
   @VisibleForTesting
   protected ThreadPoolExecutor moveToDoneExecutor = null;
   private long maxHistoryAge = 0;
-  
+
+  /**
+   * The maximum number of tasks allowed for a job to be loaded.
+   */
+  private int maxTasksForLoadedJob = -1;
+
   public HistoryFileManager() {
     super(HistoryFileManager.class.getName());
   }
@@ -503,6 +578,10 @@ public class HistoryFileManager extends AbstractService {
         JHAdminConfig.DEFAULT_MR_HISTORY_MAX_START_WAIT_TIME);
     createHistoryDirs(new SystemClock(), 10 * 1000, maxFSWaitTime);
 
+    maxTasksForLoadedJob = conf.getInt(
+        JHAdminConfig.MR_HS_LOADED_JOBS_TASKS_MAX,
+        JHAdminConfig.DEFAULT_MR_HS_LOADED_JOBS_TASKS_MAX);
+
     this.aclsMgr = new JobACLsManager(conf);
 
     maxHistoryAge = conf.getLong(JHAdminConfig.MR_HISTORY_MAX_AGE_MS,
@@ -517,12 +596,15 @@ public class HistoryFileManager extends AbstractService {
     int numMoveThreads = conf.getInt(
         JHAdminConfig.MR_HISTORY_MOVE_THREAD_COUNT,
         JHAdminConfig.DEFAULT_MR_HISTORY_MOVE_THREAD_COUNT);
+    moveToDoneExecutor = createMoveToDoneThreadPool(numMoveThreads);
+    super.serviceInit(conf);
+  }
+
+  protected ThreadPoolExecutor createMoveToDoneThreadPool(int numMoveThreads) {
     ThreadFactory tf = new ThreadFactoryBuilder().setNameFormat(
         "MoveIntermediateToDone Thread #%d").build();
-    moveToDoneExecutor = new ThreadPoolExecutor(numMoveThreads, numMoveThreads,
+    return new HadoopThreadPoolExecutor(numMoveThreads, numMoveThreads,
         1, TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
-
-    super.serviceInit(conf);
   }
 
   @VisibleForTesting
@@ -534,6 +616,9 @@ public class HistoryFileManager extends AbstractService {
     while (!done &&
         ((timeOutMillis == -1) || (clock.getTime() - start < timeOutMillis))) {
       done = tryCreatingHistoryDirs(counter++ % 3 == 0); // log every 3 attempts, 30sec
+      if (done) {
+        break;
+      }
       try {
         Thread.sleep(intervalCheckMillis);
       } catch (InterruptedException ex) {
@@ -547,12 +632,19 @@ public class HistoryFileManager extends AbstractService {
   }
 
   /**
+   * Check if the NameNode is still not started yet as indicated by the
+   * exception type and message.
    * DistributedFileSystem returns a RemoteException with a message stating
    * SafeModeException in it. So this is only way to check it is because of
-   * being in safe mode.
+   * being in safe mode. In addition, Name Node may have not started yet, in
+   * which case, the message contains "NameNode still not started".
    */
-  private boolean isBecauseSafeMode(Throwable ex) {
-    return ex.toString().contains("SafeModeException");
+  private boolean isNameNodeStillNotStarted(Exception ex) {
+    String nameNodeNotStartedMsg = NameNode.composeNotStartedMessage(
+        HdfsServerConstants.NamenodeRole.NAMENODE);
+    return ex.toString().contains("SafeModeException") ||
+        (ex instanceof RetriableException && ex.getMessage().contains(
+            nameNodeNotStartedMsg));
   }
 
   /**
@@ -579,7 +671,7 @@ public class HistoryFileManager extends AbstractService {
       }
       succeeded = false;
     } catch (IOException e) {
-      if (isBecauseSafeMode(e)) {
+      if (isNameNodeStillNotStarted(e)) {
         succeeded = false;
         if (logWait) {
           LOG.info("Waiting for FileSystem at " +
@@ -609,7 +701,7 @@ public class HistoryFileManager extends AbstractService {
               "to be available");
         }
       } catch (IOException e) {
-        if (isBecauseSafeMode(e)) {
+        if (isNameNodeStillNotStarted(e)) {
           succeeded = false;
           if (logWait) {
             LOG.info("Waiting for FileSystem at " +
@@ -658,6 +750,13 @@ public class HistoryFileManager extends AbstractService {
     }
   }
 
+  protected HistoryFileInfo createHistoryFileInfo(Path historyFile,
+      Path confFile, Path summaryFile, JobIndexInfo jobIndexInfo,
+      boolean isInDone) {
+    return new HistoryFileInfo(
+        historyFile, confFile, summaryFile, jobIndexInfo, isInDone);
+  }
+
   /**
    * Populates index data structures. Should only be called at initialization
    * times.
@@ -668,11 +767,29 @@ public class HistoryFileManager extends AbstractService {
     List<FileStatus> timestampedDirList = findTimestampedDirectories();
     // Sort first just so insertion is in a consistent order
     Collections.sort(timestampedDirList);
+    LOG.info("Found " + timestampedDirList.size() + " directories to load");
     for (FileStatus fs : timestampedDirList) {
       // TODO Could verify the correct format for these directories.
       addDirectoryToSerialNumberIndex(fs.getPath());
-      addDirectoryToJobListCache(fs.getPath());
     }
+    final double maxCacheSize = (double) jobListCache.maxSize;
+    int prevCacheSize = jobListCache.size();
+    for (int i= timestampedDirList.size() - 1;
+        i >= 0 && !jobListCache.isFull(); i--) {
+      FileStatus fs = timestampedDirList.get(i); 
+      addDirectoryToJobListCache(fs.getPath());
+
+      int currCacheSize = jobListCache.size();
+      if((currCacheSize - prevCacheSize)/maxCacheSize >= 0.05) {
+        LOG.info(currCacheSize * 100.0 / maxCacheSize +
+            "% of cache is loaded.");
+      }
+      prevCacheSize = currCacheSize;
+    }
+    final double loadedPercent = maxCacheSize == 0.0 ?
+        100 : prevCacheSize * 100.0 / maxCacheSize;
+    LOG.info("Existing job initialization finished. " +
+        loadedPercent + "% of cache is occupied.");
   }
 
   private void removeDirectoryFromSerialNumberIndex(Path serialDirPath) {
@@ -728,24 +845,29 @@ public class HistoryFileManager extends AbstractService {
           .getIntermediateConfFileName(jobIndexInfo.getJobId());
       String summaryFileName = JobHistoryUtils
           .getIntermediateSummaryFileName(jobIndexInfo.getJobId());
-      HistoryFileInfo fileInfo = new HistoryFileInfo(fs.getPath(), new Path(fs
+      HistoryFileInfo fileInfo = createHistoryFileInfo(fs.getPath(), new Path(fs
           .getPath().getParent(), confFileName), new Path(fs.getPath()
           .getParent(), summaryFileName), jobIndexInfo, true);
       jobListCache.addIfAbsent(fileInfo);
     }
   }
 
-  private static List<FileStatus> scanDirectory(Path path, FileContext fc,
+  @VisibleForTesting
+  protected static List<FileStatus> scanDirectory(Path path, FileContext fc,
       PathFilter pathFilter) throws IOException {
     path = fc.makeQualified(path);
     List<FileStatus> jhStatusList = new ArrayList<FileStatus>();
-    RemoteIterator<FileStatus> fileStatusIter = fc.listStatus(path);
-    while (fileStatusIter.hasNext()) {
-      FileStatus fileStatus = fileStatusIter.next();
-      Path filePath = fileStatus.getPath();
-      if (fileStatus.isFile() && pathFilter.accept(filePath)) {
-        jhStatusList.add(fileStatus);
+    try {
+      RemoteIterator<FileStatus> fileStatusIter = fc.listStatus(path);
+      while (fileStatusIter.hasNext()) {
+        FileStatus fileStatus = fileStatusIter.next();
+        Path filePath = fileStatus.getPath();
+        if (fileStatus.isFile() && pathFilter.accept(filePath)) {
+          jhStatusList.add(fileStatus);
+        }
       }
+    } catch (FileNotFoundException fe) {
+      LOG.error("Error while scanning directory " + path, fe);
     }
     return jhStatusList;
   }
@@ -821,7 +943,7 @@ public class HistoryFileManager extends AbstractService {
           .getIntermediateConfFileName(jobIndexInfo.getJobId());
       String summaryFileName = JobHistoryUtils
           .getIntermediateSummaryFileName(jobIndexInfo.getJobId());
-      HistoryFileInfo fileInfo = new HistoryFileInfo(fs.getPath(), new Path(fs
+      HistoryFileInfo fileInfo = createHistoryFileInfo(fs.getPath(), new Path(fs
           .getPath().getParent(), confFileName), new Path(fs.getPath()
           .getParent(), summaryFileName), jobIndexInfo, false);
 
@@ -881,7 +1003,7 @@ public class HistoryFileManager extends AbstractService {
             .getIntermediateConfFileName(jobIndexInfo.getJobId());
         String summaryFileName = JobHistoryUtils
             .getIntermediateSummaryFileName(jobIndexInfo.getJobId());
-        HistoryFileInfo fileInfo = new HistoryFileInfo(fs.getPath(), new Path(
+        HistoryFileInfo fileInfo = createHistoryFileInfo(fs.getPath(), new Path(
             fs.getPath().getParent(), confFileName), new Path(fs.getPath()
             .getParent(), summaryFileName), jobIndexInfo, true);
         return fileInfo;
@@ -953,9 +1075,16 @@ public class HistoryFileManager extends AbstractService {
 
   private String getJobSummary(FileContext fc, Path path) throws IOException {
     Path qPath = fc.makeQualified(path);
-    FSDataInputStream in = fc.open(qPath);
-    String jobSummaryString = in.readUTF();
-    in.close();
+    FSDataInputStream in = null;
+    String jobSummaryString = null;
+    try {
+      in = fc.open(qPath);
+      jobSummaryString = in.readUTF();
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+    }
     return jobSummaryString;
   }
 
@@ -1039,7 +1168,7 @@ public class HistoryFileManager extends AbstractService {
             String confFileName = JobHistoryUtils
                 .getIntermediateConfFileName(jobIndexInfo.getJobId());
 
-            fileInfo = new HistoryFileInfo(historyFile.getPath(), new Path(
+            fileInfo = createHistoryFileInfo(historyFile.getPath(), new Path(
                 historyFile.getPath().getParent(), confFileName), null,
                 jobIndexInfo, true);
           }

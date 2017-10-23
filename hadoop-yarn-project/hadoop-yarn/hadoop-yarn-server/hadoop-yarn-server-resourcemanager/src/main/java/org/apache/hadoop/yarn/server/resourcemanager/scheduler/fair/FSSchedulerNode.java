@@ -29,6 +29,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
+import java.util.Collection;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
+
 @Private
 @Unstable
 public class FSSchedulerNode extends SchedulerNode {
@@ -36,6 +40,8 @@ public class FSSchedulerNode extends SchedulerNode {
   private static final Log LOG = LogFactory.getLog(FSSchedulerNode.class);
 
   private FSAppAttempt reservedAppSchedulable;
+  private final Set<RMContainer> containersForPreemption =
+      new ConcurrentSkipListSet<>();
 
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
     super(node, usePortForNodeName);
@@ -68,12 +74,13 @@ public class FSSchedulerNode extends SchedulerNode {
             " on node " + this);
       }
 
-      LOG.info("Updated reserved container " + 
-          container.getContainer().getId() + " on node " + 
-          this + " for application " + application);
+      LOG.info("Updated reserved container " + container.getContainer().getId()
+          + " on node " + this + " for application "
+          + application.getApplicationId());
     } else {
-      LOG.info("Reserved container " + container.getContainer().getId() + 
-          " on node " + this + " for application " + application);
+      LOG.info("Reserved container " + container.getContainer().getId()
+          + " on node " + this + " for application "
+          + application.getApplicationId());
     }
     setReservedContainer(container);
     this.reservedAppSchedulable = (FSAppAttempt) application;
@@ -98,7 +105,36 @@ public class FSSchedulerNode extends SchedulerNode {
     this.reservedAppSchedulable = null;
   }
 
-  public synchronized FSAppAttempt getReservedAppSchedulable() {
+  synchronized FSAppAttempt getReservedAppSchedulable() {
     return reservedAppSchedulable;
+  }
+
+  /**
+   * Mark {@code containers} as being considered for preemption so they are
+   * not considered again. A call to this requires a corresponding call to
+   * {@link #removeContainerForPreemption} to ensure we do not mark a
+   * container for preemption and never consider it again and avoid memory
+   * leaks.
+   *
+   * @param containers container to mark
+   */
+  void addContainersForPreemption(Collection<RMContainer> containers) {
+    containersForPreemption.addAll(containers);
+  }
+
+  /**
+   * @return set of containers marked for preemption.
+   */
+  Set<RMContainer> getContainersForPreemption() {
+    return containersForPreemption;
+  }
+
+  /**
+   * Remove container from the set of containers marked for preemption.
+   *
+   * @param container container to remove
+   */
+  void removeContainerForPreemption(RMContainer container) {
+    containersForPreemption.remove(container);
   }
 }

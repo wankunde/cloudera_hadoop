@@ -1,7 +1,7 @@
 From ff584097ff0269e555e07471c1edc3f37df29b4f Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Wed, 12 Jun 2013 15:47:29 -0700
-Subject: [PATCH 074/924] MR1: CLOUDERA-BUILD. Build changes for CDH5.0.0
+Subject: [PATCH 0074/2639] MR1: CLOUDERA-BUILD. Build changes for CDH5.0.0
  development (cherry picked from commit
  b1f1bcd8c51c5fbe7f59f5a0291a651bcb0b7297)
 

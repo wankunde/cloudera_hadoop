@@ -1,7 +1,7 @@
 From acb72824cf6dc39540ae55ed8d25a4533e605587 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 13 Feb 2015 14:35:49 -0800
-Subject: [PATCH 435/924] HDFS-7686. Re-add rapid rescan of possibly corrupt
+Subject: [PATCH 0435/2639] HDFS-7686. Re-add rapid rescan of possibly corrupt
  block feature to the block scanner (cmccabe)
 
 (cherry picked from commit 8bb9a5000ed06856abbad268c43ce1d5ad5bdd43)

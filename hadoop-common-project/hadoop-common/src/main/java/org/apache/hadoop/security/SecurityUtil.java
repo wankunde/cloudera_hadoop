@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.ServiceLoader;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
@@ -44,6 +45,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.util.StopWatch;
 
 
 //this will need to be replaced someday when there is a suitable replacement
@@ -65,12 +67,37 @@ public class SecurityUtil {
   @VisibleForTesting
   static HostResolver hostResolver;
 
+  private static boolean logSlowLookups;
+  private static int slowLookupThresholdMs;
+
   static {
-    Configuration conf = new Configuration();
+    setConfigurationInternal(new Configuration());
+  }
+
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public static void setConfiguration(Configuration conf) {
+    LOG.info("Updating Configuration");
+    setConfigurationInternal(conf);
+  }
+
+  private static void setConfigurationInternal(Configuration conf) {
     boolean useIp = conf.getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
     setTokenServiceUseIp(useIp);
+
+    logSlowLookups = conf.getBoolean(
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_KEY,
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_DEFAULT);
+
+    slowLookupThresholdMs = conf.getInt(
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_KEY,
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_DEFAULT);
   }
 
   /**
@@ -79,6 +106,11 @@ public class SecurityUtil {
   @InterfaceAudience.Private
   @VisibleForTesting
   public static void setTokenServiceUseIp(boolean flag) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Setting "
+          + CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP
+          + " to " + flag);
+    }
     useIpForTokenService = flag;
     hostResolver = !useIpForTokenService
         ? new QualifiedHostResolver()
@@ -450,7 +482,7 @@ public class SecurityUtil {
 
   /**
    * Resolves a host subject to the security requirements determined by
-   * hadoop.security.token.service.use_ip.
+   * hadoop.security.token.service.use_ip. Optionally logs slow resolutions.
    * 
    * @param hostname host or ip to resolve
    * @return a resolved host
@@ -459,7 +491,22 @@ public class SecurityUtil {
   @InterfaceAudience.Private
   public static
   InetAddress getByName(String hostname) throws UnknownHostException {
-    return hostResolver.getByName(hostname);
+    if (logSlowLookups || LOG.isTraceEnabled()) {
+      StopWatch lookupTimer = new StopWatch().start();
+      InetAddress result = hostResolver.getByName(hostname);
+      long elapsedMs = lookupTimer.stop().now(TimeUnit.MILLISECONDS);
+
+      if (elapsedMs >= slowLookupThresholdMs) {
+        LOG.warn("Slow name lookup for " + hostname + ". Took " + elapsedMs +
+            " ms.");
+      } else if (LOG.isTraceEnabled()) {
+        LOG.trace("Name lookup for " + hostname + " took " + elapsedMs +
+            " ms.");
+      }
+      return result;
+    } else {
+      return hostResolver.getByName(hostname);
+    }
   }
   
   interface HostResolver {

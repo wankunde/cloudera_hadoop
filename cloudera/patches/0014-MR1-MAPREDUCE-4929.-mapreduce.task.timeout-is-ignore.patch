@@ -1,7 +1,7 @@
 From 81ed244cf63a0b1eb20f482fd8cce4548e68917d Mon Sep 17 00:00:00 2001
 From: Thomas White <tomwhite@apache.org>
 Date: Wed, 23 Jan 2013 11:06:39 +0000
-Subject: [PATCH 014/924] MR1: MAPREDUCE-4929. mapreduce.task.timeout is
+Subject: [PATCH 0014/2639] MR1: MAPREDUCE-4929. mapreduce.task.timeout is
  ignored. Contributed by Sandy Ryza.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1437343 13f79535-47bb-0310-9956-ffa450edef68

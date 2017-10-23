@@ -1,9 +1,9 @@
 From 565a91876f12ee52d424b87f011a87cdc398bf6e Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Tue, 13 Aug 2013 17:06:31 -0700
-Subject: [PATCH 084/924] MR1: MAPREDUCE-5038. old API CombineFileInputFormat
- missing fixes that are in new API. (sandyr via
- tucu)
+Subject: [PATCH 0084/2639] MR1: MAPREDUCE-5038. old API
+ CombineFileInputFormat missing fixes that are in
+ new API. (sandyr via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1458021 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a2330b6007f3424845cf30e5da162bbbf7d4036c)

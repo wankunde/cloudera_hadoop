@@ -1,7 +1,7 @@
 From 7314be7df4587a293dd1c90f1d6067f76eb13b25 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Thu, 3 Oct 2013 15:33:20 -0700
-Subject: [PATCH 104/924] MR1: CLOUDERA-BUILD. Fixing TestStreamingStatus
+Subject: [PATCH 0104/2639] MR1: CLOUDERA-BUILD. Fixing TestStreamingStatus
  failure (CDH-14655)
 
 (cherry picked from commit 2f6b654fb2858f4cab77c7dd0bcca40cf3e0d647)

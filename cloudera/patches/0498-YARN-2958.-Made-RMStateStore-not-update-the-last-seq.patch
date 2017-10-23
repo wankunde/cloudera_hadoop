@@ -1,9 +1,9 @@
 From 83065d45f8badce6b0df30789df8584b223e40cd Mon Sep 17 00:00:00 2001
 From: Zhijie Shen <zjshen@apache.org>
 Date: Mon, 5 Jan 2015 13:33:07 -0800
-Subject: [PATCH 498/924] YARN-2958. Made RMStateStore not update the last
- sequence number when updating the delegation token.
- Contributed by Varun Saxena.
+Subject: [PATCH 0498/2639] YARN-2958. Made RMStateStore not update the last
+ sequence number when updating the delegation
+ token. Contributed by Varun Saxena.
 
 (cherry picked from commit 562a701945be3a672f9cb5a52cc6db2c1589ba2b)
 (cherry picked from commit c6cf7489853d603bb1a77ad699b3068cb4779bbf)

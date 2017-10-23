@@ -1,7 +1,7 @@
 From 5f2a35c1e351887c07c0ecf9cf1817de1e7a12e9 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Fri, 10 Oct 2014 13:40:37 -0700
-Subject: [PATCH 205/924] HDFS-7209. Populate EDEK cache when creating
+Subject: [PATCH 0205/2639] HDFS-7209. Populate EDEK cache when creating
  encryption zone. (Yi Liu via wang)
 
 (cherry picked from commit d3d3d47202a18749eeebec22db759c19dd3e232c)

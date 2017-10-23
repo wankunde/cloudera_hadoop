@@ -1,7 +1,7 @@
 From 27c5fe47343532899c443aab240bde6e0152cd2a Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Sat, 20 Dec 2014 12:17:50 -0800
-Subject: [PATCH 301/924] YARN-2975. FSLeafQueue app lists are accessed
+Subject: [PATCH 0301/2639] YARN-2975. FSLeafQueue app lists are accessed
  without required locks. (kasha)
 
 (cherry picked from commit 24ee9e3431d27811530ffa01d8d241133fd643fe)

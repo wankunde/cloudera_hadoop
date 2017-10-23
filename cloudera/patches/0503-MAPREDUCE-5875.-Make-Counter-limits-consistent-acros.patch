@@ -1,9 +1,9 @@
 From 2b2b6c14c0dce31ed8b21e2720b58e0a6dd7102b Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Sat, 11 Oct 2014 22:48:47 -0700
-Subject: [PATCH 503/924] MAPREDUCE-5875. Make Counter limits consistent
- across JobClient, MRAppMaster, and YarnChild. (Gera
- Shegalov via kasha)
+Subject: [PATCH 0503/2639] MAPREDUCE-5875. Make Counter limits consistent
+ across JobClient, MRAppMaster, and YarnChild.
+ (Gera Shegalov via kasha)
 
 (cherry picked from commit e8a31f2e1c34514fba2f480e8db652f6e2ed65d8)
 

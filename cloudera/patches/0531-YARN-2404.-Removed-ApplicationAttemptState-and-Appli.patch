@@ -1,10 +1,10 @@
 From 28d0e53975b73b6d8db6d3dd86a4b7ecdf0810ce Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Tue, 25 Nov 2014 12:48:22 -0800
-Subject: [PATCH 531/924] YARN-2404. Removed ApplicationAttemptState and
- ApplicationState class in RMStateStore. Contributed
- by Tsuyoshi OZAWA (cherry picked from commit
- 5805a81efbc024024d8172489dfdc6cf77879416)
+Subject: [PATCH 0531/2639] YARN-2404. Removed ApplicationAttemptState and
+ ApplicationState class in RMStateStore.
+ Contributed by Tsuyoshi OZAWA (cherry picked from
+ commit 5805a81efbc024024d8172489dfdc6cf77879416)
 
 (cherry picked from commit 286305653082baf514a4e4a11318ff9cb0be0ba5)
 

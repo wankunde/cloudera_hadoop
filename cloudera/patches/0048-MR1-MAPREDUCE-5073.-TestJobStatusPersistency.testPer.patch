@@ -1,7 +1,7 @@
 From f59e2abcd312d84844a4598c9ce21141650c335d Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 15 Mar 2013 20:12:29 +0000
-Subject: [PATCH 048/924] MR1: MAPREDUCE-5073.
+Subject: [PATCH 0048/2639] MR1: MAPREDUCE-5073.
  TestJobStatusPersistency.testPersistency fails on
  JDK7. (sandyr via tucu)
 

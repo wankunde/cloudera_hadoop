@@ -246,6 +246,16 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertEquals("text/html; charset=utf-8", conn.getContentType());
   }
 
+  @Test
+  public void testHttpResonseContainsXFrameOptions() throws IOException {
+    URL url = new URL(baseUrl, "");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+
+    String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
+    assertTrue("X-FRAME-OPTIONS is absent in the header", xfoHeader != null);
+  }
+
   /**
    * Dummy filter that mimics as an authentication filter. Obtains user identity
    * from the request parameter user.name. Wraps around the request so that
@@ -545,9 +555,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         assertTrue(boundPort != 0); // ephemeral should now return bound port
       } else if (findPort) {
         assertTrue(boundPort > port);
-        // allow a little wiggle room to prevent random test failures if
-        // some consecutive ports are already in use
-        assertTrue(boundPort - port < 8);
       }
     } catch (Exception e) {
       server.stop();

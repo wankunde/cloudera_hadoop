@@ -1,8 +1,8 @@
 From ce33fb5a1ccc70540510e10b04406d438d08b105 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Sun, 27 Jul 2014 19:04:14 +0000
-Subject: [PATCH 333/924] MAPREDUCE-5995. native-task: Revert changes to Text
- internals. Contributed by Todd Lipcon.
+Subject: [PATCH 0333/2639] MAPREDUCE-5995. native-task: Revert changes to
+ Text internals. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/MR-2841@1613828 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 78d86a983960f231f51e47579c0b1ae73f9645fd)

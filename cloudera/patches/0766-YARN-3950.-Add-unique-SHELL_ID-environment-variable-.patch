@@ -1,9 +1,9 @@
-From ec07c2bf311143575789aa5f9a621bd412476e72 Mon Sep 17 00:00:00 2001
+From 64aecbdd96691f531935ecb536c0f1dd0cc11555 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Wed, 29 Jul 2015 15:16:40 +0000
-Subject: [PATCH 766/924] YARN-3950. Add unique SHELL_ID environment variable
- to DistributedShell. Contributed by Robert Kanter
- (cherry picked from commit
+Subject: [PATCH 0766/2639] YARN-3950. Add unique SHELL_ID environment
+ variable to DistributedShell. Contributed by
+ Robert Kanter (cherry picked from commit
  2b2bd9214604bc2e14e41e08d30bf86f512151bd)
 
 (cherry picked from commit 6f50a6a4565d89a886a240c459899692ed5807c3)
@@ -12,7 +12,6 @@ Conflicts:
 	hadoop-yarn-project/CHANGES.txt
 
 Change-Id: I0922fec411c8fa00205b9705741fc6a8de6ed54b
-(cherry picked from commit 64aecbdd96691f531935ecb536c0f1dd0cc11555)
 ---
  .../distributedshell/ApplicationMaster.java        |   31 +++++++++++++++-----
  .../distributedshell/TestDSAppMaster.java          |   11 ++++++-

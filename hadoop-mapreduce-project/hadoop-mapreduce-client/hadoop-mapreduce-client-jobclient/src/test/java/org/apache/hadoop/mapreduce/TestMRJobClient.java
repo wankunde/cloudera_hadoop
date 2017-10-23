@@ -22,13 +22,19 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
+import java.util.Arrays;
 
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
@@ -80,6 +86,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
   public static int runTool(Configuration conf, Tool tool, String[] args,
       OutputStream out) throws Exception {
+    LOG.info("args = " + Arrays.toString(args));
     PrintStream oldOut = System.out;
     PrintStream newOut = new PrintStream(out, true);
     try {
@@ -137,7 +144,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // test list of events
     testJobEvents(jobId, conf);
     // test job history
-    testJobHistory(conf);
+    testJobHistory(jobId, conf);
     // test tracker list
     testListTrackers(conf);
     // attempts list
@@ -156,6 +163,8 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     testfailTask(conf);
     // kill job
     testKillJob(conf);
+    // download job config
+    testConfig(jobId, conf);
   }
 
   /**
@@ -351,35 +360,204 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
   /**
    * print job history from file 
    */
-  private void testJobHistory(Configuration conf) throws Exception {
+  private void testJobHistory(String jobId, Configuration conf)
+      throws Exception {
     CLI jc = createJobClient();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    File f = new File("src/test/resources/job_1329348432655_0001-10.jhist");
-    FileSystem localFs = FileSystem.getLocal(conf);
-    String historyFileUri = new Path(f.getAbsolutePath())
-        .makeQualified(localFs.getUri(), localFs.getWorkingDirectory()).toUri()
-        .toString();
- 
-    // bad command
-    int exitCode = runTool(conf, jc, new String[] { "-history", "pul", 
-        historyFileUri }, out);
-    assertEquals("Exit code", -1, exitCode);
 
-    exitCode = runTool(conf, jc, new String[] { "-history", "all",
-        historyFileUri }, out);
-    assertEquals("Exit code", 0, exitCode);
-    String line;
-    BufferedReader br = new BufferedReader(new InputStreamReader(
-        new ByteArrayInputStream(out.toByteArray())));
-    int counter = 0;
-    while ((line = br.readLine()) != null) {
-      LOG.info("line = " + line);
-      if (line.startsWith("task_")) {
-        counter++;
+    // Find jhist file
+    String historyFileUri = null;
+    RemoteIterator<LocatedFileStatus> it =
+        getFileSystem().listFiles(new Path("/"), true);
+    while (it.hasNext() && historyFileUri == null) {
+      LocatedFileStatus file = it.next();
+      if (file.getPath().getName().endsWith(".jhist")) {
+        historyFileUri = file.getPath().toUri().toString();
       }
     }
-    assertEquals(23, counter);
+    assertNotNull("Could not find jhist file", historyFileUri);
+
+    for (String historyFileOrJobId : new String[]{historyFileUri, jobId}) {
+      // Try a bunch of different valid combinations of the command
+      int exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          "all",
+          historyFileOrJobId,
+      }, out);
+      assertEquals("Exit code", 0, exitCode);
+      checkHistoryHumanOutput(jobId, out);
+      File outFile = File.createTempFile("myout", ".txt");
+      exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          "all",
+          historyFileOrJobId,
+          "-outfile",
+          outFile.getAbsolutePath()
+      }, out);
+      assertEquals("Exit code", 0, exitCode);
+      checkHistoryHumanFileOutput(jobId, out, outFile);
+      outFile = File.createTempFile("myout", ".txt");
+      exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          "all",
+          historyFileOrJobId,
+          "-outfile",
+          outFile.getAbsolutePath(),
+          "-format",
+          "human"
+      }, out);
+      assertEquals("Exit code", 0, exitCode);
+      checkHistoryHumanFileOutput(jobId, out, outFile);
+      exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          historyFileOrJobId,
+          "-format",
+          "human"
+      }, out);
+      assertEquals("Exit code", 0, exitCode);
+      checkHistoryHumanOutput(jobId, out);
+      exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          "all",
+          historyFileOrJobId,
+          "-format",
+          "json"
+      }, out);
+      assertEquals("Exit code", 0, exitCode);
+      checkHistoryJSONOutput(jobId, out);
+      outFile = File.createTempFile("myout", ".txt");
+      exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          "all",
+          historyFileOrJobId,
+          "-outfile",
+          outFile.getAbsolutePath(),
+          "-format",
+          "json"
+      }, out);
+      assertEquals("Exit code", 0, exitCode);
+      checkHistoryJSONFileOutput(jobId, out, outFile);
+      exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          historyFileOrJobId,
+          "-format",
+          "json"
+      }, out);
+      assertEquals("Exit code", 0, exitCode);
+      checkHistoryJSONOutput(jobId, out);
+
+      // Check some bad arguments
+      exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          historyFileOrJobId,
+          "foo"
+      }, out);
+      assertEquals("Exit code", -1, exitCode);
+      exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          historyFileOrJobId,
+          "-format"
+      }, out);
+      assertEquals("Exit code", -1, exitCode);
+      exitCode = runTool(conf, jc, new String[]{
+          "-history",
+          historyFileOrJobId,
+          "-outfile",
+      }, out);
+      assertEquals("Exit code", -1, exitCode);
+      try {
+        runTool(conf, jc, new String[]{
+            "-history",
+            historyFileOrJobId,
+            "-format",
+            "foo"
+        }, out);
+        fail();
+      } catch (IllegalArgumentException e) {
+        // Expected
+      }
+    }
+    try {
+      runTool(conf, jc, new String[]{
+          "-history",
+          "not_a_valid_history_file_or_job_id",
+      }, out);
+      fail();
+    } catch (IllegalArgumentException e) {
+      // Expected
+    }
   }
+
+  private void checkHistoryHumanOutput(String jobId, ByteArrayOutputStream out)
+      throws IOException, JSONException {
+    BufferedReader br = new BufferedReader(new InputStreamReader(
+        new ByteArrayInputStream(out.toByteArray())));
+    br.readLine();
+    String line = br.readLine();
+    br.close();
+    assertEquals("Hadoop job: " + jobId, line);
+    out.reset();
+  }
+
+  private void checkHistoryJSONOutput(String jobId, ByteArrayOutputStream out)
+      throws IOException, JSONException {
+    BufferedReader br = new BufferedReader(new InputStreamReader(
+        new ByteArrayInputStream(out.toByteArray())));
+    String line = org.apache.commons.io.IOUtils.toString(br);
+    br.close();
+    JSONObject json = new JSONObject(line);
+    assertEquals(jobId, json.getString("hadoopJob"));
+    out.reset();
+  }
+
+  private void checkHistoryHumanFileOutput(String jobId,
+      ByteArrayOutputStream out, File outFile)
+      throws IOException, JSONException {
+    BufferedReader br = new BufferedReader(new FileReader(outFile));
+    br.readLine();
+    String line = br.readLine();
+    br.close();
+    assertEquals("Hadoop job: " + jobId, line);
+    assertEquals(0, out.size());
+  }
+
+  private void checkHistoryJSONFileOutput(String jobId,
+      ByteArrayOutputStream out, File outFile)
+      throws IOException, JSONException {
+    BufferedReader br = new BufferedReader(new FileReader(outFile));
+    String line = org.apache.commons.io.IOUtils.toString(br);
+    br.close();
+    JSONObject json = new JSONObject(line);
+    assertEquals(jobId, json.getString("hadoopJob"));
+    assertEquals(0, out.size());
+  }
+
+  /**
+   * download job config
+   */
+  private void testConfig(String jobId, Configuration conf) throws Exception {
+    CLI jc = createJobClient();
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    // bad arguments
+    int exitCode = runTool(conf, jc, new String[] { "-config" }, out);
+    assertEquals("Exit code", -1, exitCode);
+    exitCode = runTool(conf, jc, new String[] { "-config job_invalid foo.xml" },
+        out);
+    assertEquals("Exit code", -1, exitCode);
+
+    // good arguments
+    File outFile = File.createTempFile("config", ".xml");
+    exitCode = runTool(conf, jc, new String[] { "-config", jobId,
+        outFile.toString()}, out);
+    assertEquals("Exit code", 0, exitCode);
+    BufferedReader br = new BufferedReader(new FileReader(outFile));
+    String line = br.readLine();
+    br.close();
+    assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\" " +
+        "standalone=\"no\"?><configuration>", line);
+  }
+
   /**
    * print job events list 
    */

@@ -1,7 +1,7 @@
 From 8df09fce28cfa101cbf02c1e6b5fc4113e90521b Mon Sep 17 00:00:00 2001
 From: Arun Murthy <acmurthy@apache.org>
 Date: Sat, 20 Apr 2013 19:21:02 +0000
-Subject: [PATCH 111/924] MR1: MAPREDUCE-5066. Added a timeout for the
+Subject: [PATCH 0111/2639] MR1: MAPREDUCE-5066. Added a timeout for the
  job.end.notification.url. Contributed by Ivan
  Mitic.
 

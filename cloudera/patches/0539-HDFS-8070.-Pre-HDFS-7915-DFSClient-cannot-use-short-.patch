@@ -1,8 +1,9 @@
 From b329678c35fce6e7a0acdefad1cf621bb609e805 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 23 Apr 2015 19:03:44 -0700
-Subject: [PATCH 539/924] HDFS-8070. Pre-HDFS-7915 DFSClient cannot use short
- circuit on post-HDFS-7915 DataNode (cmccabe)
+Subject: [PATCH 0539/2639] HDFS-8070. Pre-HDFS-7915 DFSClient cannot use
+ short circuit on post-HDFS-7915 DataNode
+ (cmccabe)
 
 (cherry picked from commit a8898445dc9b5cdb7230e2e23a57393c9f378ff0)
 (cherry picked from commit 3d0385c3c8fab72be02453a158c7692212ab3b5e)

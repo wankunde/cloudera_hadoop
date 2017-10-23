@@ -1,7 +1,7 @@
 From cf44eaa83877f9043c9f46798fde1e3f30658ebd Mon Sep 17 00:00:00 2001
 From: Jing Zhao <jing9@apache.org>
 Date: Wed, 15 Apr 2015 12:37:20 -0700
-Subject: [PATCH 683/924] HDFS-8151. Always use snapshot path as source when
+Subject: [PATCH 0683/2639] HDFS-8151. Always use snapshot path as source when
  invalid snapshot names are used for diff based
  distcp. Contributed by Jing Zhao.
 

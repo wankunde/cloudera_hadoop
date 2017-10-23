@@ -1,7 +1,7 @@
 From 13af5129e41366e293f82127dd4d519974ab32ee Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 9 Sep 2013 17:22:48 +0200
-Subject: [PATCH 163/924] CLOUDERA-BUILD. Use slf4j version from CDH root
+Subject: [PATCH 0163/2639] CLOUDERA-BUILD. Use slf4j version from CDH root
 
 (cherry picked from commit a52090bb9381fff42b4d360496f7dcdf07444356)
 (cherry picked from commit 368867927e39909209d97b81989488596cbba539)

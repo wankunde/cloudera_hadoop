@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -82,15 +84,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import com.google.common.base.Supplier;
 
-
 @SuppressWarnings({"rawtypes", "unchecked"})
-@RunWith(value = Parameterized.class)
-public class TestWorkPreservingRMRestart {
+public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase {
 
   private YarnConfiguration conf;
   private Class<?> schedulerClass;
@@ -98,15 +95,15 @@ public class TestWorkPreservingRMRestart {
   MockRM rm2 = null;
 
   @Before
-  public void setup() throws UnknownHostException {
+  public void setup() throws UnknownHostException, ClassNotFoundException {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
     conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, schedulerClass,
-      ResourceScheduler.class);
+    schedulerClass = conf.getClass(YarnConfiguration.RM_SCHEDULER,
+        Class.forName(YarnConfiguration.DEFAULT_RM_SCHEDULER));
     conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, true);
     conf.setLong(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS, 0);
     DefaultMetricsSystem.setMiniClusterMode(true);
@@ -122,14 +119,7 @@ public class TestWorkPreservingRMRestart {
     }
   }
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> getTestParameters() {
-    return Arrays.asList(new Object[][] { { CapacityScheduler.class },
-        { FifoScheduler.class }, {FairScheduler.class } });
-  }
-
-  public TestWorkPreservingRMRestart(Class<?> schedulerClass) {
-    this.schedulerClass = schedulerClass;
+  public TestWorkPreservingRMRestart() {
   }
 
   // Test common scheduler state including SchedulerAttempt, SchedulerNode,
@@ -439,7 +429,7 @@ public class TestWorkPreservingRMRestart {
     // Wait for RM to settle down on recovering containers;
     waitForNumContainersToRecover(2, rm2, am1_1.getApplicationAttemptId());
     waitForNumContainersToRecover(2, rm2, am1_2.getApplicationAttemptId());
-    waitForNumContainersToRecover(2, rm2, am1_2.getApplicationAttemptId());
+    waitForNumContainersToRecover(2, rm2, am2.getApplicationAttemptId());
 
     // Calculate each queue's resource usage.
     Resource containerResource = Resource.newInstance(1024, 1);
@@ -984,5 +974,72 @@ public class TestWorkPreservingRMRestart {
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     rm2.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
+  }
+
+  // Test that if application state was saved, but attempt state was not saved.
+  // RM should start correctly.
+  @Test (timeout = 20000)
+  public void testAppStateSavedButAttemptStateNotSaved() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      @Override public synchronized void updateApplicationAttemptStateInternal(
+          ApplicationAttemptId appAttemptId,
+          ApplicationAttemptStateData attemptState) {
+        // do nothing;
+        // simulate the failure that attempt final state is not saved.
+      }
+    };
+    memStore.init(conf);
+    rm1 = new MockRM(conf, memStore);
+    rm1.start();
+
+    MockNM nm1 = new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    RMApp app1 = rm1.submitApp(200);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    MockRM.finishAMAndVerifyAppState(app1, rm1, nm1, am1);
+
+    ApplicationStateData appSavedState =
+        memStore.getState().getApplicationState().get(app1.getApplicationId());
+
+    // check that app state is  saved.
+    assertEquals(RMAppState.FINISHED, appSavedState.getState());
+    // check that attempt state is not saved.
+    assertNull(appSavedState.getAttempt(am1.getApplicationAttemptId()).getState());
+
+    rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    RMApp recoveredApp1 =
+        rm2.getRMContext().getRMApps().get(app1.getApplicationId());
+
+    assertEquals(RMAppState.FINISHED, recoveredApp1.getState());
+    // check that attempt state is recovered correctly.
+    assertEquals(RMAppAttemptState.FINISHED, recoveredApp1.getCurrentAppAttempt().getState());
+  }
+
+  /**
+   * Test validateAndCreateResourceRequest fails on recovery, app should ignore
+   * this Exception and continue
+   */
+  @Test (timeout = 30000)
+  public void testAppFailToValidateResourceRequestOnRecovery() throws Exception{
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 8192, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    RMApp app1 = rm1.submitApp(200);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // Change the config so that validateAndCreateResourceRequest throws
+    // exception on recovery
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 50);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 100);
+
+    rm2 = new MockRM(conf, memStore);
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    rm2.start();
   }
 }

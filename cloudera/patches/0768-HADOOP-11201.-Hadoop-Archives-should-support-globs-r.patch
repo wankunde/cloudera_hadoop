@@ -1,7 +1,7 @@
-From 66b7cd5d90a8003fb1ec7db5e98aeda5e90b0d08 Mon Sep 17 00:00:00 2001
+From b6a9892ce0292b35d4e21682a1d798a8e54f9e5c Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Tue, 18 Nov 2014 17:05:48 -0800
-Subject: [PATCH 768/924] HADOOP-11201. Hadoop Archives should support globs
+Subject: [PATCH 0768/2639] HADOOP-11201. Hadoop Archives should support globs
  resolving to files. Contributed by Gera Shegalov.
 
 (cherry picked from commit 79301e80d7510f055c01a06970bb409607a4197c)
@@ -11,7 +11,6 @@ Conflicts:
 	hadoop-common-project/hadoop-common/CHANGES.txt
 
 Change-Id: Ib6be3448bda07ec2a270d4fd3f61e4db583f1749
-(cherry picked from commit b6a9892ce0292b35d4e21682a1d798a8e54f9e5c)
 ---
  .../org/apache/hadoop/tools/HadoopArchives.java    |   17 ++---
  .../apache/hadoop/tools/TestHadoopArchives.java    |   77 +++++++++++++++++---

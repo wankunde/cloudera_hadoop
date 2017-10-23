@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -45,11 +46,12 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class provides an interface for implementors of a Hadoop file system
@@ -79,6 +81,9 @@ public abstract class AbstractFileSystem {
   
   /** The statistics for this file system. */
   protected Statistics statistics;
+
+  @VisibleForTesting
+  static final String NO_ABSTRACT_FS_ERROR = "No AbstractFileSystem configured for scheme";
   
   private final URI myUri;
   
@@ -127,6 +132,13 @@ public abstract class AbstractFileSystem {
         CONSTRUCTOR_CACHE.put(theClass, meth);
       }
       result = meth.newInstance(uri, conf);
+    } catch (InvocationTargetException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof RuntimeException) {
+        throw (RuntimeException) cause;
+      } else {
+        throw new RuntimeException(cause);
+      }
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -148,11 +160,14 @@ public abstract class AbstractFileSystem {
    */
   public static AbstractFileSystem createFileSystem(URI uri, Configuration conf)
       throws UnsupportedFileSystemException {
-    Class<?> clazz = conf.getClass("fs.AbstractFileSystem." + 
-                                uri.getScheme() + ".impl", null);
+    final String fsImplConf = String.format("fs.AbstractFileSystem.%s.impl",
+        uri.getScheme());
+
+    Class<?> clazz = conf.getClass(fsImplConf, null);
     if (clazz == null) {
-      throw new UnsupportedFileSystemException(
-          "No AbstractFileSystem for scheme: " + uri.getScheme());
+      throw new UnsupportedFileSystemException(String.format(
+          "%s=null: %s: %s",
+          fsImplConf, NO_ABSTRACT_FS_ERROR, uri.getScheme()));
     }
     return (AbstractFileSystem) newInstance(clazz, uri, conf);
   }

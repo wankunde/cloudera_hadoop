@@ -1,7 +1,7 @@
 From a5d4a55193dbc979198f2106260dae8f7073f623 Mon Sep 17 00:00:00 2001
 From: Anubhav Dhoot <adhoot@cloudera.com>
 Date: Thu, 19 Mar 2015 15:47:02 -0700
-Subject: [PATCH 685/924] CLOUDERA-BUILD Revert YARN-2581 NMs need to find a
+Subject: [PATCH 0685/2639] CLOUDERA-BUILD Revert YARN-2581 NMs need to find a
  way to get LogAggregationContext
 
 (cherry picked from commit 588e68371609337a60367afd7280900cc557a939)

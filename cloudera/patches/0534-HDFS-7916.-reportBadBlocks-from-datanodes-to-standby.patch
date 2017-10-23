@@ -1,9 +1,9 @@
 From 618245c11d06805c4288fc038e62d332052168c6 Mon Sep 17 00:00:00 2001
 From: Vinayakumar B <vinayakumarb@apache.org>
 Date: Thu, 2 Apr 2015 08:12:00 +0530
-Subject: [PATCH 534/924] HDFS-7916. 'reportBadBlocks' from datanodes to
- standby Node BPServiceActor goes for infinite loop
- (Contributed by Vinayakumar B)
+Subject: [PATCH 0534/2639] HDFS-7916. 'reportBadBlocks' from datanodes to
+ standby Node BPServiceActor goes for infinite
+ loop (Contributed by Vinayakumar B)
 
 (cherry picked from commit 867d5d2675b8fb73c40fac1e581b02b005459d95)
 (cherry picked from commit beb0fd0d601aff0ba993c2d48b83fe52edfb9065)

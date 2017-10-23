@@ -1,8 +1,9 @@
 From 7223cc10d73cacba1f47be215d92100894e4cce6 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Thu, 27 Aug 2015 10:17:00 -0700
-Subject: [PATCH 726/924] HADOOP-12362. Set hadoop.tmp.dir and hadoop.log.dir
- in pom. Contributed by Charlie Helin.
+Subject: [PATCH 0726/2639] HADOOP-12362. Set hadoop.tmp.dir and
+ hadoop.log.dir in pom. Contributed by Charlie
+ Helin.
 
 (cherry picked from commit 90fe7bcc3b30f8497d7a5124c91c5aea28f2fccb)
 

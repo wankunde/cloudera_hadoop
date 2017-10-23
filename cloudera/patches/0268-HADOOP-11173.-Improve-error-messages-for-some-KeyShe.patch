@@ -1,7 +1,7 @@
 From 3ba640d63dda2cbd98c86f1e5966ddd165029b31 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 25 Nov 2014 16:13:32 -0800
-Subject: [PATCH 268/924] HADOOP-11173. Improve error messages for some
+Subject: [PATCH 0268/2639] HADOOP-11173. Improve error messages for some
  KeyShell commands.
 
 (cherry picked from commit fae266bbf19e44a2595fa62366d9b65e7c996df8)

@@ -1,8 +1,8 @@
 From be34510e5661d651029e24c8129913cbdc9dd794 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Tue, 3 Feb 2015 11:05:31 -0800
-Subject: [PATCH 434/924] HDFS-7721. The HDFS BlockScanner may run fast during
- the first hour (cmccabe)
+Subject: [PATCH 0434/2639] HDFS-7721. The HDFS BlockScanner may run fast
+ during the first hour (cmccabe)
 
 (cherry picked from commit 115428176e1d919fe7d54d01b34dfda57d1b3950)
 (cherry picked from commit 6edcb9a503ca8b58802fa950ad4ef1c63f0832b3)

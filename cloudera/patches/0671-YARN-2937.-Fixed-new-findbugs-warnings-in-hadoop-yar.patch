@@ -1,7 +1,7 @@
 From c5be7e7282be3ff9540ca670669bd7e866b36c53 Mon Sep 17 00:00:00 2001
 From: Zhijie Shen <zjshen@apache.org>
 Date: Tue, 23 Dec 2014 20:32:36 -0800
-Subject: [PATCH 671/924] YARN-2937. Fixed new findbugs warnings in
+Subject: [PATCH 0671/2639] YARN-2937. Fixed new findbugs warnings in
  hadoop-yarn-nodemanager. Contributed by Varun
  Saxena. (cherry picked from commit
  41a548a916d4248164cb9495320f123ec215d70e)

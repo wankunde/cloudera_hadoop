@@ -1,7 +1,7 @@
 From 809afc775ab1330ec644455b6a82ae79eefd8bc6 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Tue, 13 Aug 2013 13:55:59 -0700
-Subject: [PATCH 401/924] MR1: MAPREDUCE-4049. ShuffleProviderPlugin not
+Subject: [PATCH 0401/2639] MR1: MAPREDUCE-4049. ShuffleProviderPlugin not
  initializing
 
   Reason: bug, a missing hunk from the original backport

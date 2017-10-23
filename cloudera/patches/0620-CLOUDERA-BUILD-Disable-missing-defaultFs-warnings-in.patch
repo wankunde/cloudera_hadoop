@@ -1,7 +1,7 @@
 From b3d18bac3aa67b2679d899750fdad034330c5d76 Mon Sep 17 00:00:00 2001
 From: Lei Xu <lei@apache.org>
 Date: Tue, 30 Jun 2015 16:47:33 -0700
-Subject: [PATCH 620/924] CLOUDERA-BUILD: Disable missing defaultFs warnings
+Subject: [PATCH 0620/2639] CLOUDERA-BUILD: Disable missing defaultFs warnings
  in test to make jenkins green.
 
 ---

@@ -19,10 +19,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -218,7 +220,8 @@ public abstract class SchedulerNode {
     Resources.subtractFrom(usedResource, resource);
   }
 
-  private synchronized void deductAvailableResource(Resource resource) {
+  @VisibleForTesting
+  public synchronized void deductAvailableResource(Resource resource) {
     if (resource == null) {
       LOG.error("Invalid deduction of null resource for "
           + rmNode.getNodeAddress());
@@ -258,6 +261,22 @@ public abstract class SchedulerNode {
 
   public synchronized List<RMContainer> getRunningContainers() {
     return new ArrayList<RMContainer>(launchedContainers.values());
+  }
+
+  /**
+   * Get the containers running on the node with AM containers at the end.
+   * @return A copy of running containers with AM containers at the end.
+   */
+  public synchronized List<RMContainer> getRunningContainersWithAMsAtTheEnd() {
+    LinkedList<RMContainer> result = new LinkedList<>();
+    for (RMContainer container : launchedContainers.values()) {
+      if(container.isAMContainer()) {
+        result.addLast(container);
+      } else {
+        result.addFirst(container);
+      }
+    }
+    return result;
   }
 
   public synchronized RMContainer getReservedContainer() {

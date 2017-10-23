@@ -66,6 +66,12 @@ public interface MRJobConfig {
 
   public static final String QUEUE_NAME = "mapreduce.job.queuename";
 
+  /**
+   * Specify strict locality on a comma-separated list of racks and/or nodes.
+   * Syntax: /rack or /rack/node or node (assumes /default-rack)
+   */
+  public static final String AM_STRICT_LOCALITY = "mapreduce.job.am.strict-locality";
+
   public static final String RESERVATION_ID = "mapreduce.job.reservation.id";
 
   public static final String JOB_TAGS = "mapreduce.job.tags";
@@ -205,6 +211,7 @@ public interface MRJobConfig {
   public static final String TASK_ATTEMPT_ID = "mapreduce.task.attempt.id";
 
   public static final String TASK_ISMAP = "mapreduce.task.ismap";
+  public static final boolean DEFAULT_TASK_ISMAP = true;
 
   public static final String TASK_PARTITION = "mapreduce.task.partition";
 
@@ -225,6 +232,10 @@ public interface MRJobConfig {
   public static final String TASK_REDUCE_PROFILE_PARAMS = "mapreduce.task.profile.reduce.params";
   
   public static final String TASK_TIMEOUT = "mapreduce.task.timeout";
+  long DEFAULT_TASK_TIMEOUT_MILLIS = 5 * 60 * 1000L;
+
+  String TASK_PROGRESS_REPORT_INTERVAL =
+      "mapreduce.task.progress-report.interval";
 
   public static final String TASK_TIMEOUT_CHECK_INTERVAL_MS = "mapreduce.task.timeout.check-interval-ms";
 
@@ -383,6 +394,14 @@ public interface MRJobConfig {
 
   public static final String DEFAULT_JOB_ACL_MODIFY_JOB = " ";
   
+  public static final String JOB_RUNNING_MAP_LIMIT =
+      "mapreduce.job.running.map.limit";
+  public static final int DEFAULT_JOB_RUNNING_MAP_LIMIT = 0;
+
+  public static final String JOB_RUNNING_REDUCE_LIMIT =
+      "mapreduce.job.running.reduce.limit";
+  public static final int DEFAULT_JOB_RUNNING_REDUCE_LIMIT = 0;
+
   /* config for tracking the local file where all the credentials for the job
    * credentials.
    */
@@ -452,6 +471,21 @@ public interface MRJobConfig {
     MR_PREFIX + "client.max-retries";
   public static final int DEFAULT_MR_CLIENT_MAX_RETRIES = 3;
   
+  /**
+   * How many times to retry jobclient calls (via getjob)
+   */
+  public static final String MR_CLIENT_JOB_MAX_RETRIES =
+      MR_PREFIX + "client.job.max-retries";
+  public static final int DEFAULT_MR_CLIENT_JOB_MAX_RETRIES = 3;
+
+  /**
+   * How long to wait between jobclient retries on failure
+   */
+  public static final String MR_CLIENT_JOB_RETRY_INTERVAL =
+      MR_PREFIX + "client.job.retry-interval";
+  public static final long DEFAULT_MR_CLIENT_JOB_RETRY_INTERVAL =
+      2000;
+
   /** The staging directory for map reduce.*/
   public static final String MR_AM_STAGING_DIR = 
     MR_AM_PREFIX+"staging-dir";
@@ -505,6 +539,14 @@ public interface MRJobConfig {
 
   public static final int DEFAULT_MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT = 
       500;
+
+  /**
+   * The initial size of thread pool to launch containers in the app master
+   */
+  public static final String MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE =
+      MR_AM_PREFIX+"containerlauncher.threadpool-initial-size";
+  public static final int DEFAULT_MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE =
+      10;
 
   /** Number of threads to handle job client RPC requests.*/
   public static final String MR_AM_JOB_CLIENT_THREAD_COUNT =
@@ -664,6 +706,16 @@ public interface MRJobConfig {
   public static final String MR_AM_ADMIN_USER_ENV =
       MR_AM_PREFIX + "admin.user.env";
 
+  // although the AM admin user env default should be the same as the task user
+  // env default, there are problems in making it work on Windows currently
+  // MAPREDUCE-6588 should address the issue and set it to a proper non-empty
+  // value
+  public static final String DEFAULT_MR_AM_ADMIN_USER_ENV =
+      Shell.WINDOWS ?
+          "" :
+          "LD_LIBRARY_PATH=" + Apps.crossPlatformify("HADOOP_COMMON_HOME") +
+              "/lib/native";
+
   public static final String MR_AM_PROFILE = MR_AM_PREFIX + "profile";
   public static final boolean DEFAULT_MR_AM_PROFILE = false;
   public static final String MR_AM_PROFILE_PARAMS = MR_AM_PREFIX
@@ -687,10 +739,13 @@ public interface MRJobConfig {
   public static final String MAPRED_ADMIN_USER_ENV =
       "mapreduce.admin.user.env";
 
-  public final String DEFAULT_MAPRED_ADMIN_USER_ENV = 
-      Shell.WINDOWS ? 
-          "PATH=%PATH%;%HADOOP_COMMON_HOME%\\bin":
-          "LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native";
+  // the "%...%" macros can be expanded prematurely and are probably not OK
+  // this should be addressed by MAPREDUCE-6588
+  public static final String DEFAULT_MAPRED_ADMIN_USER_ENV =
+      Shell.WINDOWS ?
+          "PATH=%PATH%;%HADOOP_COMMON_HOME%\\bin" :
+          "LD_LIBRARY_PATH=" + Apps.crossPlatformify("HADOOP_COMMON_HOME") +
+              "/lib/native";
 
   public static final String WORKDIR = "work";
 
@@ -813,6 +868,18 @@ public interface MRJobConfig {
       MR_PREFIX + "task.container.log.backups";
   public static final int DEFAULT_TASK_LOG_BACKUPS = 0; // don't roll
 
+  public static final String REDUCE_SEPARATE_SHUFFLE_LOG =
+      MR_PREFIX + "shuffle.log.separate";
+  public static final boolean DEFAULT_REDUCE_SEPARATE_SHUFFLE_LOG = true;
+
+  public static final String SHUFFLE_LOG_BACKUPS =
+      MR_PREFIX + "shuffle.log.backups";
+  public static final int DEFAULT_SHUFFLE_LOG_BACKUPS = 0; // don't roll
+
+  public static final String SHUFFLE_LOG_KB =
+      MR_PREFIX + "shuffle.log.limit.kb";
+  public static final long DEFAULT_SHUFFLE_LOG_KB = 0L;
+
   public static final String WORKFLOW_NAME = "mapreduce.workflow.name";
   
   public static final String WORKFLOW_NODE_NAME =
@@ -854,4 +921,9 @@ public interface MRJobConfig {
       "mapreduce.job.encrypted-intermediate-data.buffer.kb";
   public static final int DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_BUFFER_KB =
           128;
+
+  /**
+   * A comma-separated list of properties whose value will be redacted.
+   */
+  String MR_JOB_REDACTED_PROPERTIES = "mapreduce.job.redacted-properties";
 }

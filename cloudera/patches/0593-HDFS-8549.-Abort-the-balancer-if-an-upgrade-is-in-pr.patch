@@ -1,7 +1,7 @@
 From 156422e7b1ddbd379b01fa7ba1f5b89fc98506da Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Wed, 10 Jun 2015 13:42:57 -0700
-Subject: [PATCH 593/924] HDFS-8549. Abort the balancer if an upgrade is in
+Subject: [PATCH 0593/2639] HDFS-8549. Abort the balancer if an upgrade is in
  progress.
 
 (cherry picked from commit a7a7768341f1b7d3a8f2686e2f4d00c57f2e1d4f)

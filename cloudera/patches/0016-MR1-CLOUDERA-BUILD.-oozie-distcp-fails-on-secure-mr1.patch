@@ -1,7 +1,7 @@
 From 7d37d26188940ea15c7bca93f9b505c5efc49581 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Fri, 25 Jan 2013 15:12:51 -0800
-Subject: [PATCH 016/924] MR1: CLOUDERA-BUILD. oozie distcp fails on secure
+Subject: [PATCH 0016/2639] MR1: CLOUDERA-BUILD. oozie distcp fails on secure
  mr1 cluster
 
   Reason: bug, this is a backport of a functionality present in distcp-v2 (Hadoop2)

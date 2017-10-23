@@ -1,9 +1,10 @@
 From e3c426011c51abdaa4ef55b03775fca019c6e0fc Mon Sep 17 00:00:00 2001
 From: Christopher Douglas <cdouglas@apache.org>
 Date: Mon, 16 May 2011 22:53:09 +0000
-Subject: [PATCH 065/924] MR1: MAPREDUCE-2479. Move distributed cache cleanup
- to a background task, backporting MAPREDUCE-1568.
- Contributed by Robert Joseph Evans
+Subject: [PATCH 0065/2639] MR1: MAPREDUCE-2479. Move distributed cache
+ cleanup to a background task, backporting
+ MAPREDUCE-1568. Contributed by Robert Joseph
+ Evans
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-0.20-security@1103940 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 9b31f27ce02840e94043df911c82cf326afd1604)

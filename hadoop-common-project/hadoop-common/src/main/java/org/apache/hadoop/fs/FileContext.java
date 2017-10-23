@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
@@ -58,6 +59,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.htrace.core.Tracer;
+
+import com.google.common.base.Preconditions;
 
 /**
  * The FileContext class provides an interface to the application writer for
@@ -274,6 +277,7 @@ public class FileContext {
    * has been deliberately declared private.
    */
   Path fixRelativePart(Path p) {
+    Preconditions.checkNotNull(p, "path cannot be null");
     if (p.isUriPathAbsolute()) {
       return p;
     } else {
@@ -337,6 +341,15 @@ public class FileContext {
           return AbstractFileSystem.get(uri, conf);
         }
       });
+    } catch (RuntimeException ex) {
+      // RTEs can wrap other exceptions; if there is an IOException inner,
+      // throw it direct.
+      Throwable cause = ex.getCause();
+      if (cause instanceof IOException) {
+        throw (IOException) cause;
+      } else {
+        throw ex;
+      }
     } catch (InterruptedException ex) {
       LOG.error(ex);
       throw new IOException("Failed to get the AbstractFileSystem for path: "
@@ -470,9 +483,15 @@ public class FileContext {
    */
   public static FileContext getFileContext(final Configuration aConf)
       throws UnsupportedFileSystemException {
-    return getFileContext(
-      URI.create(aConf.get(FS_DEFAULT_NAME_KEY, FS_DEFAULT_NAME_DEFAULT)), 
-      aConf);
+    final URI defaultFsUri = URI.create(aConf.get(FS_DEFAULT_NAME_KEY,
+        FS_DEFAULT_NAME_DEFAULT));
+    if (   defaultFsUri.getScheme() != null
+        && !defaultFsUri.getScheme().trim().isEmpty()) {
+      return getFileContext(defaultFsUri, aConf);
+    }
+    throw new UnsupportedFileSystemException(String.format(
+        "%s: URI configured via %s carries no scheme",
+        defaultFsUri, FS_DEFAULT_NAME_KEY));
   }
 
   /**
@@ -672,7 +691,7 @@ public class FileContext {
     CreateOpts.Perms permOpt = CreateOpts.getOpt(CreateOpts.Perms.class, opts);
     FsPermission permission = (permOpt != null) ? permOpt.getValue() :
                                       FILE_DEFAULT_PERM;
-    permission = permission.applyUMask(umask);
+    permission = FsCreateModes.applyUMask(permission, umask);
 
     final CreateOpts[] updatedOpts = 
                       CreateOpts.setOpt(CreateOpts.perms(permission), opts);
@@ -718,8 +737,9 @@ public class FileContext {
       ParentNotDirectoryException, UnsupportedFileSystemException, 
       IOException {
     final Path absDir = fixRelativePart(dir);
-    final FsPermission absFerms = (permission == null ? 
-          FsPermission.getDirDefault() : permission).applyUMask(umask);
+    final FsPermission absFerms = FsCreateModes.applyUMask(
+        permission == null ?
+            FsPermission.getDirDefault() : permission, umask);
     new FSLinkResolver<Void>() {
       @Override
       public Void next(final AbstractFileSystem fs, final Path p) 

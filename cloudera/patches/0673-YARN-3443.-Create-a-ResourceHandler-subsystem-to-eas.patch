@@ -1,10 +1,10 @@
 From eb0a7b269ea85d0b7df964c0cb8fcdcc7a12abb1 Mon Sep 17 00:00:00 2001
 From: Junping Du <junping_du@apache.org>
 Date: Mon, 13 Apr 2015 18:35:56 -0700
-Subject: [PATCH 673/924] YARN-3443. Create a 'ResourceHandler' subsystem to
- ease addition of support for new resource types on
- the NM. Contributed by Sidharta Seethana. (cherry
- picked from commit
+Subject: [PATCH 0673/2639] YARN-3443. Create a 'ResourceHandler' subsystem to
+ ease addition of support for new resource types
+ on the NM. Contributed by Sidharta Seethana.
+ (cherry picked from commit
  838b06ac87339494cea706d4a97e7f5383bdc442)
 
 Conflicts:

@@ -1,7 +1,7 @@
 From 59e0e797b296fb51d0ad837c1b76f2110046017a Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Fri, 29 Aug 2014 17:15:38 -0700
-Subject: [PATCH 200/924] YARN-2360. Fair Scheduler: Display dynamic fair
+Subject: [PATCH 0200/2639] YARN-2360. Fair Scheduler: Display dynamic fair
  share for queues on the scheduler page. (Ashwin
  Shankar and Wei Yan via kasha)
 

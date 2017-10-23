@@ -1,8 +1,8 @@
 From 8dcf3873d26b44310970c541d18ff52652a5658b Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Fri, 3 Jan 2014 15:23:25 -0800
-Subject: [PATCH 110/924] CLOUDERA-BUILD: MR1: toBeDeleted parent directories
- aren't being cleaned up
+Subject: [PATCH 0110/2639] CLOUDERA-BUILD: MR1: toBeDeleted parent
+ directories aren't being cleaned up
 
 This will go in upstream as MAPREDUCE-5706
 

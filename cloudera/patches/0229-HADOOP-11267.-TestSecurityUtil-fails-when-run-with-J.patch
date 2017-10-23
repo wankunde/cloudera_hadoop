@@ -1,9 +1,9 @@
 From 12b3aac457d60a332d109bc4c4bb557f77c27fce Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Wed, 5 Nov 2014 15:25:35 -0800
-Subject: [PATCH 229/924] HADOOP-11267. TestSecurityUtil fails when run with
- JDK8 because of empty principal names. Contributed
- by Stephen Chu.
+Subject: [PATCH 0229/2639] HADOOP-11267. TestSecurityUtil fails when run with
+ JDK8 because of empty principal names.
+ Contributed by Stephen Chu.
 
 (cherry picked from commit 8549fa5dc95d3e94e49c9b92734aec0509693a2a)
 (cherry picked from commit 0335257f5de56302bea0d31644e3bef7e2e73813)

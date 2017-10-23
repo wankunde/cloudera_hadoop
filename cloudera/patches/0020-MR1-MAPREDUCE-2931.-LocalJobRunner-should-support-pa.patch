@@ -1,7 +1,7 @@
 From 9669281b522fe98c5899c72c74b4c1c53db70b67 Mon Sep 17 00:00:00 2001
 From: Thomas White <tomwhite@apache.org>
 Date: Fri, 25 Jan 2013 10:57:52 +0000
-Subject: [PATCH 020/924] MR1: MAPREDUCE-2931. LocalJobRunner should support
+Subject: [PATCH 0020/2639] MR1: MAPREDUCE-2931. LocalJobRunner should support
  parallel mapper execution. Contributed by Sandy
  Ryza.
 

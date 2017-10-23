@@ -184,7 +184,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     final Path p = new Path("/test/testOpenNonExistFile");
     //open it as a file, should get FileNotFoundException 
     try {
-      fs.open(p);
+      fs.open(p).read();
       fail("Expected FileNotFoundException was not thrown");
     } catch(FileNotFoundException fnfe) {
       WebHdfsFileSystem.LOG.info("This is expected.", fnfe);
@@ -401,7 +401,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       final Map<?, ?> m = WebHdfsTestUtil.connectAndGetJson(
           conn, HttpServletResponse.SC_OK);
-      assertEquals(WebHdfsFileSystem.getHomeDirectoryString(ugi),
+      assertEquals(webhdfs.getHomeDirectory().toUri().getPath(),
           m.get(Path.class.getSimpleName()));
       conn.disconnect();
     }

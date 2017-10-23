@@ -1,9 +1,9 @@
 From 10003c36213155ead1110564db5aa82f7fd334eb Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Mon, 23 Mar 2015 16:29:51 -0700
-Subject: [PATCH 578/924] HDFS-7917. Use file to replace data dirs in test to
- simulate a disk failure. Contributed by Lei (Eddy)
- Xu.
+Subject: [PATCH 0578/2639] HDFS-7917. Use file to replace data dirs in test
+ to simulate a disk failure. Contributed by Lei
+ (Eddy) Xu.
 
 (cherry picked from commit 2c238ae4e00371ef76582b007bb0e20ac8455d9c)
 (cherry picked from commit 01c0bcb176e22ddefbc8086e382dd1ebd105f9c6)

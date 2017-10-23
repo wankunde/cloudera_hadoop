@@ -1,10 +1,11 @@
 From 672decaa1135602d87bd8a748a82fd461c96c552 Mon Sep 17 00:00:00 2001
 From: Devaraj K <devaraj@apache.org>
 Date: Thu, 26 Feb 2015 15:45:41 +0530
-Subject: [PATCH 404/924] YARN-3256. TestClientToAMTokens#testClientTokenRace
- is not running against all Schedulers even when
- using ParameterizedSchedulerTestBase. Contributed
- by Anubhav Dhoot.
+Subject: [PATCH 0404/2639] YARN-3256.
+ TestClientToAMTokens#testClientTokenRace is not
+ running against all Schedulers even when using
+ ParameterizedSchedulerTestBase. Contributed by
+ Anubhav Dhoot.
 
 (cherry picked from commit 0d4296f0e0f545267f2e39a868d4ffefc9844db8)
 

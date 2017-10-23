@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
-public class RMContainerImpl implements RMContainer {
+public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
 
   private static final Log LOG = LogFactory.getLog(RMContainerImpl.class);
 
@@ -286,8 +286,13 @@ public class RMContainerImpl implements RMContainer {
   public String getLogURL() {
     try {
       readLock.lock();
-      return WebAppUtils.getRunningLogURL("//" + container.getNodeHttpAddress(),
-          ConverterUtils.toString(containerId), user);
+      StringBuilder logURL = new StringBuilder();
+      logURL.append(WebAppUtils.getHttpSchemePrefix(rmContext
+          .getYarnConfiguration()));
+      logURL.append(WebAppUtils.getRunningLogURL(
+          container.getNodeHttpAddress(), ConverterUtils.toString(containerId),
+          user));
+      return logURL.toString();
     } finally {
       readLock.unlock();
     }
@@ -391,7 +396,33 @@ public class RMContainerImpl implements RMContainer {
   public ContainerStatus getFinishedStatus() {
     return finishedStatus;
   }
-  
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof RMContainer) {
+      if (null != getContainerId()) {
+        return getContainerId().equals(((RMContainer) obj).getContainerId());
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    if (null != getContainerId()) {
+      return getContainerId().hashCode();
+    }
+    return super.hashCode();
+  }
+
+  @Override
+  public int compareTo(RMContainer o) {
+    if (getContainerId() != null && o.getContainerId() != null) {
+      return getContainerId().compareTo(o.getContainerId());
+    }
+    return -1;
+  }
+
   private static class BaseTransition implements
       SingleArcTransition<RMContainerImpl, RMContainerEvent> {
 

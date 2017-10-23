@@ -1,7 +1,7 @@
 From f65e4fee363ea1f5e4d4795eb62f2d1cf9057c76 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 27 Oct 2014 09:53:16 -0700
-Subject: [PATCH 189/924] HDFS-7278. Add a command that allows sysadmins to
+Subject: [PATCH 0189/2639] HDFS-7278. Add a command that allows sysadmins to
  manually trigger full block reports from a DN
  (cmccabe) (cherry picked from commit
  baf794dc404ac54f4e8332654eadfac1bebacb8f)

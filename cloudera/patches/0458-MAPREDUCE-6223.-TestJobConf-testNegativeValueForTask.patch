@@ -1,9 +1,9 @@
 From f7f6059e8492e5ee364d42634c7a10a001e257ca Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Thu, 26 Feb 2015 14:24:19 -0800
-Subject: [PATCH 458/924] MAPREDUCE-6223.
- TestJobConf#testNegativeValueForTaskVmem failures.
- (Varun Saxena via kasha)
+Subject: [PATCH 0458/2639] MAPREDUCE-6223.
+ TestJobConf#testNegativeValueForTaskVmem
+ failures. (Varun Saxena via kasha)
 
 (cherry picked from commit 1047c883ba01a252dbd4203e525fb1ff8ea313aa)
 ---

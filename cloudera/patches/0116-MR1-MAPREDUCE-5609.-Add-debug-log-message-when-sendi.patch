@@ -1,7 +1,7 @@
 From e8bc2ab23af53ce1708fae20817be9a036c1ed22 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Wed, 6 Nov 2013 15:13:49 -0800
-Subject: [PATCH 116/924] MR1: MAPREDUCE-5609. Add debug log message when
+Subject: [PATCH 0116/2639] MR1: MAPREDUCE-5609. Add debug log message when
  sending job end notification. (rkanter via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1539476 13f79535-47bb-0310-9956-ffa450edef68

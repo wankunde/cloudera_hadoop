@@ -1,9 +1,9 @@
 From 90890c0310a29ed898619d07a9c31fdf6032589a Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Thu, 21 Aug 2014 17:37:34 +0000
-Subject: [PATCH 349/924] MAPREDUCE-5974. Allow specifying multiple
- MapOutputCollectors with fallback. (Todd Lipcon via
- kasha)
+Subject: [PATCH 0349/2639] MAPREDUCE-5974. Allow specifying multiple
+ MapOutputCollectors with fallback. (Todd Lipcon
+ via kasha)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1619492 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 549ad6ad74b89fcc530525f793a6cfb056971865)

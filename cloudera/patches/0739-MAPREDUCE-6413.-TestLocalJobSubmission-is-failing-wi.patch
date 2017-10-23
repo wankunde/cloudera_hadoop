@@ -1,7 +1,7 @@
-From 03cd95fb0e69bc9a1bc12f74e3ab98612993fd5c Mon Sep 17 00:00:00 2001
+From 0387fcc28784abb2f5bfd81e5cf7c28a11b9019a Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Thu, 25 Jun 2015 19:50:07 +0000
-Subject: [PATCH 739/924] MAPREDUCE-6413. TestLocalJobSubmission is failing
+Subject: [PATCH 0739/2639] MAPREDUCE-6413. TestLocalJobSubmission is failing
  with unknown host. Contributed by zhihai xu
 
 (cherry picked from commit aa5b15b03be61ebb76a226e0de485d5228c8e3d0)

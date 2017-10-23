@@ -1,7 +1,7 @@
 From f0d1789af127083bddd4ef9405bde9eb3ef63888 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 4 Dec 2014 12:51:42 -0800
-Subject: [PATCH 293/924] HADOOP-11348. Remove unused variable from CMake
+Subject: [PATCH 0293/2639] HADOOP-11348. Remove unused variable from CMake
  error message for finding openssl (Dian Fu via
  Colin P. McCabe)
 

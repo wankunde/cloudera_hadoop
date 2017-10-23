@@ -61,21 +61,14 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
         Random.class);
     try {
       random = ReflectionUtils.newInstance(klass, conf);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Using " + klass.getName() + " as random number generator.");
+      }
     } catch (Exception e) {
       LOG.info("Unable to use " + klass.getName() + ".  Falling back to " +
           "Java SecureRandom.", e);
       this.random = new SecureRandom();
     }
-  }
-
-  @Override
-  protected void finalize() throws Throwable {
-    try {
-      Closeable r = (Closeable) this.random;
-      r.close();
-    } catch (ClassCastException e) {
-    }
-    super.finalize();
   }
 
   @Override
@@ -97,7 +90,17 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
   public void generateSecureRandom(byte[] bytes) {
     random.nextBytes(bytes);
   }
-  
+
+  @Override
+  public void close() throws IOException {
+    try {
+      Closeable r = (Closeable) this.random;
+      r.close();
+    } catch (ClassCastException e) {
+    }
+    super.close();
+  }
+
   private static class OpensslAesCtrCipher implements Encryptor, Decryptor {
     private final OpensslCipher cipher;
     private final int mode;

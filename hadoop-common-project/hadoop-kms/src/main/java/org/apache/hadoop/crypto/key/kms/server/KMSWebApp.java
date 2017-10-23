@@ -28,6 +28,7 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.PropertyConfigurator;
@@ -39,9 +40,9 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.util.List;
 
 @InterfaceAudience.Private
 public class KMSWebApp implements ServletContextListener {
@@ -63,6 +64,10 @@ public class KMSWebApp implements ServletContextListener {
       "generate_eek.calls.meter";
   private static final String DECRYPT_EEK_METER = METRICS_PREFIX +
       "decrypt_eek.calls.meter";
+  private static final String REENCRYPT_EEK_METER = METRICS_PREFIX +
+      "reencrypt_eek.calls.meter";
+  private static final String REENCRYPT_EEK_BATCH_METER = METRICS_PREFIX +
+      "reencrypt_eek_batch.calls.meter";
 
   private static Logger LOG;
   private static MetricRegistry metricRegistry;
@@ -75,6 +80,8 @@ public class KMSWebApp implements ServletContextListener {
   private static Meter unauthorizedCallsMeter;
   private static Meter unauthenticatedCallsMeter;
   private static Meter decryptEEKCallsMeter;
+  private static Meter reencryptEEKCallsMeter;
+  private static Meter reencryptEEKBatchCallsMeter;
   private static Meter generateEEKCallsMeter;
   private static Meter invalidCallsMeter;
   private static KMSAudit kmsAudit;
@@ -121,9 +128,11 @@ public class KMSWebApp implements ServletContextListener {
       }
       kmsConf = KMSConfiguration.getKMSConf();
       initLogging(confDir);
+      UserGroupInformation.setConfiguration(kmsConf);
       LOG.info("-------------------------------------------------------------");
       LOG.info("  Java runtime version : {}", System.getProperty(
           "java.runtime.version"));
+      LOG.info("  User: {}", System.getProperty("user.name"));
       LOG.info("  KMS Hadoop Version: " + VersionInfo.getVersion());
       LOG.info("-------------------------------------------------------------");
 
@@ -137,6 +146,10 @@ public class KMSWebApp implements ServletContextListener {
           new Meter());
       decryptEEKCallsMeter = metricRegistry.register(DECRYPT_EEK_METER,
           new Meter());
+      reencryptEEKCallsMeter = metricRegistry.register(REENCRYPT_EEK_METER,
+          new Meter());
+      reencryptEEKBatchCallsMeter = metricRegistry.register(
+          REENCRYPT_EEK_BATCH_METER, new Meter());
       adminCallsMeter = metricRegistry.register(ADMIN_CALLS_METER, new Meter());
       keyCallsMeter = metricRegistry.register(KEY_CALLS_METER, new Meter());
       invalidCallsMeter = metricRegistry.register(INVALID_CALLS_METER,
@@ -146,10 +159,7 @@ public class KMSWebApp implements ServletContextListener {
       unauthenticatedCallsMeter = metricRegistry.register(
           UNAUTHENTICATED_CALLS_METER, new Meter());
 
-      kmsAudit =
-          new KMSAudit(kmsConf.getLong(
-              KMSConfiguration.KMS_AUDIT_AGGREGATION_WINDOW,
-              KMSConfiguration.KMS_AUDIT_AGGREGATION_WINDOW_DEFAULT));
+      kmsAudit = new KMSAudit(kmsConf);
 
       // this is required for the the JMXJsonServlet to work properly.
       // the JMXJsonServlet is behind the authentication filter,
@@ -215,6 +225,11 @@ public class KMSWebApp implements ServletContextListener {
 
   @Override
   public void contextDestroyed(ServletContextEvent sce) {
+    try {
+      keyProviderCryptoExtension.close();
+    } catch (IOException ioe) {
+      LOG.error("Error closing KeyProviderCryptoExtension", ioe);
+    }
     kmsAudit.shutdown();
     kmsAcls.stopReloader();
     jmxReporter.stop();
@@ -249,6 +264,14 @@ public class KMSWebApp implements ServletContextListener {
 
   public static Meter getDecryptEEKCallsMeter() {
     return decryptEEKCallsMeter;
+  }
+
+  public static Meter getReencryptEEKCallsMeter() {
+    return reencryptEEKCallsMeter;
+  }
+
+  public static Meter getReencryptEEKBatchCallsMeter() {
+    return reencryptEEKBatchCallsMeter;
   }
 
   public static Meter getUnauthorizedCallsMeter() {

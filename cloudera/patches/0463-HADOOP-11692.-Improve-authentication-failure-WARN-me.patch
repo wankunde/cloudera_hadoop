@@ -1,7 +1,7 @@
 From e9b66e5cbea309e1c2597552d3d0bb93998aff23 Mon Sep 17 00:00:00 2001
 From: Yongjun Zhang <yzhang@cloudera.com>
 Date: Mon, 9 Mar 2015 11:55:32 -0700
-Subject: [PATCH 463/924] HADOOP-11692. Improve authentication failure WARN
+Subject: [PATCH 0463/2639] HADOOP-11692. Improve authentication failure WARN
  message to avoid user confusion. Contributed by
  Yongjun Zhang.
 

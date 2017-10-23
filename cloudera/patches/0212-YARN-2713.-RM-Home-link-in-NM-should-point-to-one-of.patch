@@ -1,8 +1,8 @@
 From b5a66e654e1d423970c8a79d6c892a9778589d5e Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Fri, 24 Oct 2014 15:00:12 -0700
-Subject: [PATCH 212/924] YARN-2713. "RM Home" link in NM should point to one
- of the RMs in an HA setup. (kasha)
+Subject: [PATCH 0212/2639] YARN-2713. "RM Home" link in NM should point to
+ one of the RMs in an HA setup. (kasha)
 
 (cherry picked from commit 683897fd028dcc2185383f73b52d15245a69e0cb)
 (cherry picked from commit 9af3cfc7eb64389b9e2001f60e7ad810fe260a23)

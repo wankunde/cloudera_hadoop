@@ -1,9 +1,9 @@
 From ab3edd241879c76bf87b093d877d452ef138f3f7 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Wed, 15 May 2013 01:35:06 -0700
-Subject: [PATCH 070/924] MR1: CLOUDERA-BUILD. Backport fixes from
- MAPREDUCE-323 to allow underscores in usernames and
- jobnames
+Subject: [PATCH 0070/2639] MR1: CLOUDERA-BUILD. Backport fixes from
+ MAPREDUCE-323 to allow underscores in usernames
+ and jobnames
 
 Reason: Customer request
 Ref: CDH-11431

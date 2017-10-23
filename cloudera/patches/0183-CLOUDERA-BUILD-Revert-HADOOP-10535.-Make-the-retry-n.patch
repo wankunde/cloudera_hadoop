@@ -1,8 +1,9 @@
 From 749e334de1302ee4d48d298fcf427c2301b0fb88 Mon Sep 17 00:00:00 2001
 From: Juan Yu <jyu@cloudera.com>
 Date: Wed, 20 Aug 2014 15:27:21 -0700
-Subject: [PATCH 183/924] CLOUDERA-BUILD Revert "HADOOP-10535. Make the retry
- numbers in ActiveStandbyElector configurable."
+Subject: [PATCH 0183/2639] CLOUDERA-BUILD Revert "HADOOP-10535. Make the
+ retry numbers in ActiveStandbyElector
+ configurable."
 
 This reverts commit 659f3b228d8752f4066ec86c7a0def154b452571.
 

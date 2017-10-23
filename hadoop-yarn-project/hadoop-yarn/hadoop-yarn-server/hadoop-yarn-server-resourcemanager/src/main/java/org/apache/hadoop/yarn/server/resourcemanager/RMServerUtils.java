@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +36,7 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
@@ -45,6 +48,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -89,11 +93,11 @@ public class RMServerUtils {
    * Utility method to validate a list resource requests, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
    */
-  public static void validateResourceRequests(List<ResourceRequest> ask,
+  public static void normalizeAndValidateRequests(List<ResourceRequest> ask,
       Resource maximumResource, String queueName, YarnScheduler scheduler)
       throws InvalidResourceRequestException {
     for (ResourceRequest resReq : ask) {
-      SchedulerUtils.validateResourceRequest(resReq, maximumResource,
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maximumResource,
           queueName, scheduler);
     }
   }
@@ -140,43 +144,43 @@ public class RMServerUtils {
     }
   }
 
-  public static UserGroupInformation verifyAccess(
-      AccessControlList acl, String method, final Log LOG)
+  public static UserGroupInformation verifyAdminAccess(
+      YarnAuthorizationProvider authorizer, String method, final Log LOG)
       throws IOException {
     // by default, this method will use AdminService as module name
-    return verifyAccess(acl, method, "AdminService", LOG);
+    return verifyAdminAccess(authorizer, method, "AdminService", LOG);
   }
 
   /**
    * Utility method to verify if the current user has access based on the
    * passed {@link AccessControlList}
-   * @param acl the {@link AccessControlList} to check against
+   * @param authorizer the {@link AccessControlList} to check against
    * @param method the method name to be logged
-   * @param module, like AdminService or NodeLabelManager
+   * @param module like AdminService or NodeLabelManager
    * @param LOG the logger to use
    * @return {@link UserGroupInformation} of the current user
    * @throws IOException
    */
-  public static UserGroupInformation verifyAccess(
-      AccessControlList acl, String method, String module, final Log LOG)
+  public static UserGroupInformation verifyAdminAccess(
+      YarnAuthorizationProvider authorizer, String method, String module,
+      final Log LOG)
       throws IOException {
     UserGroupInformation user;
     try {
       user = UserGroupInformation.getCurrentUser();
     } catch (IOException ioe) {
       LOG.warn("Couldn't get current user", ioe);
-      RMAuditLogger.logFailure("UNKNOWN", method, acl.toString(),
+      RMAuditLogger.logFailure("UNKNOWN", method, "",
           "AdminService", "Couldn't get current user");
       throw ioe;
     }
 
-    if (!acl.isUserAllowed(user)) {
+    if (!authorizer.isAdmin(user)) {
       LOG.warn("User " + user.getShortUserName() + " doesn't have permission" +
           " to call '" + method + "'");
 
-      RMAuditLogger.logFailure(user.getShortUserName(), method,
-          acl.toString(), module,
-          RMAuditLogger.AuditConstants.UNAUTHORIZED_USER);
+      RMAuditLogger.logFailure(user.getShortUserName(), method, "", module,
+        RMAuditLogger.AuditConstants.UNAUTHORIZED_USER);
 
       throw new AccessControlException("User " + user.getShortUserName() +
               " doesn't have permission" +
@@ -274,5 +278,37 @@ public class RMServerUtils {
     for (Map.Entry<String, String> entry : rmProxyUsers.entrySet()) {
       conf.set(entry.getKey(), entry.getValue());
     }
+  }
+
+  /**
+   * Get applicable Node count for AM.
+   *
+   * @param rmContext context
+   * @param conf configuration
+   * @param amReqs am resource requests
+   * @return applicable node count
+   */
+  public static int getApplicableNodeCountForAM(RMContext rmContext,
+      Configuration conf, List<ResourceRequest> amReqs) {
+    // Determine the list of nodes that are eligible based on the strict
+    // resource requests
+    Set<NodeId> nodesForReqs = new HashSet<>();
+    if (amReqs != null) {
+      for (ResourceRequest amReq : amReqs) {
+        if (amReq.getRelaxLocality() &&
+            !amReq.getResourceName().equals(ResourceRequest.ANY)) {
+          nodesForReqs.addAll(
+              rmContext.getScheduler().getNodeIds(amReq.getResourceName()));
+        }
+      }
+    }
+
+    // If no strict resource request NodeIds, then just
+    // return the entire cluster
+    if (nodesForReqs.isEmpty()) {
+      return rmContext.getScheduler().getNumClusterNodes();
+    }
+    // Return the strict resource request NodeIds
+    return nodesForReqs.size();
   }
 }

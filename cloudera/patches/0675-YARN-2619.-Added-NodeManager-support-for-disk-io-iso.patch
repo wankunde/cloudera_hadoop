@@ -1,7 +1,7 @@
 From 5467fb39bbaeb29a60194f5495fddff382e172fc Mon Sep 17 00:00:00 2001
 From: Vinod Kumar Vavilapalli <vinodkv@apache.org>
 Date: Thu, 30 Apr 2015 21:41:07 -0700
-Subject: [PATCH 675/924] YARN-2619. Added NodeManager support for disk io
+Subject: [PATCH 0675/2639] YARN-2619. Added NodeManager support for disk io
  isolation through cgroups. Contributed by Varun
  Vasudev and Wei Yan.
 

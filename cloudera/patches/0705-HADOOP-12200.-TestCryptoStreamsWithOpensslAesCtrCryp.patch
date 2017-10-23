@@ -1,7 +1,7 @@
 From 2bea2e3ae64366327d8f7f5f02b4055f18292285 Mon Sep 17 00:00:00 2001
 From: Akira Ajisaka <aajisaka@apache.org>
 Date: Thu, 9 Jul 2015 13:14:53 +0900
-Subject: [PATCH 705/924] HADOOP-12200.
+Subject: [PATCH 0705/2639] HADOOP-12200.
  TestCryptoStreamsWithOpensslAesCtrCryptoCodec
  should be skipped in non-native profile.
  Contributed by Masatake Iwasaki.

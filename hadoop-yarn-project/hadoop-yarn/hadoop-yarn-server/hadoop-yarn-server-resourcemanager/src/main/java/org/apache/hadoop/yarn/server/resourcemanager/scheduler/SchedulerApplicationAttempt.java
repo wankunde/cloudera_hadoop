@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -130,7 +131,7 @@ public class SchedulerApplicationAttempt {
   public SchedulerApplicationAttempt(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext) {
-    Preconditions.checkNotNull("RMContext should not be null", rmContext);
+    Preconditions.checkNotNull(rmContext, "RMContext should not be null");
     this.rmContext = rmContext;
     this.appSchedulingInfo = 
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
@@ -204,7 +205,8 @@ public class SchedulerApplicationAttempt {
   }
 
   public synchronized int getTotalRequiredResources(Priority priority) {
-    return getResourceRequest(priority, ResourceRequest.ANY).getNumContainers();
+    ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
+    return request == null ? 0 : request.getNumContainers();
   }
 
   public synchronized Resource getResource(Priority priority) {
@@ -507,8 +509,10 @@ public class SchedulerApplicationAttempt {
   }
 
   public synchronized void addSchedulingOpportunity(Priority priority) {
-    schedulingOpportunities.setCount(priority,
-        schedulingOpportunities.count(priority) + 1);
+    int count = schedulingOpportunities.count(priority);
+    if (count < Integer.MAX_VALUE) {
+      schedulingOpportunities.setCount(priority, count + 1);
+    }
   }
   
   public synchronized void subtractSchedulingOpportunity(Priority priority) {
@@ -540,6 +544,11 @@ public class SchedulerApplicationAttempt {
       long currentTimeMs) {
     lastScheduledContainer.put(priority, currentTimeMs);
     schedulingOpportunities.setCount(priority, 0);
+  }
+
+  @VisibleForTesting
+  void setSchedulingOpportunities(Priority priority, int count) {
+    schedulingOpportunities.setCount(priority, count);
   }
 
   synchronized AggregateAppResourceUsage getRunningAggregateAppResourceUsage() {
@@ -653,5 +662,21 @@ public class SchedulerApplicationAttempt {
         queue.getMetrics().addAppAttemptFirstContainerAllocationDelay(timediff);
       }
     }
+  }
+
+  @Override
+  public int hashCode() {
+    return getApplicationAttemptId().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (! (o instanceof SchedulerApplicationAttempt)) {
+      return false;
+    }
+
+    SchedulerApplicationAttempt other = (SchedulerApplicationAttempt) o;
+    return (this == other ||
+        this.getApplicationAttemptId().equals(other.getApplicationAttemptId()));
   }
 }

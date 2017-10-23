@@ -103,7 +103,7 @@ public class FsPermission implements Writable {
    * @throws IllegalArgumentException if <code>mode</code> is invalid
    */
   public FsPermission(String mode) {
-    this(new UmaskParser(mode).getUMask());
+    this(new RawParser(mode).getPermission());
   }
 
   /** Return user {@link FsAction}. */
@@ -135,6 +135,20 @@ public class FsPermission implements Writable {
   @Override
   public void readFields(DataInput in) throws IOException {
     fromShort(in.readShort());
+  }
+
+  /**
+   * Get masked permission if exists.
+   */
+  public FsPermission getMasked() {
+    return null;
+  }
+
+  /**
+   * Get unmasked permission if exists.
+   */
+  public FsPermission getUnmasked() {
+    return null;
   }
 
   /**
@@ -375,13 +389,10 @@ public class FsPermission implements Writable {
     public ImmutableFsPermission(short permission) {
       super(permission);
     }
-    @Override
-    public FsPermission applyUMask(FsPermission umask) {
-      throw new UnsupportedOperationException();
-    }
+
     @Override
     public void readFields(DataInput in) throws IOException {
       throw new UnsupportedOperationException();
-    }    
+    }
   }
 }

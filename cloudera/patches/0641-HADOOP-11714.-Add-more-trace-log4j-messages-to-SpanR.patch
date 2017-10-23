@@ -1,7 +1,7 @@
 From 27849ab1a579da3dd6547b35cee360e3502a4273 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 16 Mar 2015 12:02:10 -0700
-Subject: [PATCH 641/924] HADOOP-11714. Add more trace log4j messages to
+Subject: [PATCH 0641/2639] HADOOP-11714. Add more trace log4j messages to
  SpanReceiverHost (cmccabe)
 
 (cherry picked from commit bf3275dbaa99105d49520e25f5a6eadd6fd5b7ed)

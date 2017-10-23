@@ -20,12 +20,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>2.6.0-cdh5.5.1</version>
+    <version>2.6.0-cdh5.13.0</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-hdfs</artifactId>
-  <version>2.6.0-cdh5.5.1</version>
+  <version>2.6.0-cdh5.13.0</version>
   <description>Apache Hadoop HDFS</description>
   <name>Apache Hadoop HDFS</name>
   <packaging>jar</packaging>
@@ -163,11 +163,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-core-asl</artifactId>
+      <version>1.9.13</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-mapper-asl</artifactId>
+      <version>1.9.13</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -419,6 +421,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <exclude name="**/proto-*-web.xml"/>
                   </fileset>
                 </copy>
+                <replace dir="${project.build.directory}/webapps" value="${release-year}">
+                  <include name="**/*.html"/>
+                  <replacetoken>{release-year-token}</replacetoken>
+                </replace>
               </target>
             </configuration>
           </execution>
@@ -503,6 +509,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
           <excludePackageNames>org.apache.hadoop.hdfs.protocol.proto</excludePackageNames>
+          <maxmemory>1g</maxmemory>
         </configuration>
       </plugin>
       <plugin>
@@ -536,9 +543,17 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/contrib/**</exclude>
             <exclude>src/site/resources/images/*</exclude>
             <exclude>src/main/webapps/static/bootstrap-3.0.2/**</exclude>
+            <exclude>src/main/webapps/static/moment.min.js</exclude>
             <exclude>src/main/webapps/static/dust-full-2.0.0.min.js</exclude>
             <exclude>src/main/webapps/static/dust-helpers-1.1.1.min.js</exclude>
             <exclude>src/main/webapps/static/jquery-1.10.2.min.js</exclude>
+            <exclude>src/main/webapps/static/jquery.dataTables.min.js</exclude>
+            <exclude>src/main/webapps/static/json-bignum.js</exclude>
+            <exclude>src/main/webapps/static/dataTables.bootstrap.css</exclude>
+            <exclude>src/main/webapps/static/dataTables.bootstrap.js</exclude>
+            <exclude>src/main/webapps/static/d3-v4.1.1.min.js</exclude>
+            <exclude>src/test/resources/diskBalancer/data-cluster-3node-3disk.json</exclude>
+            <exclude>HDFS-1312_CHANGES.txt</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -553,15 +568,22 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <createDependencyReducedPom>false</createDependencyReducedPom>
+              <shadeTestJar>true</shadeTestJar>
               <artifactSet>
                 <includes>
                   <include>io.netty:netty-all:jar:*</include>
+                  <include>org.codehaus.jackson:jackson-mapper-asl:jar:*</include>
+                  <include>org.codehaus.jackson:jackson-core-asl:jar:*</include>
                 </includes>
               </artifactSet>
               <relocations>
                 <relocation>
                   <pattern>io.netty</pattern>
                   <shadedPattern>com.cloudera.io.netty</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.codehaus.jackson</pattern>
+                  <shadedPattern>com.cloudera.org.codehaus.jackson</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>

@@ -1,7 +1,7 @@
 From c0d730874d897038a4e7ad0a7c4ca1b5da6d9b4e Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Mon, 5 Jan 2015 12:59:48 +0000
-Subject: [PATCH 390/924] HADOOP-11446 S3AOutputStream should use shared
+Subject: [PATCH 0390/2639] HADOOP-11446 S3AOutputStream should use shared
  thread pool to avoid OutOfMemoryError (cherry
  picked from commit
  2800e73c2789f3d41fab618b35a25c59a45bf947)

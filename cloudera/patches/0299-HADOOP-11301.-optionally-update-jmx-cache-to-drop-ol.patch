@@ -1,11 +1,12 @@
 From bdb33471b02a04273781badcf5ff83fc21342d22 Mon Sep 17 00:00:00 2001
 From: stack <stack@duboce.net>
 Date: Mon, 1 Dec 2014 23:07:05 -0800
-Subject: [PATCH 299/924] HADOOP-11301. [optionally] update jmx cache to drop
- old metrics  (Maysam Yabandeh via stack) Ref:
- CDH-23378 updateJmxCache in MetricsSourceAdapter
- misses MBean attribute updates, makes metrics
- inaccessible Reviewer: Andrew Wang and stack
+Subject: [PATCH 0299/2639] HADOOP-11301. [optionally] update jmx cache to
+ drop old metrics  (Maysam Yabandeh via stack)
+ Ref: CDH-23378 updateJmxCache in
+ MetricsSourceAdapter misses MBean attribute
+ updates, makes metrics inaccessible Reviewer:
+ Andrew Wang and stack
 
 (cherry picked from commit b36f29298247f6c5db9f6eff7c2f5177a0fe3de5)
 

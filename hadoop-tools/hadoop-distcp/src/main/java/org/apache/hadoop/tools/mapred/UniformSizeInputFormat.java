@@ -23,12 +23,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileRecordReader;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.conf.Configuration;
@@ -95,7 +99,8 @@ public class UniformSizeInputFormat
       while (reader.next(srcRelPath, srcFileStatus)) {
         // If adding the current file would cause the bytes per map to exceed
         // limit. Add the current file to new split
-        if (currentSplitSize + srcFileStatus.getLen() > nBytesPerSplit && lastPosition != 0) {
+        if (currentSplitSize + srcFileStatus.getChunkLength() > nBytesPerSplit
+            && lastPosition != 0) {
           FileSplit split = new FileSplit(listingFilePath, lastSplitStart,
               lastPosition - lastSplitStart, null);
           if (LOG.isDebugEnabled()) {
@@ -105,7 +110,7 @@ public class UniformSizeInputFormat
           lastSplitStart = lastPosition;
           currentSplitSize = 0;
         }
-        currentSplitSize += srcFileStatus.getLen();
+        currentSplitSize += srcFileStatus.getChunkLength();
         lastPosition = reader.getPosition();
       }
       if (lastPosition > lastSplitStart) {

@@ -1,7 +1,7 @@
 From 457ad46b5eb8e3f4d6f981be27df9c5993769ed6 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Fri, 14 Jun 2013 15:20:23 -0700
-Subject: [PATCH 077/924] MR1: CLOUDERA-BUILD. Delete tests from TestIO that
+Subject: [PATCH 0077/2639] MR1: CLOUDERA-BUILD. Delete tests from TestIO that
  test/require old record generation
 
 (cherry picked from commit 3c1dcb9b1f710a66104afc5c33866d654a42a006)

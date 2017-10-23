@@ -1,7 +1,7 @@
 From af7dbb6808375298487b3ad076a94a160b76d1dc Mon Sep 17 00:00:00 2001
 From: Andrew Wang <andrew.wang@cloudera.com>
 Date: Tue, 26 May 2015 11:55:02 -0700
-Subject: [PATCH 573/924] CLOUDERA-BUILD. CDH-28019. Cross site scripting
+Subject: [PATCH 0573/2639] CLOUDERA-BUILD. CDH-28019. Cross site scripting
  vulnerability in dfsnodelist.jsp.
 
 ---

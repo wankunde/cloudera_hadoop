@@ -1,9 +1,9 @@
 From c70117579545fb841a540ed638f11e44ec018062 Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Tue, 3 Mar 2015 16:18:39 -0800
-Subject: [PATCH 470/924] HADOOP-11183. Memory-based S3AOutputstream. (Thomas
- Demoor via stevel) (cherry picked from commit
- 15b7076ad5f2ae92d231140b2f8cebc392a92c87) 
+Subject: [PATCH 0470/2639] HADOOP-11183. Memory-based S3AOutputstream.
+ (Thomas Demoor via stevel) (cherry picked from
+ commit 15b7076ad5f2ae92d231140b2f8cebc392a92c87) 
  Conflicts: 
  hadoop-common-project/hadoop-common/CHANGES.txt 
  hadoop-common-project/hadoop-common/src/main/resources/core-default.xml

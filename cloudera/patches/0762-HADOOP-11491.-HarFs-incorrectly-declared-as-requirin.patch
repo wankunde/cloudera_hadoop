@@ -1,7 +1,7 @@
-From b2fd097e5e27a608b17920080ce88d6b8b5ad7a4 Mon Sep 17 00:00:00 2001
+From b3645ebbeee7dfd29d60ade69492b8671f887ab3 Mon Sep 17 00:00:00 2001
 From: Gera Shegalov <gera@apache.org>
 Date: Fri, 1 May 2015 15:44:36 -0700
-Subject: [PATCH 762/924] HADOOP-11491. HarFs incorrectly declared as
+Subject: [PATCH 0762/2639] HADOOP-11491. HarFs incorrectly declared as
  requiring an authority. (Brahma Reddy Battula via
  gera)
 
@@ -12,7 +12,6 @@ Conflicts:
 	hadoop-common-project/hadoop-common/CHANGES.txt
 
 Change-Id: I6d64de8d63798dc9b289c63e21069e6d0135d596
-(cherry picked from commit b3645ebbeee7dfd29d60ade69492b8671f887ab3)
 ---
  .../src/main/java/org/apache/hadoop/fs/HarFs.java  |    2 +-
  .../apache/hadoop/fs/TestHarFileSystemBasics.java  |    7 +++++++

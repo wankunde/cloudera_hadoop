@@ -1,7 +1,7 @@
 From 697e99a14ef55701ce930399c555132c19794024 Mon Sep 17 00:00:00 2001
 From: Stephen Chu <schu@cloudera.com>
 Date: Wed, 4 Feb 2015 14:36:14 -0800
-Subject: [PATCH 358/924] CLOUDERA-BUILD. Update cdh-root version for
+Subject: [PATCH 0358/2639] CLOUDERA-BUILD. Update cdh-root version for
  packaging job.
 
 ---

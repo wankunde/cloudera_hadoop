@@ -1,13 +1,13 @@
-From a9a1b7008e3f66fac50a03d1653c5e5e04c22809 Mon Sep 17 00:00:00 2001
+From 1aadf916f2ddea33b91f0daaee601b94b7abd9c9 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 17 Aug 2015 12:00:45 -0700
-Subject: [PATCH 773/924] HDFS-8792. BlockManager#postponedMisreplicatedBlocks
- should use a LightWeightHashSet to save memory (Yi
- Liu via Colin P. McCabe)
+Subject: [PATCH 0773/2639] HDFS-8792.
+ BlockManager#postponedMisreplicatedBlocks should
+ use a LightWeightHashSet to save memory (Yi Liu
+ via Colin P. McCabe)
 
 (cherry picked from commit c77bd6af16cbc26f88a2c6d8220db83a3e1caa2c)
 (cherry picked from commit 08508ca1c8d9263d83229841915c8659bfc72afc)
-(cherry picked from commit 1aadf916f2ddea33b91f0daaee601b94b7abd9c9)
 ---
  .../hdfs/server/blockmanagement/BlockManager.java  |    5 ++--
  .../hadoop/hdfs/util/LightWeightHashSet.java       |   21 ++++++++++----

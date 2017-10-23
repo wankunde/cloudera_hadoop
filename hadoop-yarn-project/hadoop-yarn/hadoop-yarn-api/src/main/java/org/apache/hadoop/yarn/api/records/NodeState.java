@@ -43,7 +43,10 @@ public enum NodeState {
   LOST, 
   
   /** Node has rebooted */
-  REBOOTED;
+  REBOOTED,
+
+  /** Node decommission is in progress */
+  DECOMMISSIONING;
   
   public boolean isUnusable() {
     return (this == UNHEALTHY || this == DECOMMISSIONED || this == LOST);

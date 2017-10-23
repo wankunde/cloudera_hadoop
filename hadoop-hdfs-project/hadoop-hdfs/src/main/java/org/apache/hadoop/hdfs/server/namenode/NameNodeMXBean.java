@@ -162,6 +162,13 @@ public interface NameNodeMXBean {
   public long getNumberOfMissingBlocksWithReplicationFactorOne();
 
   /**
+   * Gets the total number of snapshottable dirs in the system.
+   *
+   * @return the total number of snapshottable dirs in the system
+   */
+  public long getNumberOfSnapshottableDirs();
+
+  /**
    * Gets the number of threads.
    * 
    * @return the number of threads
@@ -188,7 +195,14 @@ public interface NameNodeMXBean {
    * @return the decommissioning node information
    */
   public String getDecomNodes();
-  
+
+  /**
+   * Gets the information on nodes entering maintenance.
+   *
+   * @return the information on nodes entering maintenance
+   */
+  String getEnteringMaintenanceNodes();
+
   /**
    * Gets the cluster id.
    * 
@@ -237,6 +251,12 @@ public interface NameNodeMXBean {
    * @return the NN start time
    */
   public String getNNStarted();
+
+  /**
+   * Gets the NN start time in milliseconds.
+   * @return the NN start time in msec
+   */
+  long getNNStartedTimeInMillis();
 
   /**
    * Get the compilation information which contains date, user and branch

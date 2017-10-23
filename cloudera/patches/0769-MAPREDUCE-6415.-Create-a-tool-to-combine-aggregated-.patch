@@ -1,8 +1,9 @@
-From 1d097dfa2c9352a12287befa7cb44cef2392b69a Mon Sep 17 00:00:00 2001
+From b25274bca841ff28e3a1f4e181f1d4595d50d5e5 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 9 Sep 2015 17:49:23 -0700
-Subject: [PATCH 769/924] MAPREDUCE-6415. Create a tool to combine aggregated
- logs into HAR files. (Robert Kanter via kasha)
+Subject: [PATCH 0769/2639] MAPREDUCE-6415. Create a tool to combine
+ aggregated logs into HAR files. (Robert Kanter
+ via kasha)
 
 (cherry picked from commit 999aa225099e580b4a0ce3f3d2428ef6dc3d3895)
 
@@ -1383,7 +1384,7 @@ index 09b7807..2c7617f 100755
    CLASS=org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin
    HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 diff --git a/hadoop-project/pom.xml b/hadoop-project/pom.xml
-index 00f2814..2a5b8fd 100644
+index 27f9e55..2676880 100644
 --- a/hadoop-project/pom.xml
 +++ b/hadoop-project/pom.xml
 @@ -303,6 +303,11 @@
@@ -1400,7 +1401,7 @@ index 00f2814..2a5b8fd 100644
        </dependency>
 diff --git a/hadoop-tools/hadoop-archive-logs/pom.xml b/hadoop-tools/hadoop-archive-logs/pom.xml
 new file mode 100644
-index 0000000..a63196a
+index 0000000..584e9d7
 --- /dev/null
 +++ b/hadoop-tools/hadoop-archive-logs/pom.xml
 @@ -0,0 +1,171 @@
@@ -1426,12 +1427,12 @@ index 0000000..a63196a
 +  <parent>
 +    <groupId>org.apache.hadoop</groupId>
 +    <artifactId>hadoop-project</artifactId>
-+    <version>2.6.0-cdh5.5.0-SNAPSHOT</version>
++    <version>2.6.0-cdh5.7.0-SNAPSHOT</version>
 +    <relativePath>../../hadoop-project</relativePath>
 +  </parent>
 +  <groupId>org.apache.hadoop</groupId>
 +  <artifactId>hadoop-archive-logs</artifactId>
-+  <version>2.6.0-cdh5.5.0-SNAPSHOT</version>
++  <version>2.6.0-cdh5.7.0-SNAPSHOT</version>
 +  <description>Apache Hadoop Archive Logs</description>
 +  <name>Apache Hadoop Archive Logs</name>
 +  <packaging>jar</packaging>
@@ -2619,7 +2620,7 @@ index 0000000..af66f14
 +  }
 +}
 diff --git a/hadoop-tools/hadoop-tools-dist/pom.xml b/hadoop-tools/hadoop-tools-dist/pom.xml
-index 234864b..91d5894 100644
+index 4113371..33eef47 100644
 --- a/hadoop-tools/hadoop-tools-dist/pom.xml
 +++ b/hadoop-tools/hadoop-tools-dist/pom.xml
 @@ -52,6 +52,11 @@
@@ -2635,7 +2636,7 @@ index 234864b..91d5894 100644
        <scope>compile</scope>
      </dependency>
 diff --git a/hadoop-tools/pom.xml b/hadoop-tools/pom.xml
-index 640f8df..e802775 100644
+index 637be31..dedf596 100644
 --- a/hadoop-tools/pom.xml
 +++ b/hadoop-tools/pom.xml
 @@ -34,6 +34,7 @@

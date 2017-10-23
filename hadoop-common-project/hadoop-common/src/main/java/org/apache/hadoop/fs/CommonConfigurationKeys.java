@@ -52,6 +52,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String  IPC_CLIENT_PING_KEY = "ipc.client.ping";
   /** Default value of IPC_CLIENT_PING_KEY */
   public static final boolean IPC_CLIENT_PING_DEFAULT = true;
+  /** Timeout value for RPC client on waiting for response. */
+  public static final String IPC_CLIENT_RPC_TIMEOUT_KEY =
+      "ipc.client.rpc-timeout.ms";
+  /** Default value for IPC_CLIENT_RPC_TIMEOUT_KEY. */
+  public static final int IPC_CLIENT_RPC_TIMEOUT_DEFAULT = 0;
   /** Responses larger than this will be logged */
   public static final String  IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY =
     "ipc.server.max.response.size";
@@ -176,7 +181,19 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
       true;
-  
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml .</a> */
+  public static final String HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_KEY =
+      "hadoop.security.dns.log-slow-lookups.enabled";
+  public static final boolean
+      HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_DEFAULT = false;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml .</a> */
+  public static final String
+      HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_KEY =
+      "hadoop.security.dns.log-slow-lookups.threshold.ms";
+  public static final int
+      HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_DEFAULT = 1000;
+
   /**
    * HA health monitor and failover controller.
    */
@@ -272,6 +289,17 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
 
   public static final String HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS =
     "hadoop.user.group.metrics.percentiles.intervals";
+
+  /* When creating UGI with UserGroupInformation(Subject), treat the passed
+   * subject external if set to true, and assume the owner of the subject
+   * should do the credential renewal.
+   *
+   * This is a temporary config to solve the compatibility issue with
+   * HADOOP-13558 and HADOOP-13805 fix, see the jiras for discussions.
+   */
+  public static final String HADOOP_TREAT_SUBJECT_EXTERNAL_KEY =
+      "hadoop.treat.subject.external";
+  public static final boolean HADOOP_TREAT_SUBJECT_EXTERNAL_DEFAULT = false;
 
   public static final String RPC_METRICS_QUANTILE_ENABLE =
       "rpc.metrics.quantile.enable";

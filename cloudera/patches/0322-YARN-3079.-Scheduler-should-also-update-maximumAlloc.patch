@@ -1,9 +1,9 @@
 From 6be4ed82cdbc950b9a0b544314e558b68fad33cf Mon Sep 17 00:00:00 2001
 From: Wangda Tan <wangda@apache.org>
 Date: Wed, 28 Jan 2015 21:54:27 -0800
-Subject: [PATCH 322/924] YARN-3079. Scheduler should also update
- maximumAllocation when updateNodeResource. (Zhihai
- Xu via wangda)
+Subject: [PATCH 0322/2639] YARN-3079. Scheduler should also update
+ maximumAllocation when updateNodeResource.
+ (Zhihai Xu via wangda)
 
 (cherry picked from commit 7882bc0f1433ae73361cab4207eb0c15abee4586)
 

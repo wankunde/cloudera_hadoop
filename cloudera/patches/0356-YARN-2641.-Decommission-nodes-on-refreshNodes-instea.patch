@@ -1,7 +1,7 @@
 From 12cbb91677e35a4ccacc3358611364200affaee3 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Mon, 13 Oct 2014 16:23:04 -0700
-Subject: [PATCH 356/924] YARN-2641. Decommission nodes on -refreshNodes
+Subject: [PATCH 0356/2639] YARN-2641. Decommission nodes on -refreshNodes
  instead of next NM-RM heartbeat. (Zhihai Xu via
  kasha)
 

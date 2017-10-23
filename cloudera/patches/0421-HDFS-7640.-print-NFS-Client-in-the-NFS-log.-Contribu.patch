@@ -1,7 +1,7 @@
 From 891eb1533993a11019024b0589a450d9eb1af8dc Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Mon, 19 Jan 2015 17:29:46 -0800
-Subject: [PATCH 421/924] HDFS-7640. print NFS Client in the NFS log.
+Subject: [PATCH 0421/2639] HDFS-7640. print NFS Client in the NFS log.
  Contributed by Brandon Li.
 
 Conflicts:

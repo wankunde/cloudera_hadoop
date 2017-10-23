@@ -1,7 +1,7 @@
 From acfbe23f83dcfd4e0876f0152a4f29b0e9f0b297 Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Wed, 21 Jan 2015 00:57:51 +0800
-Subject: [PATCH 635/924] HDFS-7623. Add htrace configuration properties to
+Subject: [PATCH 0635/2639] HDFS-7623. Add htrace configuration properties to
  core-default.xml and update user doc about how to
  enable htrace. (yliu)
 

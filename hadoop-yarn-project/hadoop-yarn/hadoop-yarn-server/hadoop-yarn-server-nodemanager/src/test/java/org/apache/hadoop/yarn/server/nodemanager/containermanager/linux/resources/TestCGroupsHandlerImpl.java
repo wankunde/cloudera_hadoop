@@ -39,6 +39,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -251,6 +254,10 @@ public class TestCGroupsHandlerImpl {
     String cpuMtabContent =
         "none " + parentDir.getAbsolutePath()
             + "/cpu cgroup rw,relatime,cpu 0 0\n";
+    // Mark an empty directory called 'cp' cgroup. It is processed before 'cpu'
+    String cpuMtabContentMissing =
+        "none " + parentDir.getAbsolutePath()
+            + "/cp cgroup rw,relatime,cpu 0 0\n";
     String blkioMtabContent =
         "none " + parentDir.getAbsolutePath()
             + "/blkio cgroup rw,relatime,blkio 0 0\n";
@@ -263,6 +270,7 @@ public class TestCGroupsHandlerImpl {
       }
     }
     FileWriter mtabWriter = new FileWriter(mockMtab.getAbsoluteFile());
+    mtabWriter.write(cpuMtabContentMissing);
     mtabWriter.write(cpuMtabContent);
     mtabWriter.write(blkioMtabContent);
     mtabWriter.close();
@@ -295,6 +303,35 @@ public class TestCGroupsHandlerImpl {
         controllerPaths.get(CGroupsHandler.CGroupController.BLKIO);
     Assert.assertEquals(parentDir.getAbsolutePath() + "/cpu", cpuDir);
     Assert.assertEquals(parentDir.getAbsolutePath() + "/blkio", blkioDir);
+  }
+
+  @Test
+  public void testSelectCgroup() throws Exception {
+    File cpu = new File(tmpPath, "cpu");
+    File cpuNoExist = new File(tmpPath, "cpuNoExist");
+    File memory = new File(tmpPath, "memory");
+    try {
+      CGroupsHandlerImpl handler = new CGroupsHandlerImpl(
+          conf,
+          privilegedOperationExecutorMock);
+      Map<String, List<String>> cgroups = new LinkedHashMap<>();
+
+      Assert.assertTrue("temp dir should be created", cpu.mkdirs());
+      Assert.assertTrue("temp dir should be created", memory.mkdirs());
+      Assert.assertFalse("temp dir should not be created", cpuNoExist.exists());
+
+      cgroups.put(
+          memory.getAbsolutePath(), Collections.singletonList("memory"));
+      cgroups.put(
+          cpuNoExist.getAbsolutePath(), Collections.singletonList("cpu"));
+      cgroups.put(cpu.getAbsolutePath(), Collections.singletonList("cpu"));
+      String selectedCPU = handler.findControllerInMtab("cpu", cgroups);
+      Assert.assertEquals("Wrong CPU mount point selected",
+          cpu.getAbsolutePath(), selectedCPU);
+    } finally {
+      FileUtils.deleteQuietly(cpu);
+      FileUtils.deleteQuietly(memory);
+    }
   }
 
   @After

@@ -1,8 +1,8 @@
 From 759a8205da498b627413c052e70f599481152494 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 23 Apr 2015 19:16:10 -0700
-Subject: [PATCH 538/924] HADOOP-11802.  Fix renamed constant in test file in
- backport to 2.7.1 (cmccabe)
+Subject: [PATCH 0538/2639] HADOOP-11802.  Fix renamed constant in test file
+ in backport to 2.7.1 (cmccabe)
 
 (cherry picked from commit c2e6d2589aa1ae4ed885b3d1b3d82d998b52156e)
 ---

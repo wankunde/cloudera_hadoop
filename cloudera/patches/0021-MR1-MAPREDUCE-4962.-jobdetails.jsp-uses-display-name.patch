@@ -1,9 +1,9 @@
 From 7b64315ab67aa1c621ec674c8f3f7317a84a533a Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Sat, 26 Jan 2013 20:33:41 +0000
-Subject: [PATCH 021/924] MR1: MAPREDUCE-4962. jobdetails.jsp uses display
- name instead of real name to get counters. (sandyr
- via tucu)
+Subject: [PATCH 0021/2639] MR1: MAPREDUCE-4962. jobdetails.jsp uses display
+ name instead of real name to get counters.
+ (sandyr via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1438956 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 71a4429f006b489cda51862274751f446af7fbb6)

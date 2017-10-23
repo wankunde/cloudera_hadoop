@@ -1,8 +1,8 @@
 From 2a0fc953fa08845dba1acecf1d2bff5cbf7a3330 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <andrew.wang@cloudera.com>
 Date: Wed, 8 Apr 2015 21:43:42 -0700
-Subject: [PATCH 690/924] HDFS-7979. Initialize block report IDs with a random
- number.
+Subject: [PATCH 0690/2639] HDFS-7979. Initialize block report IDs with a
+ random number.
 
 (cherry picked from commit b1e059089d6a5b2b7006d7d384c6df81ed268bd9)
 (cherry picked from commit 351fac25a994de42ec1b1218513326884a1dde43)

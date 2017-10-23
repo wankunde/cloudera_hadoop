@@ -1,9 +1,9 @@
 From e580d360b2fdf137246e145a79a8742d1b1d143f Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Fri, 6 Feb 2015 21:47:32 +0000
-Subject: [PATCH 588/924] YARN-3143. RM Apps REST API can return NPE or
- entries missing id and other fields. Contributed by
- Jason Lowe
+Subject: [PATCH 0588/2639] YARN-3143. RM Apps REST API can return NPE or
+ entries missing id and other fields. Contributed
+ by Jason Lowe
 
 (cherry picked from commit da2fb2bc46bddf42d79c6d7664cbf0311973709e)
 

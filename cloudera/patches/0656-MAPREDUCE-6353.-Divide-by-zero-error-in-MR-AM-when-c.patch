@@ -1,7 +1,7 @@
 From 594109b0ae04333c5e8bc80e426488bffc4a786f Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Sat, 9 May 2015 14:43:18 -0700
-Subject: [PATCH 656/924] MAPREDUCE-6353. Divide by zero error in MR AM when
+Subject: [PATCH 0656/2639] MAPREDUCE-6353. Divide by zero error in MR AM when
  calculating available containers. (Anubhav Dhoot
  via kasha)
 

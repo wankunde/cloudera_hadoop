@@ -1,7 +1,7 @@
 From cc4f80a74d874bd54a7f127869b659bc6aedb26d Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Tue, 12 Mar 2013 07:14:48 -0700
-Subject: [PATCH 043/924] MR1: Remove stripping of scheme, authority from
+Subject: [PATCH 0043/2639] MR1: Remove stripping of scheme, authority from
  submit dir in support of viewfs.
 
   Reason: bug

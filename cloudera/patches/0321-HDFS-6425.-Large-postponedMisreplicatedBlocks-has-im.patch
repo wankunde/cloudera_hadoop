@@ -1,9 +1,9 @@
 From 81432c57e495537092eb498c710afd5dc33d4d51 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Tue, 16 Dec 2014 10:31:57 -0600
-Subject: [PATCH 321/924] HDFS-6425. Large postponedMisreplicatedBlocks has
- impact on blockReport latency. Contributed by Ming
- Ma. (cherry picked from commit
+Subject: [PATCH 0321/2639] HDFS-6425. Large postponedMisreplicatedBlocks has
+ impact on blockReport latency. Contributed by
+ Ming Ma. (cherry picked from commit
  b7923a356e9f111619375b94d12749d634069347)
 
 (cherry picked from commit b70c0c295cab04073d7889b6d7c893c29ba5b7ba)

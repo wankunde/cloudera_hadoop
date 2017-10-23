@@ -1,7 +1,7 @@
 From 86ffa4a2a554c718f1c94bec3ab4938e54b97685 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 17 Dec 2014 16:41:59 -0800
-Subject: [PATCH 385/924] HDFS-7531. Improve the concurrent access on
+Subject: [PATCH 0385/2639] HDFS-7531. Improve the concurrent access on
  FsVolumeList (Lei Xu via Colin P. McCabe) (cherry
  picked from commit
  dda1fc169db2e69964cca746be4ff8965eb8b56f) (cherry

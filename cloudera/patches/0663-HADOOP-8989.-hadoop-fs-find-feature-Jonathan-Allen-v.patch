@@ -1,9 +1,10 @@
 From 13a1fddc8b90058c518062e73ddd0ba395a43dc5 Mon Sep 17 00:00:00 2001
 From: Allen Wittenauer <aw@apache.org>
 Date: Thu, 15 Jan 2015 11:57:48 -0800
-Subject: [PATCH 663/924] HADOOP-8989. hadoop fs -find feature (Jonathan Allen
- via aw) (missed some files) (cherry picked from
- commit 450561a93469ab7cd0f13fee8b9c3580cb8885a4)
+Subject: [PATCH 0663/2639] HADOOP-8989. hadoop fs -find feature (Jonathan
+ Allen via aw) (missed some files) (cherry picked
+ from commit
+ 450561a93469ab7cd0f13fee8b9c3580cb8885a4)
 
 ---
  .../java/org/apache/hadoop/fs/shell/find/And.java  |   84 ++

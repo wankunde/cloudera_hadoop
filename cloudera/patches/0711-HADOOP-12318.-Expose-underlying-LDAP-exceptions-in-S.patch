@@ -1,7 +1,7 @@
 From 828fa588e33748f62e21feadb7dd5e4a0f38688f Mon Sep 17 00:00:00 2001
 From: "Aaron T. Myers" <atm@apache.org>
 Date: Wed, 12 Aug 2015 15:16:05 -0700
-Subject: [PATCH 711/924] HADOOP-12318. Expose underlying LDAP exceptions in
+Subject: [PATCH 0711/2639] HADOOP-12318. Expose underlying LDAP exceptions in
  SaslPlainServer. Contributed by Mike Yoder.
 
 (cherry picked from commit 820f864a26d90e9f4a3584577df581dcac20f9b6)

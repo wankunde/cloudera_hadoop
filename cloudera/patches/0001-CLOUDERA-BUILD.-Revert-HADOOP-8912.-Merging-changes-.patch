@@ -1,8 +1,8 @@
 From 1217b355af3394b564a8a6704929613d7b5b4f77 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Thu, 13 Jun 2013 19:38:40 -0700
-Subject: [PATCH 001/924] CLOUDERA-BUILD. Revert "HADOOP-8912. Merging changes
- 1397437 and 1397438 from trunk"
+Subject: [PATCH 0001/2639] CLOUDERA-BUILD. Revert "HADOOP-8912. Merging
+ changes 1397437 and 1397438 from trunk"
 
 This reverts commit 59e991d12389b1a171960bd8c402ba0f89dfa1a0.
 

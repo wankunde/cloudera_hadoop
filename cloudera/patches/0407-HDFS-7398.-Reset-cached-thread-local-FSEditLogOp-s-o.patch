@@ -1,7 +1,7 @@
 From 964d8e24f473f51a73cf63e422524a974dce3610 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Tue, 18 Nov 2014 16:56:44 -0800
-Subject: [PATCH 407/924] HDFS-7398. Reset cached thread-local FSEditLogOp's
+Subject: [PATCH 0407/2639] HDFS-7398. Reset cached thread-local FSEditLogOp's
  on every FSEditLog#logEdit. Contributed by Gera
  Shegalov.
 

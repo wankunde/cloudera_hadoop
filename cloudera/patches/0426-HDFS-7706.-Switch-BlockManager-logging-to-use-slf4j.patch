@@ -1,7 +1,8 @@
 From 8ab350f40315ceec8f94bd1413707a25e01a52d7 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Fri, 30 Jan 2015 11:32:25 -0800
-Subject: [PATCH 426/924] HDFS-7706. Switch BlockManager logging to use slf4j.
+Subject: [PATCH 0426/2639] HDFS-7706. Switch BlockManager logging to use
+ slf4j.
 
 (cherry picked from commit 951b3608a8cb1d9063b9be9c740b524c137b816f)
 (cherry picked from commit fcd23b61e30b521d74709297c2808225fa82e906)

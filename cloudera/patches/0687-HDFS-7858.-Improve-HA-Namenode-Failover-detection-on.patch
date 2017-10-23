@@ -1,8 +1,8 @@
 From 6d66f5a82f4611f8dc8f687b0c981ee7ff955064 Mon Sep 17 00:00:00 2001
 From: Arun Suresh <asuresh@apache.org>
 Date: Mon, 27 Jul 2015 23:02:03 -0700
-Subject: [PATCH 687/924] HDFS-7858. Improve HA Namenode Failover detection on
- the client. (asuresh)
+Subject: [PATCH 0687/2639] HDFS-7858. Improve HA Namenode Failover detection
+ on the client. (asuresh)
 
 (cherry picked from commit 030fcfa99c345ad57625486eeabedebf2fd4411f)
 ---

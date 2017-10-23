@@ -44,15 +44,26 @@ public class TestTraceAdmin {
     try {
       ret = trace.run(cmd);
     } finally {
-      System.out.flush();
-      System.setOut(oldStdout);
-      System.setErr(oldStderr);
+      try {
+        System.out.flush();
+      } finally {
+        System.setOut(oldStdout);
+        System.setErr(oldStderr);
+      }
     }
     return "ret:" + ret + ", " + baos.toString();
   }
 
   private String getHostPortForNN(MiniDFSCluster cluster) {
     return "127.0.0.1:" + cluster.getNameNodePort();
+  }
+
+  @Test
+  public void testNoOperator() throws Exception {
+    TraceAdmin trace = new TraceAdmin();
+    trace.setConf(new Configuration());
+    Assert.assertEquals("ret:1, You must specify an operation." + NEWLINE,
+        runTraceCommand(trace, "-host", "127.0.0.1:12346"));
   }
 
   @Test

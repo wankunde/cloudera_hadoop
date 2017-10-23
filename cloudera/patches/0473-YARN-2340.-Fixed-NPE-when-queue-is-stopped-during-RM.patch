@@ -1,9 +1,9 @@
 From 20dd990f077c6fff7eda04874306c73bab7367cb Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Mon, 22 Dec 2014 21:53:22 -0800
-Subject: [PATCH 473/924] YARN-2340. Fixed NPE when queue is stopped during RM
- restart. Contributed by Rohith Sharmaks (cherry
- picked from commit
+Subject: [PATCH 0473/2639] YARN-2340. Fixed NPE when queue is stopped during
+ RM restart. Contributed by Rohith Sharmaks
+ (cherry picked from commit
  0d89859b51157078cc504ac81dc8aa75ce6b1782) (cherry
  picked from commit
  8b398a66ca3728f47363fc8b2fcf7e556e6bbf5a)

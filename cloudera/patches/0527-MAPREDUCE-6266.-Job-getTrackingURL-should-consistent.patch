@@ -1,7 +1,7 @@
 From 98ada1a06739dd960e9d27f947cef373fa4b3afc Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@apache.org>
 Date: Thu, 9 Apr 2015 13:48:14 -0700
-Subject: [PATCH 527/924] MAPREDUCE-6266. Job#getTrackingURL should
+Subject: [PATCH 0527/2639] MAPREDUCE-6266. Job#getTrackingURL should
  consistently return a proper URL (rchiang via
  rkanter)
 

@@ -1,10 +1,10 @@
 From 6159fb90563d15cce2a46359606aa1cea9f75a02 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Thu, 9 May 2013 15:38:10 -0700
-Subject: [PATCH 059/924] MR1: CLOUDERA-BUILD. CDH-9235. Fix API
+Subject: [PATCH 0059/2639] MR1: CLOUDERA-BUILD. CDH-9235. Fix API
  incompatibility in
- mapreduce.lib.jobcontrol.JobControl (cherry picked
- from commit
+ mapreduce.lib.jobcontrol.JobControl (cherry
+ picked from commit
  5ab1a1731b97dcdc4877960cb955ae74a9bbaa24)
 
 (cherry picked from commit 1a3f6b32b1ab742bf4ffa5e8a644dafcee835b8f)

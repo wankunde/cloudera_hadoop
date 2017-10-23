@@ -1,7 +1,7 @@
 From a33d5ec8f21671950480a7a6223ac5ba9c709f16 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Fri, 29 May 2015 17:15:58 -0700
-Subject: [PATCH 579/924] HADOOP-12043. Display warning if defaultFs is not
+Subject: [PATCH 0579/2639] HADOOP-12043. Display warning if defaultFs is not
  set when running fs commands. Contributed by Eddy
  Xu.
 

@@ -1,7 +1,7 @@
 From f81cdf2b4aa647bc3ed62308ad8ee915dd19ba81 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Tue, 12 Feb 2013 16:14:27 -0800
-Subject: [PATCH 033/924] MR1: CLOUDERA-BUILD. hadoop client must exclude
+Subject: [PATCH 0033/2639] MR1: CLOUDERA-BUILD. hadoop client must exclude
  servlet/jsp/jetty/tomcat JARs.
 
   Reason: bug, this creates conflicts in Oozie and HttpFS

@@ -1,11 +1,10 @@
-From eaa9964ebf585cda1343b7712b792eaee4884d9f Mon Sep 17 00:00:00 2001
+From 401816618edcc94f307d72bda18dc5fdb6c7229e Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Tue, 18 Aug 2015 09:25:03 +0800
-Subject: [PATCH 776/924] HDFS-8862. BlockManager#excessReplicateMap should
+Subject: [PATCH 0776/2639] HDFS-8862. BlockManager#excessReplicateMap should
  use a HashMap. (yliu)
 
 (cherry picked from commit 076c688780ecf66b0f593d7c19ce8944dc4451d4)
-(cherry picked from commit 401816618edcc94f307d72bda18dc5fdb6c7229e)
 ---
  .../hdfs/server/blockmanagement/BlockManager.java  |    3 +--
  1 file changed, 1 insertion(+), 2 deletions(-)

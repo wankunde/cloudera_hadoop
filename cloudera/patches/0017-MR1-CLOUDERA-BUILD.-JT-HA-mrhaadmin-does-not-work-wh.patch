@@ -1,7 +1,7 @@
 From 13d6736cc9bcd544bcc8c2325e425d5f944f5f3c Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Fri, 25 Jan 2013 16:33:35 -0800
-Subject: [PATCH 017/924] MR1: CLOUDERA-BUILD. JT HA mrhaadmin does not work
+Subject: [PATCH 0017/2639] MR1: CLOUDERA-BUILD. JT HA mrhaadmin does not work
  when hadoop.security.authorization is set to true
 
   Reason: bug

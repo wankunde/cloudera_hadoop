@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -48,10 +49,12 @@ import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -92,7 +95,10 @@ public class TestBPOfferService {
 
   private DatanodeProtocolClientSideTranslatorPB mockNN1;
   private DatanodeProtocolClientSideTranslatorPB mockNN2;
-  private final NNHAStatusHeartbeat[] mockHaStatuses = new NNHAStatusHeartbeat[2];
+  private final NNHAStatusHeartbeat[] mockHaStatuses =
+      new NNHAStatusHeartbeat[2];
+  private final DatanodeCommand[][] datanodeCommands =
+      new DatanodeCommand[2][0];
   private final int[] heartbeatCounts = new int[2];
   private DataNode mockDn;
   private FsDatasetSpi<?> mockFSDataset;
@@ -147,6 +153,7 @@ public class TestBPOfferService {
           Mockito.any(VolumeFailureSummary.class),
           Mockito.anyBoolean());
     mockHaStatuses[nnIdx] = new NNHAStatusHeartbeat(HAServiceState.STANDBY, 0);
+    datanodeCommands[nnIdx] = new DatanodeCommand[0];
     return mock;
   }
   
@@ -165,9 +172,12 @@ public class TestBPOfferService {
     @Override
     public HeartbeatResponse answer(InvocationOnMock invocation) throws Throwable {
       heartbeatCounts[nnIdx]++;
-      return new HeartbeatResponse(new DatanodeCommand[0],
-          mockHaStatuses[nnIdx], null,
+      HeartbeatResponse heartbeatResponse = new HeartbeatResponse(
+          datanodeCommands[nnIdx], mockHaStatuses[nnIdx], null,
           ThreadLocalRandom.current().nextLong() | 1L);
+      //reset the command
+      datanodeCommands[nnIdx] = new DatanodeCommand[0];
+      return heartbeatResponse;
     }
   }
 
@@ -181,7 +191,7 @@ public class TestBPOfferService {
     BPOfferService bpos = setupBPOSForNNs(mockNN1, mockNN2);
     bpos.start();
     try {
-      waitForInitialization(bpos);
+      waitForBothActors(bpos);
       
       // The DN should have register to both NNs.
       Mockito.verify(mockNN1).registerDatanode(
@@ -194,7 +204,7 @@ public class TestBPOfferService {
       waitForBlockReport(mockNN2);
 
       // When we receive a block, it should report it to both NNs
-      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, "", "");
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, "", false);
 
       ReceivedDeletedBlockInfo[] ret = waitForBlockReceived(FAKE_BLOCK, mockNN1);
       assertEquals(1, ret.length);
@@ -206,7 +216,37 @@ public class TestBPOfferService {
 
     } finally {
       bpos.stop();
+      bpos.join();
     }
+  }
+
+  @Test
+  public void testLocklessBlockPoolId() throws Exception {
+    BPOfferService bpos = Mockito.spy(setupBPOSForNNs(mockNN1));
+
+    // bpNSInfo is not set, should take lock to check nsInfo.
+    assertNull(bpos.getBlockPoolId());
+    Mockito.verify(bpos).readLock();
+
+    // setting the bpNSInfo should cache the bp id, thus no locking.
+    Mockito.reset(bpos);
+    NamespaceInfo nsInfo = new NamespaceInfo(1, FAKE_CLUSTERID, FAKE_BPID, 0);
+    assertNull(bpos.setNamespaceInfo(nsInfo));
+    assertEquals(FAKE_BPID, bpos.getBlockPoolId());
+    Mockito.verify(bpos, Mockito.never()).readLock();
+
+    // clearing the bpNSInfo should clear the cached bp id, thus requiring
+    // locking to check the bpNSInfo.
+    Mockito.reset(bpos);
+    assertEquals(nsInfo, bpos.setNamespaceInfo(null));
+    assertNull(bpos.getBlockPoolId());
+    Mockito.verify(bpos).readLock();
+
+    // test setting it again.
+    Mockito.reset(bpos);
+    assertNull(bpos.setNamespaceInfo(nsInfo));
+    assertEquals(FAKE_BPID, bpos.getBlockPoolId());
+    Mockito.verify(bpos, Mockito.never()).readLock();
   }
 
   /**
@@ -236,6 +276,7 @@ public class TestBPOfferService {
 
     } finally {
       bpos.stop();
+      bpos.join();
     }
     
     // Should ignore the delete command from the standby
@@ -261,6 +302,7 @@ public class TestBPOfferService {
       waitForOneToFail(bpos);
     } finally {
       bpos.stop();
+      bpos.join();
     }
   }
   
@@ -308,6 +350,7 @@ public class TestBPOfferService {
 
     } finally {
       bpos.stop();
+      bpos.join();
     }
   }
 
@@ -350,6 +393,7 @@ public class TestBPOfferService {
       waitForBlockReport(mockNN1, mockNN2);
     } finally {
       bpos.stop();
+      bpos.join();
     }
   }
 
@@ -401,6 +445,27 @@ public class TestBPOfferService {
       @Override
       public Boolean get() {
         return bpos.isAlive() && bpos.isInitialized();
+      }
+    }, 100, 10000);
+  }
+
+  private void waitForBothActors(final BPOfferService bpos)
+      throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        List<BPServiceActor> actors = bpos.getBPServiceActors();
+
+        return bpos.isAlive() && getRegisteredActors(actors) == 2;
+      }
+      private int getRegisteredActors(List<BPServiceActor> actors) {
+        int regActors = 0;
+        for (BPServiceActor actor : actors) {
+          if (actor.getBpRegistration() != null) {
+            regActors++;
+          }
+        }
+        return regActors;
       }
     }, 100, 10000);
   }
@@ -541,6 +606,7 @@ public class TestBPOfferService {
           difference < 5000);
     } finally {
       bpos.stop();
+      bpos.join();
     }
   }
 
@@ -580,6 +646,7 @@ public class TestBPOfferService {
           + " processing ", difference < 5000);
     } finally {
       bpos.stop();
+      bpos.join();
     }
   }
   /**
@@ -625,6 +692,7 @@ public class TestBPOfferService {
           + "when errorReport threw IOException", secondCallTime != 0);
     } finally {
       bpos.stop();
+      bpos.join();
     }
   } 
 
@@ -676,6 +744,87 @@ public class TestBPOfferService {
           .reportBadBlocks(Mockito.any(LocatedBlock[].class));
     } finally {
       bpos.stop();
+      bpos.join();
     }
+  }
+
+  /*
+   * HDFS-9917 : Standby IBR accumulation when Standby was down.
+   */
+  @Test
+  public void testIBRClearanceForStandbyOnReRegister() throws Exception {
+    final BPOfferService bpos = setupBPOSForNNs(mockNN1, mockNN2);
+    bpos.start();
+    try {
+      waitForInitialization(bpos);
+      // Should start with neither NN as active.
+      assertNull(bpos.getActiveNN());
+      // Have NN1 claim active at txid 1
+      mockHaStatuses[0] = new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1);
+      bpos.triggerHeartbeatForTests();
+      // Now mockNN1 is acting like active namenode and mockNN2 as Standby
+      assertSame(mockNN1, bpos.getActiveNN());
+      // Return nothing when active Active Namenode gets IBRs
+      Mockito.doNothing().when(mockNN1).blockReceivedAndDeleted(
+          Mockito.any(DatanodeRegistration.class), Mockito.anyString(), Mockito
+              .any(StorageReceivedDeletedBlocks[].class));
+
+      final IOException re = new IOException(
+          "Standby NN is currently not able to process IBR");
+
+      final AtomicBoolean ibrReported = new AtomicBoolean(false);
+      // throw exception for standby when first IBR is receieved
+      Mockito.doAnswer(new Answer<Void>() {
+        @Override
+        public Void answer(InvocationOnMock invocation) throws Throwable {
+          ibrReported.set(true);
+          throw re;
+        }
+      }).when(mockNN2).blockReceivedAndDeleted(
+          Mockito.any(DatanodeRegistration.class), Mockito.anyString(), Mockito
+              .any(StorageReceivedDeletedBlocks[].class));
+
+      DatanodeStorage storage = Mockito.mock(DatanodeStorage.class);
+      Mockito.doReturn(storage).when(mockFSDataset).getStorage("storage0");
+      // Add IBRs
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, "storage0", false);
+      // Send heartbeat so that the BpServiceActor can send IBR to
+      // namenode
+      bpos.triggerHeartbeatForTests();
+      // Wait till first IBR is received at standbyNN. Just for confirmation.
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return ibrReported.get();
+        }
+      }, 100, 1000);
+
+      // Send register command back to Datanode to reRegister().
+      // After reRegister IBRs should be cleared.
+      datanodeCommands[1] = new DatanodeCommand[] { new RegisterCommand() };
+      assertEquals(
+          "IBR size before reRegister should be non-0", 1, getStandbyIBRSize(
+              bpos));
+      bpos.triggerHeartbeatForTests();
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return getStandbyIBRSize(bpos) == 0;
+        }
+      }, 100, 1000);
+    } finally {
+      bpos.stop();
+      bpos.join();
+    }
+  }
+
+  private int getStandbyIBRSize(BPOfferService bpos) {
+    List<BPServiceActor> bpServiceActors = bpos.getBPServiceActors();
+    for (BPServiceActor bpServiceActor : bpServiceActors) {
+      if (bpServiceActor.state == HAServiceState.STANDBY) {
+        return bpServiceActor.getIbrManager().getPendingIBRSize();
+      }
+    }
+    return -1;
   }
 }

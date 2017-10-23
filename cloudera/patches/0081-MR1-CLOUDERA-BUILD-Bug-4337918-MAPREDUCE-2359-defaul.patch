@@ -1,7 +1,7 @@
 From d683088236598587025e75bc310686effa71af1d Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Wed, 28 Aug 2013 10:17:13 -0700
-Subject: [PATCH 081/924] MR1: CLOUDERA-BUILD: Bug:4337918 (MAPREDUCE-2359) 
+Subject: [PATCH 0081/2639] MR1: CLOUDERA-BUILD: Bug:4337918 (MAPREDUCE-2359) 
  default name node is viewfs:/// if we pass
  hdfs://path giving error - fix in
  DistributedCache(ramach)

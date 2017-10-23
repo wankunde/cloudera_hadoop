@@ -1,8 +1,8 @@
 From 3ee0f2f419c49d617b587ad43684ed94b720f08a Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Fri, 20 Feb 2015 11:15:24 -0800
-Subject: [PATCH 396/924] Revert "YARN-2713. "RM Home" link in NM should point
- to one of the RMs in an HA setup. (kasha)"
+Subject: [PATCH 0396/2639] Revert "YARN-2713. "RM Home" link in NM should
+ point to one of the RMs in an HA setup. (kasha)"
 
 This reverts commit b5a66e654e1d423970c8a79d6c892a9778589d5e.
 ---

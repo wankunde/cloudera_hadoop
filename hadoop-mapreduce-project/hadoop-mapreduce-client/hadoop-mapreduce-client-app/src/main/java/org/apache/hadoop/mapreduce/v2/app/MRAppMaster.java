@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -47,6 +48,7 @@ import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.TaskAttemptListenerImpl;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
+import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -141,9 +143,10 @@ import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import javax.crypto.KeyGenerator;
 
 /**
  * The Map-Reduce Application Master.
@@ -172,6 +175,7 @@ public class MRAppMaster extends CompositeService {
    * Priority of the MRAppMaster shutdown hook.
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
+  public static final String INTERMEDIATE_DATA_ENCRYPTION_ALGO = "HmacSHA1";
 
   private Clock clock;
   private final long startTime;
@@ -202,6 +206,7 @@ public class MRAppMaster extends CompositeService {
   private JobEventDispatcher jobEventDispatcher;
   private JobHistoryEventHandler jobHistoryEventHandler;
   private SpeculatorEventDispatcher speculatorEventDispatcher;
+  private byte[] encryptedSpillKey;
 
   // After a task attempt completes from TaskUmbilicalProtocol's point of view,
   // it will be transitioned to finishing state.
@@ -223,7 +228,7 @@ public class MRAppMaster extends CompositeService {
   JobStateInternal forcedState = null;
   private final ScheduledExecutorService logSyncer;
 
-  private long recoveredJobStartTime = 0;
+  private long recoveredJobStartTime = -1L;
 
   @VisibleForTesting
   protected AtomicBoolean successfullyUnregistered =
@@ -293,10 +298,12 @@ public class MRAppMaster extends CompositeService {
     }
     
     boolean copyHistory = false;
+    committer = createOutputCommitter(conf);
     try {
       String user = UserGroupInformation.getCurrentUser().getShortUserName();
       Path stagingDir = MRApps.getStagingAreaDir(conf, user);
       FileSystem fs = getFileSystem(conf);
+
       boolean stagingExists = fs.exists(stagingDir);
       Path startCommitFile = MRApps.getStartJobCommitFile(conf, user, jobId);
       boolean commitStarted = fs.exists(startCommitFile);
@@ -329,15 +336,24 @@ public class MRAppMaster extends CompositeService {
           shutDownMessage = "We crashed after a commit failure.";
           forcedState = JobStateInternal.FAILED;
         } else {
-          //The commit is still pending, commit error
-          shutDownMessage = "We crashed durring a commit";
-          forcedState = JobStateInternal.ERROR;
+          if (isCommitJobRepeatable()) {
+            // cleanup previous half done commits if committer supports
+            // repeatable job commit.
+            errorHappenedShutDown = false;
+            cleanupInterruptedCommit(conf, fs, startCommitFile);
+          } else {
+            //The commit is still pending, commit error
+            shutDownMessage =
+                "Job commit from a prior MRAppMaster attempt is " +
+                "potentially in progress. Preventing multiple commit executions";
+            forcedState = JobStateInternal.ERROR;
+          }
         }
       }
     } catch (IOException e) {
       throw new YarnRuntimeException("Error while initializing", e);
     }
-    
+
     if (errorHappenedShutDown) {
       NoopEventHandler eater = new NoopEventHandler();
       //We do not have a JobEventDispatcher in this path
@@ -383,7 +399,6 @@ public class MRAppMaster extends CompositeService {
         addIfService(cpHist);
       }
     } else {
-      committer = createOutputCommitter(conf);
 
       //service to handle requests from JobClient
       clientService = createClientService(context);
@@ -458,6 +473,38 @@ public class MRAppMaster extends CompositeService {
   
   protected Dispatcher createDispatcher() {
     return new AsyncDispatcher();
+  }
+
+  private boolean isCommitJobRepeatable() throws IOException {
+    boolean isRepeatable = false;
+    Configuration conf = getConfig();
+    if (committer != null) {
+      final JobContext jobContext = getJobContextFromConf(conf);
+
+      isRepeatable = callWithJobClassLoader(conf,
+          new ExceptionAction<Boolean>() {
+            public Boolean call(Configuration conf) throws IOException {
+              return committer.isCommitJobRepeatable(jobContext);
+            }
+          });
+    }
+    return isRepeatable;
+  }
+
+  private JobContext getJobContextFromConf(Configuration conf) {
+    if (newApiCommitter) {
+      return new JobContextImpl(conf, TypeConverter.fromYarn(getJobId()));
+    } else {
+      return new org.apache.hadoop.mapred.JobContextImpl(
+          new JobConf(conf), TypeConverter.fromYarn(getJobId()));
+    }
+  }
+
+  private void cleanupInterruptedCommit(Configuration conf,
+      FileSystem fs, Path startCommitFile) throws IOException {
+    LOG.info("Delete startJobCommitFile in case commit is not finished as " +
+        "successful or failed.");
+    fs.delete(startCommitFile, false);
   }
 
   private OutputCommitter createOutputCommitter(Configuration conf) {
@@ -657,7 +704,21 @@ public class MRAppMaster extends CompositeService {
     try {
       this.currentUser = UserGroupInformation.getCurrentUser();
       this.jobCredentials = ((JobConf)conf).getCredentials();
+      if (CryptoUtils.isEncryptedSpillEnabled(conf)) {
+        int keyLen = conf.getInt(
+                MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS,
+                MRJobConfig
+                        .DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS);
+        KeyGenerator keyGen =
+                KeyGenerator.getInstance(INTERMEDIATE_DATA_ENCRYPTION_ALGO);
+        keyGen.init(keyLen);
+        encryptedSpillKey = keyGen.generateKey().getEncoded();
+      } else {
+        encryptedSpillKey = new byte[] {0};
+      }
     } catch (IOException e) {
+      throw new YarnRuntimeException(e);
+    } catch (NoSuchAlgorithmException e) {
       throw new YarnRuntimeException(e);
     }
   }
@@ -714,7 +775,7 @@ public class MRAppMaster extends CompositeService {
   protected TaskAttemptListener createTaskAttemptListener(AppContext context) {
     TaskAttemptListener lis =
         new TaskAttemptListenerImpl(context, jobTokenSecretManager,
-            getRMHeartbeatHandler());
+            getRMHeartbeatHandler(), encryptedSpillKey);
     return lis;
   }
 
@@ -881,6 +942,8 @@ public class MRAppMaster extends CompositeService {
       if (job.isUber()) {
         this.containerLauncher = new LocalContainerLauncher(context,
             (TaskUmbilicalProtocol) taskAttemptListener);
+        ((LocalContainerLauncher) this.containerLauncher)
+                .setEncryptedSpillKey(encryptedSpillKey);
       } else {
         this.containerLauncher = new ContainerLauncherImpl(context);
       }
@@ -1053,7 +1116,7 @@ public class MRAppMaster extends CompositeService {
           new JobHistoryEvent(job.getID(), new AMStartedEvent(info
               .getAppAttemptId(), info.getStartTime(), info.getContainerId(),
               info.getNodeManagerHost(), info.getNodeManagerPort(), info
-                  .getNodeManagerHttpPort())));
+                  .getNodeManagerHttpPort(), appSubmitTime)));
     }
 
     // Send out an MR AM inited event for this AM.
@@ -1062,7 +1125,7 @@ public class MRAppMaster extends CompositeService {
             .getAppAttemptId(), amInfo.getStartTime(), amInfo.getContainerId(),
             amInfo.getNodeManagerHost(), amInfo.getNodeManagerPort(), amInfo
                 .getNodeManagerHttpPort(), this.forcedState == null ? null
-                    : this.forcedState.toString())));
+                    : this.forcedState.toString(), appSubmitTime)));
     amInfos.add(amInfo);
 
     // metrics system init is really init & start.
@@ -1119,25 +1182,17 @@ public class MRAppMaster extends CompositeService {
       startJobs();
     }
   }
-  
+
   @Override
   public void stop() {
     super.stop();
-    TaskLog.syncLogsShutdown(logSyncer);
   }
 
   private boolean isRecoverySupported() throws IOException {
     boolean isSupported = false;
     Configuration conf = getConfig();
     if (committer != null) {
-      final JobContext _jobContext;
-      if (newApiCommitter) {
-         _jobContext = new JobContextImpl(
-            conf, TypeConverter.fromYarn(getJobId()));
-      } else {
-          _jobContext = new org.apache.hadoop.mapred.JobContextImpl(
-                new JobConf(conf), TypeConverter.fromYarn(getJobId()));
-      }
+      final JobContext _jobContext = getJobContextFromConf(conf);
       isSupported = callWithJobClassLoader(conf,
           new ExceptionAction<Boolean>() {
             public Boolean call(Configuration conf) throws IOException {
@@ -1444,10 +1499,6 @@ public class MRAppMaster extends CompositeService {
       String jobUserName = System
           .getenv(ApplicationConstants.Environment.USER.name());
       conf.set(MRJobConfig.USER_NAME, jobUserName);
-      // Do not automatically close FileSystem objects so that in case of
-      // SIGTERM I have a chance to write out the job history. I'll be closing
-      // the objects myself.
-      conf.setBoolean("fs.automatic.close", false);
       initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
       LOG.fatal("Error starting MRAppMaster", t);
@@ -1627,7 +1678,6 @@ public class MRAppMaster extends CompositeService {
   @Override
   protected void serviceStop() throws Exception {
     super.serviceStop();
-    LogManager.shutdown();
   }
 
   public ClientService getClientService() {

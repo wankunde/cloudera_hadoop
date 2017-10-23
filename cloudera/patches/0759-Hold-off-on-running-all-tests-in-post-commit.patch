@@ -1,7 +1,7 @@
-From 1abaef62f776ddb23aedc56b18dbe550c84c98fc Mon Sep 17 00:00:00 2001
+From cf5e5e384f160e04f9f497603f24ee3b8606b376 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Thu, 3 Sep 2015 20:58:20 -0700
-Subject: [PATCH 759/924] Hold off on running all tests in post-commit.
+Subject: [PATCH 0759/2639] Hold off on running all tests in post-commit.
 
 Change-Id: I4ff1ca0c38cfeada8a305f55d098d95ce6d2de31
 ---

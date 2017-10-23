@@ -1,9 +1,9 @@
 From 5779eb6305b799875a19d8dc42c6a7b411856d73 Mon Sep 17 00:00:00 2001
 From: cnauroth <cnauroth@apache.org>
 Date: Tue, 11 Nov 2014 13:29:55 -0800
-Subject: [PATCH 446/924] HDFS-7389. Named user ACL cannot stop the user from
- accessing the FS entity. Contributed by Vinayakumar
- B.
+Subject: [PATCH 0446/2639] HDFS-7389. Named user ACL cannot stop the user
+ from accessing the FS entity. Contributed by
+ Vinayakumar B.
 
 (cherry picked from commit 163bb55067bde71246b4030a08256ba9a8182dc8)
 (cherry picked from commit 7e1e0cbbb81f8ad9bea2c1cbec53001f23d94ed8)

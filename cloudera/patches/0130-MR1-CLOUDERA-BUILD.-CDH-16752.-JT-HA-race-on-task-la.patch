@@ -1,7 +1,7 @@
 From 44d3cf5703119387991a0f54e37276fe4b6a8e8a Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Fri, 4 Apr 2014 18:02:38 -0700
-Subject: [PATCH 130/924] MR1: CLOUDERA-BUILD. CDH-16752. JT HA race on task
+Subject: [PATCH 0130/2639] MR1: CLOUDERA-BUILD. CDH-16752. JT HA race on task
  launch timeout
 
 (cherry picked from commit 0c760be0b52d3452a8c565edea0eb28a04ba33c6)

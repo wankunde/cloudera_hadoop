@@ -1,8 +1,9 @@
 From 7d35ce19456d13610df6861d1ee7ca485a8acbc3 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Wed, 1 Oct 2014 15:47:40 -0700
-Subject: [PATCH 204/924] YARN-2254. TestRMWebServicesAppsModification should
- run against both CS and FS. (Zhihai Xu via kasha)
+Subject: [PATCH 0204/2639] YARN-2254. TestRMWebServicesAppsModification
+ should run against both CS and FS. (Zhihai Xu via
+ kasha)
 
 (cherry picked from commit 5e0b49da9caa53814581508e589f3704592cf335)
 

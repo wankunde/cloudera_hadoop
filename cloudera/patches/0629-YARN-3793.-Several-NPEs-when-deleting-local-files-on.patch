@@ -1,9 +1,9 @@
 From 6106aab2982474ef36dc09a205a23a9a608c5a2a Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Wed, 1 Jul 2015 21:13:32 +0000
-Subject: [PATCH 629/924] YARN-3793. Several NPEs when deleting local files on
- NM recovery. Contributed by Varun Saxena (cherry
- picked from commit
+Subject: [PATCH 0629/2639] YARN-3793. Several NPEs when deleting local files
+ on NM recovery. Contributed by Varun Saxena
+ (cherry picked from commit
  b5cdf78e8e6cd6c5c1fb7286207dac72be32c0d6) (cherry
  picked from commit
  a721b9d81289f80f86f8466bd58bc13d3a5af4a6)

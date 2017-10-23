@@ -1,7 +1,7 @@
-From c2f65d8e93bf88b19db1166906d310bc493b7eb9 Mon Sep 17 00:00:00 2001
+From 1556765b3de65fb1c4d3d1c93366405ceca4440d Mon Sep 17 00:00:00 2001
 From: Xuan <xgong@apache.org>
 Date: Fri, 8 May 2015 17:52:54 -0700
-Subject: [PATCH 741/924] YARN-3602.
+Subject: [PATCH 0741/2639] YARN-3602.
  TestResourceLocalizationService.testPublicResourceInitializesLocalDir
  fails Intermittently due to IOException from
  cleanup. Contributed by zhihai xu

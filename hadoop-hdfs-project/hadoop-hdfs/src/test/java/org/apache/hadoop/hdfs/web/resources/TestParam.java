@@ -164,7 +164,8 @@ public class TestParam {
   @Test
   public void testPermissionParam() {
     final PermissionParam p = new PermissionParam(PermissionParam.DEFAULT);
-    Assert.assertEquals(new FsPermission((short)0755), p.getFsPermission());
+    Assert.assertEquals(new FsPermission((short)0755), p.getDirFsPermission());
+    Assert.assertEquals(new FsPermission((short)0644), p.getFileFsPermission());
 
     new PermissionParam("0");
 
@@ -350,6 +351,40 @@ public class TestParam {
       LOG.info("EXPECTED: " + e);
     }
   }
+
+  @Test
+  public void testUserGroupOkAfterAlteringAclPattern() {
+    // Preserve default pattern value
+    AclPermissionParam.Domain oldDomain =
+        AclPermissionParam.getAclPermissionPattern();
+
+    // Override the pattern with one that accepts '@' and numbers
+    // in the first character of usernames/groupnames
+    String newPattern =
+        "^(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?" +
+            "(,(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
+
+    try {
+      AclPermissionParam.setAclPermissionPattern(newPattern);
+
+      String numericUserSpec = "user:110201:rwx";
+      AclPermissionParam aclNumericUserParam =
+          new AclPermissionParam(numericUserSpec);
+      Assert.assertEquals(numericUserSpec, aclNumericUserParam.getValue());
+
+      String oddGroupSpec = "group:foo@bar:rwx";
+      AclPermissionParam aclGroupWithDomainParam =
+          new AclPermissionParam(oddGroupSpec);
+      Assert.assertEquals(oddGroupSpec, aclGroupWithDomainParam.getValue());
+
+    } finally {
+      // Revert back to the default rules for remainder of tests
+      AclPermissionParam.setAclPermissionPattern(oldDomain);
+    }
+
+  }
  
   @Test
   public void testXAttrNameParam() {
@@ -398,5 +433,66 @@ public class TestParam {
     final SnapshotNameParam s2 = new SnapshotNameParam("s2");
     Assert.assertEquals("s1", s1.getValue());
     Assert.assertEquals("s2", s2.getValue());
+  }
+
+  @Test
+  public void testFsActionParam() {
+    new FsActionParam("rwx");
+    new FsActionParam("rw-");
+    new FsActionParam("r-x");
+    new FsActionParam("-wx");
+    new FsActionParam("r--");
+    new FsActionParam("-w-");
+    new FsActionParam("--x");
+    new FsActionParam("---");
+
+    try {
+      new FsActionParam("rw");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("qwx");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("qrwx");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("rwxx");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("xwr");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("r-w");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+  }
+
+  @Test
+  public void testStartAfterParam() throws Exception {
+    String s = "/helloWorld";
+    StartAfterParam param = new StartAfterParam(s);
+    Assert.assertEquals(s, param.getValue());
   }
 }

@@ -1,7 +1,7 @@
 From df34690242fd07e9db8c4bcd631c139ef1f61544 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 16 Jan 2013 01:07:35 +0000
-Subject: [PATCH 004/924] MR1: MAPREDUCE-4924. flakey test:
+Subject: [PATCH 0004/2639] MR1: MAPREDUCE-4924. flakey test:
  org.apache.hadoop.mapred.TestClusterMRNotification.testMR.
  (rkanter via tucu)
 

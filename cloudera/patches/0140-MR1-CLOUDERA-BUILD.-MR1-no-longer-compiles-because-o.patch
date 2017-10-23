@@ -1,8 +1,9 @@
 From b5a821923f02f71f57ec4f69c60040cda0368c40 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Wed, 14 May 2014 13:25:07 -0700
-Subject: [PATCH 140/924] MR1: CLOUDERA-BUILD. MR1 no longer compiles because
- of changes to HttpConfig in YARN-1553 (CDH-19117)
+Subject: [PATCH 0140/2639] MR1: CLOUDERA-BUILD. MR1 no longer compiles
+ because of changes to HttpConfig in YARN-1553
+ (CDH-19117)
 
 (cherry picked from commit bf87244f585255d39fc6acbff6b196d02cfa7bb0)
 (cherry picked from commit a804b339cc9edee39dbd008db0378ee46eb0cbe9)

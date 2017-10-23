@@ -1,9 +1,10 @@
 From 6d1285c5c087ca4416853c770505da5ebd6f7943 Mon Sep 17 00:00:00 2001
 From: Xuan <xgong@apache.org>
 Date: Thu, 23 Apr 2015 16:40:40 -0700
-Subject: [PATCH 542/924] YARN-3516. killing ContainerLocalizer action doesn't
- take effect when private localizer receives
- FETCH_FAILURE status. Contributed by zhihai xu
+Subject: [PATCH 0542/2639] YARN-3516. killing ContainerLocalizer action
+ doesn't take effect when private localizer
+ receives FETCH_FAILURE status. Contributed by
+ zhihai xu
 
 (cherry picked from commit 0b3f8957a87ada1a275c9904b211fdbdcefafb02)
 

@@ -34,6 +34,8 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Dispatches {@link Event}s in a separate thread. Currently only single thread
  * does that. Potentially there could be multiple channels for each event type
@@ -47,6 +49,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   private static final Log LOG = LogFactory.getLog(AsyncDispatcher.class);
 
   private final BlockingQueue<Event> eventQueue;
+  private volatile int lastEventQueueSizeLogged = 0;
   private volatile boolean stopped = false;
 
   // Configuration flag for enabling/disabling draining dispatcher's events on
@@ -61,7 +64,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   // For drainEventsOnStop enabled only, block newly coming events into the
   // queue while stopping.
   private volatile boolean blockNewEvents = false;
-  private EventHandler handlerInstance = null;
+  private final EventHandler handlerInstance = new GenericEventHandler();
 
   private Thread eventHandlingThread;
   protected final Map<Class<? extends Enum>, EventHandler> eventDispatchers;
@@ -116,6 +119,11 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
         conf.getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,
           Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR);
     super.serviceInit(conf);
+  }
+
+  @VisibleForTesting
+  public void setExitOnDispatchException(boolean exitOnDispatchException) {
+    this.exitOnDispatchException = exitOnDispatchException;
   }
 
   @Override
@@ -215,9 +223,6 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
   @Override
   public EventHandler getEventHandler() {
-    if (handlerInstance == null) {
-      handlerInstance = new GenericEventHandler();
-    }
     return handlerInstance;
   }
 
@@ -230,7 +235,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
       /* all this method does is enqueue all the events onto the queue */
       int qSize = eventQueue.size();
-      if (qSize !=0 && qSize %1000 == 0) {
+      if (qSize != 0 && qSize % 1000 == 0
+          && lastEventQueueSizeLogged != qSize) {
+        lastEventQueueSizeLogged = qSize;
         LOG.info("Size of event-queue is " + qSize);
       }
       int remCapacity = eventQueue.remainingCapacity();
@@ -244,6 +251,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
         if (!stopped) {
           LOG.warn("AsyncDispatcher thread interrupted", e);
         }
+        // Need to reset drained flag to true if event queue is empty,
+        // otherwise dispatcher will hang on stop.
+        drained = eventQueue.isEmpty();
         throw new YarnRuntimeException(e);
       }
     };
@@ -282,5 +292,15 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
         System.exit(-1);
       }
     };
+  }
+
+  @VisibleForTesting
+  protected boolean isEventThreadWaiting() {
+    return eventHandlingThread.getState() == Thread.State.WAITING;
+  }
+
+  @VisibleForTesting
+  protected boolean isDrained() {
+    return this.drained;
   }
 }

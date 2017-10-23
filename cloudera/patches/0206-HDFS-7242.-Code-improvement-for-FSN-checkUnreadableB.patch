@@ -1,9 +1,9 @@
 From e8f2c91cb0e5a41284f7eb46164e07c4e227d5af Mon Sep 17 00:00:00 2001
 From: Vinayakumar B <vinayakumarb@apache.org>
 Date: Fri, 17 Oct 2014 17:48:20 +0530
-Subject: [PATCH 206/924] HDFS-7242. Code improvement for
- FSN#checkUnreadableBySuperuser. (Contributed by Yi
- Liu) (cherry picked from
+Subject: [PATCH 0206/2639] HDFS-7242. Code improvement for
+ FSN#checkUnreadableBySuperuser. (Contributed by
+ Yi Liu) (cherry picked from
  1c3ff0b7c892b9d70737c375fb6f4a6fc6dd6d81)
 
 (cherry picked from commit aad35e544f34b818a4c6e315ae7e6df69818eabd)

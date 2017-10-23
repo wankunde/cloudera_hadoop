@@ -1,10 +1,10 @@
 From 43b9446c29b507bf24df48518cc99b4cfb596443 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Fri, 20 Feb 2015 15:08:48 +0000
-Subject: [PATCH 491/924] YARN-3194. RM should handle NMContainerStatuses sent
- by NM while registering if NM is Reconnected node.
- Contributed by Rohith (cherry picked from commit
- a64dd3d24bfcb9af21eb63869924f6482b147fd3)
+Subject: [PATCH 0491/2639] YARN-3194. RM should handle NMContainerStatuses
+ sent by NM while registering if NM is Reconnected
+ node. Contributed by Rohith (cherry picked from
+ commit a64dd3d24bfcb9af21eb63869924f6482b147fd3)
 
 (cherry picked from commit 3e8dfd1299f2ec4e3f0cddca709162ef71237851)
 

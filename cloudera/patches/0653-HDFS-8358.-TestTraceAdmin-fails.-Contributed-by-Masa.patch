@@ -1,7 +1,7 @@
 From b9879b2e329a5e9e6cd6fab0a620ec7284cb6f09 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Wed, 13 May 2015 14:16:37 -0500
-Subject: [PATCH 653/924] HDFS-8358. TestTraceAdmin fails. Contributed by
+Subject: [PATCH 0653/2639] HDFS-8358. TestTraceAdmin fails. Contributed by
  Masatake Iwasaki.
 
 (cherry picked from commit f9a46a00d2020c6d6466fbc829ada0521cb78dc0)

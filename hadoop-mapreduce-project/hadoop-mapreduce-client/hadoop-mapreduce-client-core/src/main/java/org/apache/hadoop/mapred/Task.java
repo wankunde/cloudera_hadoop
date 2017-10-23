@@ -62,6 +62,7 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.reduce.WrappedReducer;
 import org.apache.hadoop.mapreduce.task.ReduceContextImpl;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
@@ -70,6 +71,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Base class for tasks.
@@ -149,6 +152,8 @@ abstract public class Task implements Writable, Configurable {
   private String user;                            // user running the job
   private TaskAttemptID taskId;                   // unique, includes job id
   private int partition;                          // id within job
+  private byte[] encryptedSpillKey = new byte[] {0};  // Key Used to encrypt
+  // intermediate spills
   TaskStatus taskStatus;                          // current status of the task
   protected JobStatus.State jobRunStateForCleanup;
   protected boolean jobCleanup = false;
@@ -171,7 +176,7 @@ abstract public class Task implements Writable, Configurable {
     skipRanges.skipRangeIterator();
 
   private ResourceCalculatorProcessTree pTree;
-  private long initCpuCumulativeTime = 0;
+  private long initCpuCumulativeTime = ResourceCalculatorProcessTree.UNAVAILABLE;
 
   protected JobConf conf;
   protected MapOutputFile mapOutputFile;
@@ -228,6 +233,11 @@ abstract public class Task implements Writable, Configurable {
     gcUpdater = new GcTimeUpdater();
   }
 
+  @VisibleForTesting
+  void setTaskDone() {
+    taskDone.set(true);
+  }
+
   ////////////////////////////////////////////
   // Accessors
   ////////////////////////////////////////////
@@ -254,6 +264,24 @@ abstract public class Task implements Writable, Configurable {
    */
   public void setJobTokenSecret(SecretKey tokenSecret) {
     this.tokenSecret = tokenSecret;
+  }
+
+  /**
+   * Get Encrypted spill key
+   * @return encrypted spill key
+   */
+  public byte[] getEncryptedSpillKey() {
+    return encryptedSpillKey;
+  }
+
+  /**
+   * Set Encrypted spill key
+   * @param encryptedSpillKey key
+   */
+  public void setEncryptedSpillKey(byte[] encryptedSpillKey) {
+    if (encryptedSpillKey != null) {
+      this.encryptedSpillKey = encryptedSpillKey;
+    }
   }
 
   /**
@@ -486,6 +514,17 @@ abstract public class Task implements Writable, Configurable {
     out.writeBoolean(writeSkipRecs);
     out.writeBoolean(taskCleanup);
     Text.writeString(out, user);
+
+    /**
+     * Write the key used to encrypt spill data. This has been introduced in
+     * 5.5 to fix a security issue with storing the key in plain text on the
+     * disk alongside the spill itself.
+     *
+     * However, instead of writing it separately and breaking backwards
+     * compatibility, use the extraData field that has been originally
+     * introduced for Mesos.
+     */
+    extraData = new BytesWritable(encryptedSpillKey);
     extraData.write(out);
   }
   
@@ -511,7 +550,14 @@ abstract public class Task implements Writable, Configurable {
       setPhase(TaskStatus.Phase.CLEANUP);
     }
     user = StringInterner.weakIntern(Text.readString(in));
+
+    /**
+     * Read in the key to encrypt spill data with. Note that we are
+     * bastardizing the extraData field, originally introduced for Mesos, to
+     * store the key for spill encryption.
+     */
     extraData.readFields(in);
+    encryptedSpillKey = extraData.copyBytes();
   }
 
   @Override
@@ -534,9 +580,6 @@ abstract public class Task implements Writable, Configurable {
    */
   public abstract void run(JobConf job, TaskUmbilicalProtocol umbilical)
     throws IOException, ClassNotFoundException, InterruptedException;
-
-  /** The number of milliseconds between progress reports. */
-  public static final int PROGRESS_INTERVAL = 3000;
 
   private transient Progress taskProgress = new Progress();
 
@@ -713,6 +756,10 @@ abstract public class Task implements Writable, Configurable {
       int remainingRetries = MAX_RETRIES;
       // get current flag value and reset it as well
       boolean sendProgress = resetProgressFlag();
+
+      long taskProgressInterval = MRJobConfUtil.
+          getTaskProgressReportInterval(conf);
+
       while (!taskDone.get()) {
         synchronized (lock) {
           done = false;
@@ -724,7 +771,7 @@ abstract public class Task implements Writable, Configurable {
             if (taskDone.get()) {
               break;
             }
-            lock.wait(PROGRESS_INTERVAL);
+            lock.wait(taskProgressInterval);
           }
           if (taskDone.get()) {
             break;
@@ -846,13 +893,25 @@ abstract public class Task implements Writable, Configurable {
     }
     pTree.updateProcessTree();
     long cpuTime = pTree.getCumulativeCpuTime();
-    long pMem = pTree.getCumulativeRssmem();
-    long vMem = pTree.getCumulativeVmem();
+    long pMem = pTree.getRssMemorySize();
+    long vMem = pTree.getVirtualMemorySize();
     // Remove the CPU time consumed previously by JVM reuse
-    cpuTime -= initCpuCumulativeTime;
-    counters.findCounter(TaskCounter.CPU_MILLISECONDS).setValue(cpuTime);
-    counters.findCounter(TaskCounter.PHYSICAL_MEMORY_BYTES).setValue(pMem);
-    counters.findCounter(TaskCounter.VIRTUAL_MEMORY_BYTES).setValue(vMem);
+    if (cpuTime != ResourceCalculatorProcessTree.UNAVAILABLE &&
+        initCpuCumulativeTime != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      cpuTime -= initCpuCumulativeTime;
+    }
+    
+    if (cpuTime != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      counters.findCounter(TaskCounter.CPU_MILLISECONDS).setValue(cpuTime);
+    }
+    
+    if (pMem != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      counters.findCounter(TaskCounter.PHYSICAL_MEMORY_BYTES).setValue(pMem);
+    }
+
+    if (vMem != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      counters.findCounter(TaskCounter.VIRTUAL_MEMORY_BYTES).setValue(vMem);
+    }
   }
 
   /**
@@ -1659,6 +1718,11 @@ abstract public class Task implements Writable, Configurable {
   }
 
   void setExtraData(BytesWritable extraData) {
-    this.extraData = extraData;
+    /**
+     * We are using extraData to send the key to encrypt spills with.
+     * Cannot support this operation anymore.
+     */
+    throw new UnsupportedOperationException("Using extraData is not supported."
+        + "This field is used to store the key to encrypt spill data.");
   }
 }

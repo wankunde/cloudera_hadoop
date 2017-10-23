@@ -1,8 +1,8 @@
 From 774bcd5ee7d99106a59ee36cb4a11de11e7277c1 Mon Sep 17 00:00:00 2001
 From: "Matthew J. Foley" <mattf@apache.org>
 Date: Thu, 15 Dec 2011 08:51:13 +0000
-Subject: [PATCH 003/924] MR1: MAPREDUCE-3475. JT can't renew its own tokens.
- Contributed by Daryn Sharp.
+Subject: [PATCH 0003/2639] MR1: MAPREDUCE-3475. JT can't renew its own
+ tokens. Contributed by Daryn Sharp.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1214660 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0279d7f6966f430413ed3e13d5be694200127948)

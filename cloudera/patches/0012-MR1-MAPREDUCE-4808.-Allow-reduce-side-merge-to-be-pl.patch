@@ -1,7 +1,7 @@
 From 076fee041f8174250beabac35b4981fe09c8039b Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Wed, 23 Jan 2013 10:33:14 -0800
-Subject: [PATCH 012/924] MR1: MAPREDUCE-4808. Allow reduce-side merge to be
+Subject: [PATCH 0012/2639] MR1: MAPREDUCE-4808. Allow reduce-side merge to be
  pluggable. (masokan via tucu)
 
   Reason: enable pluggable sort

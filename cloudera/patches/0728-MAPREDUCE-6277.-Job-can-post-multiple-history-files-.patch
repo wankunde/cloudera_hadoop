@@ -1,10 +1,10 @@
 From 01ef7ae6e8b1344d0ee56b57833b5cef2c131fe8 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Wed, 18 Mar 2015 19:29:56 +0000
-Subject: [PATCH 728/924] MAPREDUCE-6277. Job can post multiple history files
- if attempt loses connection to the RM. Contributed
- by Chang Li (cherry picked from commit
- 30da99cbaf36aeef38a858251ce8ffa5eb657b38)
+Subject: [PATCH 0728/2639] MAPREDUCE-6277. Job can post multiple history
+ files if attempt loses connection to the RM.
+ Contributed by Chang Li (cherry picked from
+ commit 30da99cbaf36aeef38a858251ce8ffa5eb657b38)
 
 (cherry picked from commit 24d8c6f35506bac3ad1e8129f59df6b871b52a7d)
 

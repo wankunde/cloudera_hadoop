@@ -1,8 +1,9 @@
 From 3863e1c4732278474664fa543387b13cead3f56c Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Fri, 10 Apr 2015 10:40:31 -0700
-Subject: [PATCH 710/924] YARN-3348. Add a 'yarn top' tool to help understand
- cluster usage. Contributed by Varun Vasudev
+Subject: [PATCH 0710/2639] YARN-3348. Add a 'yarn top' tool to help
+ understand cluster usage. Contributed by Varun
+ Vasudev
 
 (cherry picked from commit d3daf9665c1cb4af86e31260960120f0d02d68c1)
 

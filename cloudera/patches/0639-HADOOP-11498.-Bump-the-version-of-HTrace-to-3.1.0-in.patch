@@ -1,7 +1,7 @@
 From e0be40de8e223821a8d7d9294fc9ad6118121dcc Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Fri, 30 Jan 2015 16:01:59 -0800
-Subject: [PATCH 639/924] HADOOP-11498. Bump the version of HTrace to
+Subject: [PATCH 0639/2639] HADOOP-11498. Bump the version of HTrace to
  3.1.0-incubating (Masatake Iwasaki via Colin P.
  McCabe)
 

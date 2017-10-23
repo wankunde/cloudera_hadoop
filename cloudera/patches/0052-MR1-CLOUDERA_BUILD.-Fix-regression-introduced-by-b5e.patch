@@ -1,7 +1,7 @@
 From ce2235db8ef00306386fbb4ccf396989ba750f17 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@cloudera.com>
 Date: Tue, 26 Mar 2013 07:52:08 +0530
-Subject: [PATCH 052/924] MR1: CLOUDERA_BUILD. Fix regression introduced by
+Subject: [PATCH 0052/2639] MR1: CLOUDERA_BUILD. Fix regression introduced by
  b5eaf8099 that makes a certain JobTracker limit
  configurable by clients if un-finalized.
 

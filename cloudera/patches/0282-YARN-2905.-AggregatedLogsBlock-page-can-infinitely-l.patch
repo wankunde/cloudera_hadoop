@@ -1,7 +1,7 @@
 From 1b9287f5ed3d8e0bf8fcaa55c42ee09c6742f544 Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Mon, 1 Dec 2014 22:29:05 +0000
-Subject: [PATCH 282/924] YARN-2905. AggregatedLogsBlock page can infinitely
+Subject: [PATCH 0282/2639] YARN-2905. AggregatedLogsBlock page can infinitely
  loop if the aggregated log file is corrupted.
  Contributed by Varun Saxena (cherry picked from
  commit 0f9528b99addbb0fd9a19d84db22a8c8e934b05f)

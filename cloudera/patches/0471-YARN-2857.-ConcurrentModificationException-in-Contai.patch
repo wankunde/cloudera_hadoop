@@ -1,7 +1,7 @@
 From 4eec6619548beebb3a68c3a17bcb2431bd431a5d Mon Sep 17 00:00:00 2001
 From: Jason Lowe <jlowe@apache.org>
 Date: Fri, 14 Nov 2014 20:47:26 +0000
-Subject: [PATCH 471/924] YARN-2857. ConcurrentModificationException in
+Subject: [PATCH 0471/2639] YARN-2857. ConcurrentModificationException in
  ContainerLogAppender. Contributed by Mohammad
  Kamrul Islam (cherry picked from commit
  f2fe8a800e5b0f3875931adba9ae20c6a95aa4ff) (cherry

@@ -1,7 +1,7 @@
 From 7d0847111f6d05e7d134bb0debb550d3d7644b0a Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Wed, 28 Aug 2013 10:12:09 -0700
-Subject: [PATCH 080/924] MR1: CLOUDERA-BUILD: Fix 4274823 Distributed Cache
+Subject: [PATCH 0080/2639] MR1: CLOUDERA-BUILD: Fix 4274823 Distributed Cache
  is not adding files to class paths
 
 Contributed by Chris Douglas

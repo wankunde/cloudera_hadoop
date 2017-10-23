@@ -1,7 +1,7 @@
 From 0bd109a048a5f35302d9d5c26a3fa6985618dcf0 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Thu, 12 Feb 2015 11:12:26 -0800
-Subject: [PATCH 384/924] HDFS-7790. Do not create optional fields in
+Subject: [PATCH 0384/2639] HDFS-7790. Do not create optional fields in
  DFSInputStream unless they are needed (cmccabe)
 
 (cherry picked from commit 871cb56152e6039ff56c6fabfcd45451029471c3)

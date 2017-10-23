@@ -1,7 +1,7 @@
 From 131ee3cfa643d1e4dd9199a73c18f09646e8073b Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Mon, 15 Dec 2014 10:00:25 -0800
-Subject: [PATCH 303/924] HDFS-7513. HDFS inotify: add defaultBlockSize to
+Subject: [PATCH 0303/2639] HDFS-7513. HDFS inotify: add defaultBlockSize to
  CreateEvent (cmccabe)
 
 (cherry picked from commit 6e13fc62e1f284f22fd0089f06ce281198bc7c2a)

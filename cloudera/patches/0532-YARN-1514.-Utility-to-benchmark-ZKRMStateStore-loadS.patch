@@ -1,9 +1,9 @@
 From 410fda24ff88e52c06179146ec6b4160eea41aee Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Wed, 18 Feb 2015 16:06:55 -0800
-Subject: [PATCH 532/924] YARN-1514. Utility to benchmark
- ZKRMStateStore#loadState for RM HA. Contributed by
- Tsuyoshi OZAWA (cherry picked from commit
+Subject: [PATCH 0532/2639] YARN-1514. Utility to benchmark
+ ZKRMStateStore#loadState for RM HA. Contributed
+ by Tsuyoshi OZAWA (cherry picked from commit
  1c03376300a46722d4147f5b8f37242f68dba0a2)
 
 (cherry picked from commit b8fe1a747e9dfaeaf71471d89a706787a28aaa1b)

@@ -1,7 +1,7 @@
 From 623bb2d2fcc86f8b2cc57016cf57a5789b3154e2 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Fri, 30 Jan 2015 13:45:35 -0800
-Subject: [PATCH 325/924] CLOUDERA-BUILD: Revert "MAPREDUCE-5974. Allow
+Subject: [PATCH 0325/2639] CLOUDERA-BUILD: Revert "MAPREDUCE-5974. Allow
  specifying multiple MapOutputCollectors with
  fallback. (Todd Lipcon via kasha)"
 

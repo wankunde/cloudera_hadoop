@@ -28,6 +28,7 @@ import java.io.File;
 import java.net.URI;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -35,6 +36,7 @@ import org.junit.rules.TestName;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+@Deprecated
 public class TestS3Credentials {
   public static final Log LOG = LogFactory.getLog(TestS3Credentials.class);
 
@@ -120,6 +122,7 @@ public class TestS3Credentials {
   }
 
   @Test(expected=IllegalArgumentException.class)
+  @Ignore
   public void noSecretShouldThrow() throws Exception {
     S3Credentials s3Credentials = new S3Credentials();
     Configuration conf = new Configuration();
@@ -128,6 +131,7 @@ public class TestS3Credentials {
   }
 
   @Test(expected=IllegalArgumentException.class)
+  @Ignore
   public void noAccessIdShouldThrow() throws Exception {
     S3Credentials s3Credentials = new S3Credentials();
     Configuration conf = new Configuration();

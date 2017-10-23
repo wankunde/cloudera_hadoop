@@ -1,7 +1,7 @@
 From 28604465e54dd032d5e7b11c81709bedd7861e91 Mon Sep 17 00:00:00 2001
 From: Akira Ajisaka <aajisaka@apache.org>
 Date: Fri, 12 Jun 2015 07:25:15 -0700
-Subject: [PATCH 648/924] HADOOP-11971. Move test utilities for tracing from
+Subject: [PATCH 0648/2639] HADOOP-11971. Move test utilities for tracing from
  hadoop-hdfs to hadoop-common. Contributed by
  Masatake Iwasaki.
 
@@ -302,7 +302,7 @@ index 7fb8ac5..58b3659 100644
 -  }
  }
 diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/tracing/TestTracingShortCircuitLocalRead.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/tracing/TestTracingShortCircuitLocalRead.java
-index 0714679..1498886 100644
+index 0714679..14988867 100644
 --- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/tracing/TestTracingShortCircuitLocalRead.java
 +++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/tracing/TestTracingShortCircuitLocalRead.java
 @@ -66,7 +66,7 @@ public void testShortCircuitTraceHooks() throws IOException {

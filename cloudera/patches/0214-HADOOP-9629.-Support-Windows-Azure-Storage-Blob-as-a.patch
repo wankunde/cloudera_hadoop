@@ -1,12 +1,12 @@
 From 226aa9be3d9aba7e18aac029017f2cb207c98587 Mon Sep 17 00:00:00 2001
 From: Chris Nauroth <cnauroth@apache.org>
 Date: Tue, 10 Jun 2014 22:26:45 +0000
-Subject: [PATCH 214/924] HADOOP-9629. Support Windows Azure Storage - Blob as
- a file system in Hadoop. Contributed by Dexter
+Subject: [PATCH 0214/2639] HADOOP-9629. Support Windows Azure Storage - Blob
+ as a file system in Hadoop. Contributed by Dexter
  Bradshaw, Mostafa Elhemali, Xi Fang, Johannes
- Klein, David Lao, Mike Liddell, Chuan Liu, Lengning
- Liu, Ivan Mitic, Michael Rys, Alexander Stojanovic,
- Brian Swan, and Min Wei.
+ Klein, David Lao, Mike Liddell, Chuan Liu,
+ Lengning Liu, Ivan Mitic, Michael Rys, Alexander
+ Stojanovic, Brian Swan, and Min Wei.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1601781 13f79535-47bb-0310-9956-ffa450edef68
 (Cherry picked from commit 81bc395deb3ba00567dc067d6ca71bacf9e3bc82)

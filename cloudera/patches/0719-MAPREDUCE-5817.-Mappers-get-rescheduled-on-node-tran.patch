@@ -1,11 +1,11 @@
 From 51d064c76fa240b192af01e374eb6d801e85a9c9 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@apache.org>
 Date: Fri, 14 Aug 2015 12:29:50 -0700
-Subject: [PATCH 719/924] MAPREDUCE-5817. Mappers get rescheduled on node
+Subject: [PATCH 0719/2639] MAPREDUCE-5817. Mappers get rescheduled on node
  transition even after all reducers are completed.
- (Sangjin Lee via kasha) (cherry picked from commit
- 27d24f96ab8d17e839a1ef0d7076efc78d28724a) (cherry
- picked from commit
+ (Sangjin Lee via kasha) (cherry picked from
+ commit 27d24f96ab8d17e839a1ef0d7076efc78d28724a)
+ (cherry picked from commit
  b826168173c3386738acc12a5d62577f12aa06e9)
 
 Conflicts:

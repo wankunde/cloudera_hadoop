@@ -1,9 +1,9 @@
 From 65db69f59309940155f5b55a94fbf37a1bae9c23 Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Wed, 19 Nov 2014 19:48:33 -0800
-Subject: [PATCH 451/924] YARN-2865. Fixed RM to always create a new RMContext
- when transtions from StandBy to Active. Contributed
- by Rohith Sharmaks
+Subject: [PATCH 0451/2639] YARN-2865. Fixed RM to always create a new
+ RMContext when transtions from StandBy to Active.
+ Contributed by Rohith Sharmaks
 
 (cherry picked from commit 9cb8b75ba57f18639492bfa3b7e7c11c00bb3d3b)
 

@@ -1,9 +1,9 @@
 From 490c17af3f02a252acb95b5b426f5609c218d6cb Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@cloudera.com>
 Date: Fri, 28 Feb 2014 16:06:03 -0800
-Subject: [PATCH 314/924] CLOUDERA-BUILD. JobHistoryServer has no information
- about failed MR applications (CDH-13222) and fix
- test failure
+Subject: [PATCH 0314/2639] CLOUDERA-BUILD. JobHistoryServer has no
+ information about failed MR applications
+ (CDH-13222) and fix test failure
 
 (cherry picked from commit 4a000726db6596a532661c585118eabcae7d47de)
 (cherry picked from commit 5adb0731b23ed512565b3752b1cc25bd97d9f1f9)

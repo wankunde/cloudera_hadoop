@@ -1,7 +1,7 @@
 From 8a8af6f24789aad7d17a9a591f15436383cac688 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@apache.org>
 Date: Tue, 30 Jun 2015 16:42:59 -0700
-Subject: [PATCH 625/924] HADOOP-12159. Move DistCpUtils#compareFs() to
+Subject: [PATCH 0625/2639] HADOOP-12159. Move DistCpUtils#compareFs() to
  org.apache.hadoop.fs.FileUtil and fix for HA
  namespaces (rchiang via rkanter)
 

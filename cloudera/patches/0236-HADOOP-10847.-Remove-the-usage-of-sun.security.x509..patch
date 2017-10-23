@@ -1,9 +1,9 @@
 From e6b8d8d09d1e8290e37a3ff6d8ef240b0ee2b40c Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Tue, 4 Nov 2014 10:52:05 -0800
-Subject: [PATCH 236/924] HADOOP-10847. Remove the usage of
- sun.security.x509.* in testing code. Contributed by
- Pascal Oliva.
+Subject: [PATCH 0236/2639] HADOOP-10847. Remove the usage of
+ sun.security.x509.* in testing code. Contributed
+ by Pascal Oliva.
 
 (cherry picked from commit 3bdfd6e58e2eded406b14b585f1465be941eda65)
 

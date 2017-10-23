@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.io.PrintStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,6 +48,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -106,6 +109,7 @@ import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
@@ -162,6 +166,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private WebApp webApp;
   private AppReportFetcher fetcher = null;
   protected ResourceTrackerService resourceTracker;
+  private JvmPauseMonitor pauseMonitor;
 
   @VisibleForTesting
   protected String webAppAddress;
@@ -171,7 +176,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private Configuration conf;
 
   private UserGroupInformation rmLoginUGI;
-  
+
   public ResourceManager() {
     super("ResourceManager");
   }
@@ -189,11 +194,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
     clusterTimeStamp = timestamp;
   }
 
+  @VisibleForTesting
+  Dispatcher getRmDispatcher() {
+    return rmDispatcher;
+  }
+
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
     this.rmContext = new RMContextImpl();
-    
+    rmContext.setResourceManager(this);
+
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -253,6 +264,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     adminService = createAdminService();
     addService(adminService);
     rmContext.setRMAdminService(adminService);
+    
+    rmContext.setYarnConfiguration(conf);
     
     createAndInitActiveServices();
 
@@ -403,6 +416,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private ResourceManager rm;
     private boolean recoveryEnabled;
     private RMActiveServiceContext activeServiceContext;
+    private StandByTransitionRunnable standByTransitionRunnable;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -411,6 +425,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     protected void serviceInit(Configuration configuration) throws Exception {
+      standByTransitionRunnable = new StandByTransitionRunnable();
+
       activeServiceContext = new RMActiveServiceContext();
       rmContext.setActiveServiceContext(activeServiceContext);
 
@@ -516,7 +532,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       rmContext.setResourceTrackerService(resourceTracker);
 
       DefaultMetricsSystem.initialize("ResourceManager");
-      JvmMetrics.initSingleton("ResourceManager", null);
+      JvmMetrics jm = JvmMetrics.initSingleton("ResourceManager", null);
+      pauseMonitor = new JvmPauseMonitor();
+      addService(pauseMonitor);
+      jm.setPauseMonitor(pauseMonitor);
 
       // Initialize the Reservation system
       if (conf.getBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE,
@@ -573,12 +592,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
       if(recoveryEnabled) {
         try {
+          LOG.info("Recovery started");
           rmStore.checkVersion();
           if (rmContext.isWorkPreservingRecoveryEnabled()) {
             rmContext.setEpoch(rmStore.getAndIncrementEpoch());
           }
           RMState state = rmStore.loadState();
           recover(state);
+          LOG.info("Recovery ended");
         } catch (Exception e) {
           // the Exception from loadState() needs to be handled for
           // HA and we need to give up master status if we got fenced
@@ -593,8 +614,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     @Override
     protected void serviceStop() throws Exception {
 
-      DefaultMetricsSystem.shutdown();
+      super.serviceStop();
 
+      DefaultMetricsSystem.shutdown();
       if (rmContext != null) {
         RMStateStore store = rmContext.getStateStore();
         try {
@@ -643,6 +665,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private final ResourceScheduler scheduler;
     private final BlockingQueue<SchedulerEvent> eventQueue =
       new LinkedBlockingQueue<SchedulerEvent>();
+    private volatile int lastEventQueueSizeLogged = 0;
     private final Thread eventProcessor;
     private volatile boolean stopped = false;
     private boolean shouldExitOnError = false;
@@ -720,7 +743,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     public void handle(SchedulerEvent event) {
       try {
         int qSize = eventQueue.size();
-        if (qSize !=0 && qSize %1000 == 0) {
+        if (qSize != 0 && qSize % 1000 == 0
+            && lastEventQueueSizeLogged != qSize) {
+          lastEventQueueSizeLogged = qSize;
           LOG.info("Size of scheduler event-queue is " + qSize);
         }
         int remCapacity = eventQueue.remainingCapacity();
@@ -736,29 +761,90 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Private
-  public static class RMFatalEventDispatcher
-      implements EventHandler<RMFatalEvent> {
-
+  private class RMFatalEventDispatcher implements EventHandler<RMFatalEvent> {
     @Override
     public void handle(RMFatalEvent event) {
-      LOG.fatal("Received a " + RMFatalEvent.class.getName() + " of type " +
-          event.getType().name() + ". Cause:\n" + event.getCause());
+      LOG.error("Received " + event);
 
-      ExitUtil.terminate(1, event.getCause());
+      if (HAUtil.isHAEnabled(getConfig())) {
+        // If we're in an HA config, the right answer is always to go into
+        // standby.
+        LOG.warn("Transitioning the resource manager to standby.");
+        handleTransitionToStandByInNewThread();
+      } else {
+        // If we're stand-alone, we probably want to shut down, but the if and
+        // how depends on the event.
+        switch(event.getType()) {
+        case STATE_STORE_FENCED:
+          LOG.fatal("State store fenced even though the resource manager " +
+              "is not configured for high availability. Shutting down this " +
+              "resource manager to protect the integrity of the state store.");
+          ExitUtil.terminate(1, event.getExplanation());
+          break;
+        case STATE_STORE_OP_FAILED:
+          if (YarnConfiguration.shouldRMFailFast(getConfig())) {
+            LOG.fatal("Shutting down the resource manager because a state " +
+                "store operation failed, and the resource manager is " +
+                "configured to fail fast. See the yarn.fail-fast and " +
+                "yarn.resourcemanager.fail-fast properties.");
+            ExitUtil.terminate(1, event.getExplanation());
+          } else {
+            LOG.warn("Ignoring state store operation failure because the " +
+                "resource manager is not configured to fail fast. See the " +
+                "yarn.fail-fast and yarn.resourcemanager.fail-fast " +
+                "properties.");
+          }
+          break;
+        default:
+          LOG.fatal("Shutting down the resource manager.");
+          ExitUtil.terminate(1, event.getExplanation());
+        }
+      }
     }
   }
 
-  public void handleTransitionToStandBy() {
-    if (rmContext.isHAEnabled()) {
-      try {
-        // Transition to standby and reinit active services
-        LOG.info("Transitioning RM to Standby mode");
-        transitionToStandby(true);
-        adminService.resetLeaderElection();
+  /**
+   * Transition to standby state in a new thread. The transition operation is
+   * asynchronous to avoid deadlock caused by cyclic dependency.
+   */
+  private void handleTransitionToStandByInNewThread() {
+    Thread standByTransitionThread =
+        new Thread(activeServices.standByTransitionRunnable);
+    standByTransitionThread.setName("StandByTransitionThread");
+    standByTransitionThread.start();
+  }
+
+  /**
+   * The class to transition RM to standby state. The same
+   * {@link StandByTransitionRunnable} object could be used in multiple threads,
+   * but runs only once. That's because RM can go back to active state after
+   * transition to standby state, the same runnable in the old context can't
+   * transition RM to standby state again. A new runnable is created every time
+   * RM transitions to active state.
+   */
+  private class StandByTransitionRunnable implements Runnable {
+    // The atomic variable to make sure multiple threads with the same runnable
+    // run only once.
+    private AtomicBoolean hasAlreadyRun = new AtomicBoolean(false);
+
+    @Override
+    public void run() {
+      // Run this only once, even if multiple threads end up triggering
+      // this simultaneously.
+      if (hasAlreadyRun.getAndSet(true)) {
         return;
-      } catch (Exception e) {
-        LOG.fatal("Failed to transition RM to Standby mode.");
-        ExitUtil.terminate(1, e);
+      }
+
+      if (rmContext.isHAEnabled()) {
+        try {
+          // Transition to standby and reinit active services
+          LOG.info("Transitioning RM to Standby mode");
+          transitionToStandby(true);
+          adminService.resetLeaderElection();
+        } catch (Exception e) {
+          LOG.fatal("Failed to transition RM to Standby mode.", e);
+          ExitUtil.terminate(1, e);
+        }
       }
     }
   }
@@ -1206,8 +1292,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
     try {
       Configuration conf = new YarnConfiguration();
       // If -format-state-store, then delete RMStateStore; else startup normally
-      if (argv.length == 1 && argv[0].equals("-format-state-store")) {
-        deleteRMStateStore(conf);
+      if (argv.length >= 1) {
+        if (argv[0].equals("-format-state-store")) {
+          deleteRMStateStore(conf);
+        } else if (argv[0].equals("-remove-application-from-state-store")
+            && argv.length == 2) {
+          removeApplication(conf, argv[1]);
+        } else {
+          printUsage(System.err);
+        }
       } else {
         ResourceManager resourceManager = new ResourceManager();
         ShutdownHookManager.get().addShutdownHook(
@@ -1283,5 +1376,26 @@ public class ResourceManager extends CompositeService implements Recoverable {
     } finally {
       rmStore.stop();
     }
+  }
+
+  private static void removeApplication(Configuration conf, String applicationId)
+      throws Exception {
+    RMStateStore rmStore = RMStateStoreFactory.getStore(conf);
+    rmStore.init(conf);
+    rmStore.start();
+    try {
+      ApplicationId removeAppId = ConverterUtils.toApplicationId(applicationId);
+      LOG.info("Deleting application " + removeAppId + " from state store");
+      rmStore.removeApplication(removeAppId);
+      LOG.info("Application is deleted from state store");
+    } finally {
+      rmStore.stop();
+    }
+  }
+
+  private static void printUsage(PrintStream out) {
+    out.println("Usage: java ResourceManager [-format-state-store]");
+    out.println("                            "
+        + "[-remove-application-from-state-store <appId>]" + "\n");
   }
 }

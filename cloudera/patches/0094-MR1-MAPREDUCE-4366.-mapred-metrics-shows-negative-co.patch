@@ -1,7 +1,7 @@
 From f6d07b2c517d3379a185d49f94397fa26afe71ce Mon Sep 17 00:00:00 2001
 From: Sandy Ryza <sandy@cloudera.com>
 Date: Tue, 30 Jul 2013 15:28:22 -0700
-Subject: [PATCH 094/924] MR1: MAPREDUCE-4366. mapred metrics shows negative
+Subject: [PATCH 0094/2639] MR1: MAPREDUCE-4366. mapred metrics shows negative
  count of waiting maps and reduces. (sandyr via
  tucu)
 

@@ -1,7 +1,7 @@
 From 6b422d517aa9ace614fbc2127dd232d4e3142225 Mon Sep 17 00:00:00 2001
 From: Ravi Prakash <raviprak@altiscale.com>
 Date: Fri, 24 Apr 2015 13:39:07 -0700
-Subject: [PATCH 717/924] HADOOP-11876. Refactor code to make it more
+Subject: [PATCH 0717/2639] HADOOP-11876. Refactor code to make it more
  readable, minor maybePrintStats bug (Zoran
  Dimitrijevic via raviprak)
 

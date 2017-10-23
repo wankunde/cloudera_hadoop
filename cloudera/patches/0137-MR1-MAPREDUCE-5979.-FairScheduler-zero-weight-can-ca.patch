@@ -1,8 +1,9 @@
 From 744ddb3b1006ea5e141c99a1affb7d10349f9758 Mon Sep 17 00:00:00 2001
 From: "adhoot@cloudera.com" <adhoot@adhoot-MBP.local>
 Date: Mon, 28 Jul 2014 11:32:48 -0700
-Subject: [PATCH 137/924] MR1: MAPREDUCE-5979. FairScheduler: zero weight can
- cause sort failures. (Anubhav Dhoot via kasha)
+Subject: [PATCH 0137/2639] MR1: MAPREDUCE-5979. FairScheduler: zero weight
+ can cause sort failures. (Anubhav Dhoot via
+ kasha)
 
 (cherry picked from commit 399503ffee5e8c4da801368d45713486a07277f3)
 (cherry picked from commit 28b04851c589ac4d1ea6d6f9441eeeb13dabd21d)

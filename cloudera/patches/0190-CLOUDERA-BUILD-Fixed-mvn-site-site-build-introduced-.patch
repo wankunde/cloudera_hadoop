@@ -1,8 +1,8 @@
 From 81a313a19662a1c2308e86aea78c5450850647d6 Mon Sep 17 00:00:00 2001
 From: Lei Xu <lei@cloudera.com>
 Date: Fri, 7 Nov 2014 13:33:26 -0800
-Subject: [PATCH 190/924] CLOUDERA-BUILD: Fixed mvn site:site build introduced
- by backporting HDFS-7278.
+Subject: [PATCH 0190/2639] CLOUDERA-BUILD: Fixed mvn site:site build
+ introduced by backporting HDFS-7278.
 
 (cherry picked from commit 166347dc708cb17bfb0379fef690784f8d0591bd)
 ---

@@ -1,9 +1,9 @@
 From 1ee995294e61bd5d8ec806faa8ececf285b16c74 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Fri, 3 Jan 2014 13:50:58 -0800
-Subject: [PATCH 313/924] CLOUDERA-BUILD. CDH-16529 Support containers with
- zero CPU or MEM when cgroups and memory monitoring
- is enabled
+Subject: [PATCH 0313/2639] CLOUDERA-BUILD. CDH-16529 Support containers with
+ zero CPU or MEM when cgroups and memory
+ monitoring is enabled
 
 (cherry picked from commit c33e9e44c7cb52d055481c8a5cb2bfc3b5feea34)
 (cherry picked from commit 0e5e45ce76bab505f1033646c7de707b7e27f61c)

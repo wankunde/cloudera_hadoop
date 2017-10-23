@@ -1,10 +1,10 @@
 From e90cd9e5e09b271c6f63a017de695f978dad2591 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Thu, 12 Feb 2015 09:17:10 -0600
-Subject: [PATCH 418/924] HDFS-7704. DN heartbeat to Active NN may be blocked
- and expire if connection to Standby NN continues to
- time out. Contributed by Rushabh Shah. (cherry
- picked from commit
+Subject: [PATCH 0418/2639] HDFS-7704. DN heartbeat to Active NN may be
+ blocked and expire if connection to Standby NN
+ continues to time out. Contributed by Rushabh
+ Shah. (cherry picked from commit
  38262779bbf38a427bad6d044e91165567f1d206)
 
 (cherry picked from commit 39594301e1ba772954059aa488ce7f14e203487f)

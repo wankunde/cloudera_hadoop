@@ -1,8 +1,8 @@
 From 18ed82aca0fe881f17b04f5c3657a8b34ce92dad Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 25 Jan 2013 01:05:12 +0000
-Subject: [PATCH 018/924] MR1: MAPREDUCE-2264. Job status exceeds 100% in some
- cases. (devaraj.k and sandyr via tucu)
+Subject: [PATCH 0018/2639] MR1: MAPREDUCE-2264. Job status exceeds 100% in
+ some cases. (devaraj.k and sandyr via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1438286 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 142e1b8b722c53be5264310f64c81e8afcda5457)

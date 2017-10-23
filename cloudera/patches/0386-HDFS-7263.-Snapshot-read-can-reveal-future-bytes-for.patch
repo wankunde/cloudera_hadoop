@@ -1,8 +1,8 @@
 From 5df83b3babf8b96cd192c2be4905ad6c76ec3555 Mon Sep 17 00:00:00 2001
 From: Tao Luo <tao.luo@wandisco.com>
 Date: Wed, 29 Oct 2014 20:20:11 -0700
-Subject: [PATCH 386/924] HDFS-7263. Snapshot read can reveal future bytes for
- appended files. Contributed by Tao Luo.
+Subject: [PATCH 0386/2639] HDFS-7263. Snapshot read can reveal future bytes
+ for appended files. Contributed by Tao Luo.
 
 (cherry picked from commit 8bfef590295372a48bd447b1462048008810ee17)
 ---

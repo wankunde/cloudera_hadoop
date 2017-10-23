@@ -1,8 +1,9 @@
 From e56dbedc0e9a2780e2a144d9e6565537ef5a897f Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@apache.org>
 Date: Tue, 3 Feb 2015 10:39:41 -0800
-Subject: [PATCH 365/924] YARN-3022. Expose Container resource information
- from NodeManager for monitoring (adhoot via ranter)
+Subject: [PATCH 0365/2639] YARN-3022. Expose Container resource information
+ from NodeManager for monitoring (adhoot via
+ ranter)
 
 (cherry picked from commit f7a77819a1e4ff394e110941c1f8dd80f47dd38f)
 

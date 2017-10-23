@@ -1,9 +1,9 @@
 From 856b63e63c83d5d01d882290a2fbd048fa7b0072 Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 30 Sep 2014 16:39:44 -0700
-Subject: [PATCH 203/924] HADOOP-11156. DelegateToFileSystem should implement
- getFsStatus(final Path f). Contributed by Zhihai
- Xu.
+Subject: [PATCH 0203/2639] HADOOP-11156. DelegateToFileSystem should
+ implement getFsStatus(final Path f). Contributed
+ by Zhihai Xu.
 
 (cherry picked from commit d7075ada5d3019a8c520d34bfddb0cd73a449343)
 

@@ -1,7 +1,7 @@
 From 5a3eccfb8a8a9553fe57f21893d39f8a63c6fc9a Mon Sep 17 00:00:00 2001
 From: yliu <yliu@apache.org>
 Date: Fri, 6 Feb 2015 06:29:52 +0800
-Subject: [PATCH 392/924] HDFS-7741. Remove unnecessary synchronized in
+Subject: [PATCH 0392/2639] HDFS-7741. Remove unnecessary synchronized in
  FSDataInputStream and HdfsDataInputStream. (yliu)
 
 (cherry picked from commit e2803f5a5103119388bc8cfddeb7616e6b33f1ca)

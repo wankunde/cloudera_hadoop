@@ -1,7 +1,7 @@
 From f20fc497262538ea2270ceb7181f0a0e550045f9 Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Wed, 26 Nov 2014 11:43:46 +0000
-Subject: [PATCH 394/924] HDFS-6803 Document DFSClient#DFSInputStream
+Subject: [PATCH 0394/2639] HDFS-6803 Document DFSClient#DFSInputStream
  expectations reading and preading  in concurrent
  context. (stack via stevel)
 

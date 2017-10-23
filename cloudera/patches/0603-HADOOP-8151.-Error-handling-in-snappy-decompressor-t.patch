@@ -1,7 +1,7 @@
 From 9311fcc37c25ea46dcc91b178b247f78d188a06c Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Sun, 23 Sep 2012 10:37:52 +0000
-Subject: [PATCH 603/924] HADOOP-8151. Error handling in snappy decompressor
+Subject: [PATCH 0603/2639] HADOOP-8151. Error handling in snappy decompressor
  throws invalid exceptions. Contributed by Matt
  Foley. (harsh)
 

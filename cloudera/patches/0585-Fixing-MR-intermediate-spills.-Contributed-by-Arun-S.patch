@@ -1,7 +1,7 @@
 From 69af2cffaf13e7942f5c3c7cedd1e2c67e506e8a Mon Sep 17 00:00:00 2001
 From: Vinod Kumar Vavilapalli <vinodkv@apache.org>
 Date: Thu, 14 May 2015 16:07:56 -0700
-Subject: [PATCH 585/924] Fixing MR intermediate spills. Contributed by Arun
+Subject: [PATCH 0585/2639] Fixing MR intermediate spills. Contributed by Arun
  Suresh.
 
 (cherry picked from commit 6b710a42e00acca405e085724c89cda016cf7442)

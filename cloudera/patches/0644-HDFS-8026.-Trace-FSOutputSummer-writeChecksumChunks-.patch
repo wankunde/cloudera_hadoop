@@ -1,8 +1,9 @@
 From f438d14928bdf9ae58b53c8fb82a75689415acb6 Mon Sep 17 00:00:00 2001
 From: Colin Patrick Mccabe <cmccabe@cloudera.com>
 Date: Wed, 1 Apr 2015 13:55:40 -0700
-Subject: [PATCH 644/924] HDFS-8026. Trace FSOutputSummer#writeChecksumChunks
- rather than DFSOutputStream#writeChunk (cmccabe)
+Subject: [PATCH 0644/2639] HDFS-8026. Trace
+ FSOutputSummer#writeChecksumChunks rather than
+ DFSOutputStream#writeChunk (cmccabe)
 
 (cherry picked from commit c94d594a57806dec515e2a2053a1221f8ce48cc4)
 (cherry picked from commit 4b74aa7182c44d61a339f43c691dc31d14028ca2)

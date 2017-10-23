@@ -1,7 +1,7 @@
-From e08b6974b44e2f8d96d369dcfe917da03b007f4e Mon Sep 17 00:00:00 2001
+From 5f964f58ee73574d9ad6f258a96be6a6a7a40dc5 Mon Sep 17 00:00:00 2001
 From: Robert Kanter <rkanter@apache.org>
 Date: Wed, 9 Sep 2015 18:03:04 -0700
-Subject: [PATCH 770/924] YARN-4086. Allow Aggregated Log readers to handle
+Subject: [PATCH 0770/2639] YARN-4086. Allow Aggregated Log readers to handle
  HAR files (rkanter)
 
 (cherry picked from commit 6dd6ca442aba8612c3780399a42bb473e4483021)
@@ -37,7 +37,7 @@ Change-Id: Ic3038c36206fbe5e4d654a3975b6832d6ae906ca
  create mode 100644 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/test/resources/application_1440536969523_0001.har/part-0
 
 diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-client/pom.xml b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-client/pom.xml
-index 1b360f5..4acbe98 100644
+index cc644b2..9a9b277 100644
 --- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-client/pom.xml
 +++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-client/pom.xml
 @@ -149,4 +149,22 @@
@@ -175,7 +175,7 @@ literal 0
 HcmV?d00001
 
 diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/pom.xml b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/pom.xml
-index 71bcf90..cc0309d 100644
+index 3c9d595..97f822d 100644
 --- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/pom.xml
 +++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/pom.xml
 @@ -227,6 +227,10 @@

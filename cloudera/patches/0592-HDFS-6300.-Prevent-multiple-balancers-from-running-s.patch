@@ -1,7 +1,7 @@
 From 493b62f5c5fe8ec1a922546fcd951d468cb4f5c6 Mon Sep 17 00:00:00 2001
 From: Vinayakumar B <vinayakumarb@apache.org>
 Date: Wed, 13 May 2015 17:27:34 +0530
-Subject: [PATCH 592/924] HDFS-6300. Prevent multiple balancers from running
+Subject: [PATCH 0592/2639] HDFS-6300. Prevent multiple balancers from running
  simultaneously (Contributed by Rakesh R)
 
 (cherry picked from commit 065d8f2a34296b566e7ca541a284f7991212f14c)

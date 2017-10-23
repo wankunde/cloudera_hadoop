@@ -1,7 +1,7 @@
-From a6db328f7fb0bd4de03933945b0667c08dc75d12 Mon Sep 17 00:00:00 2001
+From 54a38844edf0fb24d839cc69c2eb3dac071ade1b Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Tue, 17 Feb 2015 13:04:38 -0800
-Subject: [PATCH 750/924] HDFS-6662. WebHDFS cannot open a file if its path
+Subject: [PATCH 0750/2639] HDFS-6662. WebHDFS cannot open a file if its path
  contains "%". Contributed by Gerson Carlos.
 
 (cherry picked from commit 043e44bc36fc7f7c59406d3722b0a93607b6fa49)

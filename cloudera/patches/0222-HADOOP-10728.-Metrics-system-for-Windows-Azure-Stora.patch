@@ -1,12 +1,12 @@
 From 69c785e21e91c62728482414585414c038345f72 Mon Sep 17 00:00:00 2001
 From: Chris Nauroth <cnauroth@apache.org>
 Date: Tue, 24 Jun 2014 20:52:44 +0000
-Subject: [PATCH 222/924] HADOOP-10728. Metrics system for Windows Azure
- Storage Filesystem. Contributed by Dexter Bradshaw,
- Mostafa Elhemali, Xi Fang, Johannes Klein, David
- Lao, Mike Liddell, Chuan Liu, Lengning Liu, Ivan
- Mitic, Michael Rys, Alexander Stojanovic, Brian
- Swan, and Min Wei.
+Subject: [PATCH 0222/2639] HADOOP-10728. Metrics system for Windows Azure
+ Storage Filesystem. Contributed by Dexter
+ Bradshaw, Mostafa Elhemali, Xi Fang, Johannes
+ Klein, David Lao, Mike Liddell, Chuan Liu,
+ Lengning Liu, Ivan Mitic, Michael Rys, Alexander
+ Stojanovic, Brian Swan, and Min Wei.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1605187 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 41c707b033379b3d0bb5b93099944aa286fa10b1)

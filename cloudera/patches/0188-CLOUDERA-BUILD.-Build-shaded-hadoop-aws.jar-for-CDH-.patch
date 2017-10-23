@@ -1,8 +1,8 @@
 From b63e4aee42c1617bb87873b3e12f821d31b60b43 Mon Sep 17 00:00:00 2001
 From: Lei Xu <lei@cloudera.com>
 Date: Thu, 2 Oct 2014 19:25:38 -0700
-Subject: [PATCH 188/924] CLOUDERA-BUILD. Build shaded hadoop-aws.jar for CDH
- 5.2.0 (CDH-22019)
+Subject: [PATCH 0188/2639] CLOUDERA-BUILD. Build shaded hadoop-aws.jar for
+ CDH 5.2.0 (CDH-22019)
 
 Shade all dependencies of hadoop-aws, except hadoop-common into its jar
 file to avoid expose conflicted jackson 2 jar to other projects.

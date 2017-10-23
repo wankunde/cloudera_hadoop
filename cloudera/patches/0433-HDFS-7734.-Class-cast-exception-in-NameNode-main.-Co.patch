@@ -1,7 +1,7 @@
 From 3d4c783b61cdcfe6b47bea5c1a4e793c09494d3a Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Wed, 4 Feb 2015 11:31:31 -0800
-Subject: [PATCH 433/924] HDFS-7734. Class cast exception in NameNode#main.
+Subject: [PATCH 0433/2639] HDFS-7734. Class cast exception in NameNode#main.
  Contributed by Yi Liu.
 
 (cherry picked from commit 9175105eeaecf0a1d60b57989b73ce45cee4689b)

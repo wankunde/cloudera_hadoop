@@ -1,8 +1,8 @@
 From 424ecc8d9524c8d00bc83fae52dca0b35198bd15 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Tue, 3 Feb 2015 14:45:15 -0600
-Subject: [PATCH 369/924] HDFS-7707. Edit log corruption due to delayed block
- removal again. Contributed by Yongjun Zhang
+Subject: [PATCH 0369/2639] HDFS-7707. Edit log corruption due to delayed
+ block removal again. Contributed by Yongjun Zhang
 
 Conflicts:
 	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt

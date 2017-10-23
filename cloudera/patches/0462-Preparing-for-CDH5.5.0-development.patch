@@ -1,7 +1,7 @@
 From dfbd81c5723fcbaaf56d3c788f95d5bce6b0e1b5 Mon Sep 17 00:00:00 2001
 From: Jenkins slave <kitchen-build@cloudera.com>
 Date: Mon, 9 Mar 2015 07:45:34 -0700
-Subject: [PATCH 462/924] Preparing for CDH5.5.0 development
+Subject: [PATCH 0462/2639] Preparing for CDH5.5.0 development
 
 ---
  hadoop-assemblies/pom.xml                          |    4 ++--
@@ -1142,7 +1142,7 @@ index bcfc007..c674b5b 100644
    <name>Apache Hadoop Scheduler Load Simulator</name>
    <packaging>jar</packaging>
 diff --git a/hadoop-tools/hadoop-streaming/pom.xml b/hadoop-tools/hadoop-streaming/pom.xml
-index b5ee73d..2f63883 100644
+index b5ee73d3..2f63883 100644
 --- a/hadoop-tools/hadoop-streaming/pom.xml
 +++ b/hadoop-tools/hadoop-streaming/pom.xml
 @@ -20,12 +20,12 @@

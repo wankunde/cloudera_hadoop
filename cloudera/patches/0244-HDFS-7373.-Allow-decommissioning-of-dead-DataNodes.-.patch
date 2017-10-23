@@ -1,8 +1,8 @@
 From 88ee2ff95241f2c946a1521f56a824aa5262da9c Mon Sep 17 00:00:00 2001
 From: Andrew Wang <wang@apache.org>
 Date: Tue, 18 Nov 2014 22:16:58 -0800
-Subject: [PATCH 244/924] HDFS-7373. Allow decommissioning of dead DataNodes.
- Contributed by Zhe Zhang.
+Subject: [PATCH 0244/2639] HDFS-7373. Allow decommissioning of dead
+ DataNodes. Contributed by Zhe Zhang.
 
 (cherry picked from commit 5bd048e8378034b496bacc73b470a25d855aceb1)
 (cherry picked from commit fbce4df71122a8e9ccba8edffa4b9ced3be885bb)

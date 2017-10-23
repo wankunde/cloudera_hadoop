@@ -1,8 +1,8 @@
 From 84b0fb8741861e3ecd6e449ec941716615af5e0a Mon Sep 17 00:00:00 2001
 From: Brandon Li <brandonli@apache.org>
 Date: Fri, 6 Mar 2015 15:19:45 -0800
-Subject: [PATCH 479/924] HDFS-6488. Support HDFS superuser in NFSv3 gateway.
- Contributed by Brandon Li
+Subject: [PATCH 0479/2639] HDFS-6488. Support HDFS superuser in NFSv3
+ gateway. Contributed by Brandon Li
 
 (cherry picked from commit 0f8ecb1d0ce6d3ee9a7caf5b15b299210c2b8875)
 

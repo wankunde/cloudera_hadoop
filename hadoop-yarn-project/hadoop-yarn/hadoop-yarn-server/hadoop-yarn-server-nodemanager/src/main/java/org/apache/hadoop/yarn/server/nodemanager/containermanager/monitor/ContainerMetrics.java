@@ -96,26 +96,32 @@ public class ContainerMetrics implements MetricsSource {
   final MetricsSystem metricsSystem;
 
   // Metrics publishing status
-  private long flushPeriodMs;
+  private final long flushPeriodMs;
+  private final long unregisterDelayMs;
   private boolean flushOnPeriod = false; // true if period elapsed
   private boolean finished = false; // true if container finished
-  private boolean unregister = false; // unregister
   private Timer timer; // lazily initialized
 
   /**
    * Simple metrics cache to help prevent re-registrations.
    */
   protected final static Map<ContainerId, ContainerMetrics>
-      usageMetrics = new HashMap<ContainerId, ContainerMetrics>();
+      usageMetrics = new HashMap<>();
+  // Create a timer to unregister container metrics,
+  // whose associated thread run as a daemon.
+  private final static Timer unregisterContainerMetricsTimer =
+      new Timer("Container metrics unregistration", true);
 
   ContainerMetrics(
-      MetricsSystem ms, ContainerId containerId, long flushPeriodMs) {
+      MetricsSystem ms, ContainerId containerId, long flushPeriodMs,
+      long delayMs) {
     this.recordInfo =
         info(sourceName(containerId), RECORD_INFO.description());
     this.registry = new MetricsRegistry(recordInfo);
     this.metricsSystem = ms;
     this.containerId = containerId;
     this.flushPeriodMs = flushPeriodMs;
+    this.unregisterDelayMs = delayMs < 0 ? 0 : delayMs;
     scheduleTimerTaskIfRequired();
 
     this.pMemMBsStat = registry.newStat(
@@ -148,17 +154,18 @@ public class ContainerMetrics implements MetricsSource {
   }
 
   public static ContainerMetrics forContainer(
-      ContainerId containerId, long flushPeriodMs) {
+      ContainerId containerId, long flushPeriodMs, long delayMs) {
     return forContainer(
-        DefaultMetricsSystem.instance(), containerId, flushPeriodMs);
+        DefaultMetricsSystem.instance(), containerId, flushPeriodMs, delayMs);
   }
 
   synchronized static ContainerMetrics forContainer(
-      MetricsSystem ms, ContainerId containerId, long flushPeriodMs) {
+      MetricsSystem ms, ContainerId containerId, long flushPeriodMs,
+      long delayMs) {
     ContainerMetrics metrics = usageMetrics.get(containerId);
     if (metrics == null) {
-      metrics = new ContainerMetrics(
-          ms, containerId, flushPeriodMs).tag(RECORD_INFO, containerId);
+      metrics = new ContainerMetrics(ms, containerId, flushPeriodMs,
+          delayMs).tag(RECORD_INFO, containerId);
 
       // Register with the MetricsSystems
       if (ms != null) {
@@ -172,22 +179,19 @@ public class ContainerMetrics implements MetricsSource {
     return metrics;
   }
 
+  synchronized static void unregisterContainerMetrics(ContainerMetrics cm) {
+    cm.metricsSystem.unregisterSource(cm.recordInfo.name());
+    usageMetrics.remove(cm.containerId);
+  }
+
   @Override
   public synchronized void getMetrics(MetricsCollector collector, boolean all) {
     //Container goes through registered -> finished -> unregistered.
-    if (unregister) {
-      metricsSystem.unregisterSource(recordInfo.name());
-      usageMetrics.remove(containerId);
-      return;
-    }
-
     if (finished || flushOnPeriod) {
       registry.snapshot(collector.addRecord(registry.info()), all);
     }
 
-    if (finished) {
-      this.unregister = true;
-    } else if (flushOnPeriod) {
+    if (!finished && flushOnPeriod) {
       flushOnPeriod = false;
       scheduleTimerTaskIfRequired();
     }
@@ -199,16 +203,23 @@ public class ContainerMetrics implements MetricsSource {
       timer.cancel();
       timer = null;
     }
+    scheduleTimerTaskForUnregistration();
   }
 
   public void recordMemoryUsage(int memoryMBs) {
-    this.pMemMBsStat.add(memoryMBs);
+    if (memoryMBs >= 0) {
+      this.pMemMBsStat.add(memoryMBs);
+    }
   }
 
   public void recordCpuUsage(
       int totalPhysicalCpuPercent, int milliVcoresUsed) {
-    this.cpuCoreUsagePercent.add(totalPhysicalCpuPercent);
-    this.milliVcoresUsed.add(milliVcoresUsed);
+    if (totalPhysicalCpuPercent >=0) {
+      this.cpuCoreUsagePercent.add(totalPhysicalCpuPercent);
+    }
+    if (milliVcoresUsed >= 0) {
+      this.milliVcoresUsed.add(milliVcoresUsed);
+    }
   }
 
   public void recordProcessId(String processId) {
@@ -233,6 +244,7 @@ public class ContainerMetrics implements MetricsSource {
       if (timer == null) {
         this.timer = new Timer("Metrics flush checker", true);
       }
+
       TimerTask timerTask = new TimerTask() {
         @Override
         public void run() {
@@ -243,7 +255,18 @@ public class ContainerMetrics implements MetricsSource {
           }
         }
       };
+
       timer.schedule(timerTask, flushPeriodMs);
     }
+  }
+
+  private void scheduleTimerTaskForUnregistration() {
+    TimerTask timerTask = new TimerTask() {
+      @Override
+      public void run() {
+        ContainerMetrics.unregisterContainerMetrics(ContainerMetrics.this);
+      }
+    };
+    unregisterContainerMetricsTimer.schedule(timerTask, unregisterDelayMs);
   }
 }

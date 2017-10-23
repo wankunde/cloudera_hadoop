@@ -1,7 +1,7 @@
 From 451ac9f566a9cb0815349c10a4c8b370ca07de25 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 18 Jan 2013 00:43:28 +0000
-Subject: [PATCH 008/924] MR1: MAPREDUCE-4923. Add toString method to
+Subject: [PATCH 0008/2639] MR1: MAPREDUCE-4923. Add toString method to
  TaggedInputSplit. (sandyr via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1@1434995 13f79535-47bb-0310-9956-ffa450edef68

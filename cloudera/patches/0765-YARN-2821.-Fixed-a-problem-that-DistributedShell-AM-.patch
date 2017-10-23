@@ -1,9 +1,9 @@
-From e7fdbbd23ed9719ecc06f9e2822f06f011316caf Mon Sep 17 00:00:00 2001
+From 82c9bae75d14a62f749470a8fe8395088d5f8495 Mon Sep 17 00:00:00 2001
 From: Jian He <jianhe@apache.org>
 Date: Tue, 19 May 2015 14:20:31 -0700
-Subject: [PATCH 765/924] YARN-2821. Fixed a problem that DistributedShell AM
- may hang if restarted. Contributed by Varun Vasudev
- (cherry picked from commit
+Subject: [PATCH 0765/2639] YARN-2821. Fixed a problem that DistributedShell
+ AM may hang if restarted. Contributed by Varun
+ Vasudev (cherry picked from commit
  7438966586f1896ab3e8b067d47a4af28a894106)
 
 (cherry picked from commit adb90c7f52be4c443a1050b2bfcbcb5cdf8542f5)
@@ -13,7 +13,6 @@ Conflicts:
 	hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-distributedshell/src/test/java/org/apache/hadoop/yarn/applications/distributedshell/TestDSAppMaster.java
 
 Change-Id: If103bc55c502b10f1784cbe640e71e8f1bd5754c
-(cherry picked from commit 82c9bae75d14a62f749470a8fe8395088d5f8495)
 ---
  .../pom.xml                                        |    5 +
  .../distributedshell/ApplicationMaster.java        |   57 ++++++-
@@ -22,7 +21,7 @@ Change-Id: If103bc55c502b10f1784cbe640e71e8f1bd5754c
  create mode 100644 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-distributedshell/src/test/java/org/apache/hadoop/yarn/applications/distributedshell/TestDSAppMaster.java
 
 diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-distributedshell/pom.xml b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-distributedshell/pom.xml
-index 0c9bc17..a01a508 100644
+index 6967173..0b0c5ca 100644
 --- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-distributedshell/pom.xml
 +++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-distributedshell/pom.xml
 @@ -134,6 +134,11 @@

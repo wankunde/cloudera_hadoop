@@ -1,7 +1,7 @@
 From 57afd074c38e1c91dd726e80f04c5dd4fb460f14 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Wed, 6 Feb 2013 12:34:43 -0800
-Subject: [PATCH 029/924] MR1: MAPREDUCE-4977. Documentation for pluggable
+Subject: [PATCH 0029/2639] MR1: MAPREDUCE-4977. Documentation for pluggable
  sort
 
   Reason: backport, new feature

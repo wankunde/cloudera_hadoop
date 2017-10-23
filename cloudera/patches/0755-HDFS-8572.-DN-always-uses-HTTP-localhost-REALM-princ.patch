@@ -1,7 +1,7 @@
-From 78bdcda8ea4d0579f0035fd86577e8e66f3cc560 Mon Sep 17 00:00:00 2001
+From 964a4ed50b8d244c06a4073efa81742bd0fa0cd4 Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Thu, 11 Jun 2015 18:53:29 -0700
-Subject: [PATCH 755/924] HDFS-8572. DN always uses HTTP/localhost@REALM
+Subject: [PATCH 0755/2639] HDFS-8572. DN always uses HTTP/localhost@REALM
  principals in SPNEGO. Contributed by Haohui Mai.
 
 (cherry picked from commit f1ee2eaf860a120d6d3749900fb5e6aa4086026f)

@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
+    .NodeAddedSchedulerEvent;
+import org.junit.Assert;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,7 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class FairSchedulerTestBase {
   public final static String TEST_DIR =
@@ -64,10 +69,18 @@ public class FairSchedulerTestBase {
   protected Configuration conf;
   protected FairScheduler scheduler;
   protected ResourceManager resourceManager;
+  public static final float TEST_RESERVATION_THRESHOLD = 0.09f;
+  private static final int SLEEP_DURATION = 10;
+  private static final int SLEEP_RETRIES = 1000;
+
+  /**
+   * The list of nodes added to the cluster using the {@link #addNode} method.
+   */
+  protected final List<RMNode> rmNodes = new ArrayList<>();
 
   // Helper methods
   protected Configuration createConfiguration() {
-    Configuration conf = new YarnConfiguration();
+    conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
         ResourceScheduler.class);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
@@ -75,7 +88,13 @@ public class FairSchedulerTestBase {
         1024);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 10240);
     conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, false);
+    conf.setLong(FairSchedulerConfiguration.UPDATE_INTERVAL_MS, 10);
     conf.setFloat(FairSchedulerConfiguration.PREEMPTION_THRESHOLD, 0f);
+
+    conf.setFloat(
+        FairSchedulerConfiguration
+           .RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE,
+        TEST_RESERVATION_THRESHOLD);
     return conf;
   }
 
@@ -164,6 +183,7 @@ public class FairSchedulerTestBase {
         .put(id.getApplicationId(), rmApp);
 
     scheduler.allocate(id, ask, new ArrayList<ContainerId>(), null, null);
+    scheduler.update();
     return id;
   }
   
@@ -212,6 +232,7 @@ public class FairSchedulerTestBase {
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ask.add(request);
     scheduler.allocate(attId, ask, new ArrayList<ContainerId>(), null, null);
+    scheduler.update();
   }
 
   protected void createApplicationWithAMResource(ApplicationAttemptId attId,
@@ -245,5 +266,36 @@ public class FairSchedulerTestBase {
     resourceManager.getRMContext().getRMApps()
         .put(attemptId.getApplicationId(), app);
     return app;
+  }
+
+  protected void checkAppConsumption(FSAppAttempt app, Resource resource)
+      throws InterruptedException {
+    for (int i = 0; i < SLEEP_RETRIES; i++) {
+      if (Resources.equals(resource, app.getCurrentConsumption())) {
+        break;
+      } else {
+        Thread.sleep(SLEEP_DURATION);
+      }
+    }
+
+    // available resource
+    Assert.assertEquals(resource.getMemory(),
+        app.getCurrentConsumption().getMemory());
+    Assert.assertEquals(resource.getVirtualCores(),
+        app.getCurrentConsumption().getVirtualCores());
+  }
+
+  /**
+   * Add a node to the cluster and track the nodes in {@link #rmNodes}
+   * @param memory memory capacity of the node
+   * @param vcores cpu capacity of the node
+   */
+  protected void addNode(int memory, int vcores) {
+    int id = rmNodes.size() + 1;
+    RMNode node =
+        MockNodes.newNodeInfo(1, Resources.createResource(memory, vcores), id,
+            "127.0.0." + id);
+    scheduler.handle(new NodeAddedSchedulerEvent(node));
+    rmNodes.add(node);
   }
 }

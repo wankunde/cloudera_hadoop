@@ -1,7 +1,7 @@
 From 3a6a277691e4618f33165ee3c0d48eed5b5a2490 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Thu, 30 May 2013 11:43:58 -0700
-Subject: [PATCH 072/924] MR1: CLOUDERA-BUILD. Job History search for
+Subject: [PATCH 0072/2639] MR1: CLOUDERA-BUILD. Job History search for
  non-existent dates results in error
 
 Reason: Customer request/ Bug fix

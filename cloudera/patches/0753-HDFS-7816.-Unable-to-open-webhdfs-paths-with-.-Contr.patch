@@ -1,7 +1,7 @@
-From 1d902cff49f5daa9350accd21ced6641f7f76338 Mon Sep 17 00:00:00 2001
+From a3b5c2331ea241b6100eaed9673923fb0b22a9e1 Mon Sep 17 00:00:00 2001
 From: Kihwal Lee <kihwal@apache.org>
 Date: Thu, 19 Mar 2015 08:01:01 -0500
-Subject: [PATCH 753/924] HDFS-7816. Unable to open webhdfs paths with "+".
+Subject: [PATCH 0753/2639] HDFS-7816. Unable to open webhdfs paths with "+".
  Contributed by Haohui Mai
 
 (cherry picked from commit e79be0ee123d05104eb34eb854afcf9fa78baef2)

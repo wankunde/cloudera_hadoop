@@ -1,9 +1,9 @@
 From 258ffaa4d2bd79b9766c57b750c95cf20dcb65ee Mon Sep 17 00:00:00 2001
 From: Haohui Mai <wheat9@apache.org>
 Date: Tue, 4 Nov 2014 17:52:03 -0800
-Subject: [PATCH 237/924] HADOOP-11230. Add missing dependency of bouncycastle
- for kms, httpfs, hdfs, MR and YARN. Contributed by
- Robert Kanter.
+Subject: [PATCH 0237/2639] HADOOP-11230. Add missing dependency of
+ bouncycastle for kms, httpfs, hdfs, MR and YARN.
+ Contributed by Robert Kanter.
 
 (cherry picked from commit fa92b40f0950381b99160c77d295cc997e3d2e6c)
 
