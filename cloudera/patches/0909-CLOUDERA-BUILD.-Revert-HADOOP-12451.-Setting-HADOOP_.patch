@@ -1,0 +1,34 @@
+From 58690463634a56c4807ae7ae46eeb80666b9d258 Mon Sep 17 00:00:00 2001
+From: Robert Kanter <rkanter@cloudera.com>
+Date: Tue, 6 Oct 2015 17:35:23 -0700
+Subject: [PATCH 909/924] CLOUDERA-BUILD. Revert "HADOOP-12451. Setting
+ HADOOP_HOME explicitly should be allowed. (kasha)"
+
+This reverts commit a73a6ff1a2021c70d08d7cd324496243aba8d9aa.
+
+Change-Id: I9d2a6dd46255ff1d6e871154cfaa40557828597c
+---
+ .../hadoop-common/src/main/bin/hadoop-config.sh    |    7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh b/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh
+index c813e7f..15e7afa 100644
+--- a/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh
++++ b/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh
+@@ -233,11 +233,8 @@ TOOL_PATH="${TOOL_PATH:-$HADOOP_PREFIX/share/hadoop/tools/lib/*}"
+ 
+ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
+ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
+-
+-if [ "$HADOOP_HOME" = "" ]; then
+-  HADOOP_HOME=$HADOOP_PREFIX
+-fi
+-if [ "$cygwin" = true ]; then
++HADOOP_HOME=$HADOOP_PREFIX
++if $cygwin; then
+   HADOOP_HOME=$(cygpath -w "$HADOOP_HOME" 2>/dev/null)
+ fi
+ export HADOOP_HOME
+-- 
+1.7.9.5
+
