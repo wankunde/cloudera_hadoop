@@ -48,6 +48,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
   <repositories>
     <repository>
+      <id>ali.repo</id>
+      <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
+      <name>Ali Repositories</name>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+   </repository>
+   <repository>   
       <id>cdh.repo</id>
       <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
       <name>Cloudera Repositories</name>
@@ -206,9 +214,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <requireMavenVersion>
               <version>[3.0.2,)</version>
             </requireMavenVersion>
-            <requireJavaVersion>
-              <version>[${javaVersion}.0,${javaVersion}.1000}]</version>
-            </requireJavaVersion>
           </rules>
         </configuration>
         <executions>
