@@ -42,7 +42,7 @@
     <profile>
       <id>jdk1.7</id>
       <activation>
-        <jdk>1.7</jdk>
+        <activeByDefault>true</activeByDefault>
       </activation>
       <dependencies>
         <dependency>
