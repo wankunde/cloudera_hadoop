@@ -77,6 +77,9 @@ abstract public class FSOutputSummer extends OutputStream {
   /** Write one byte */
   @Override
   public synchronized void write(int b) throws IOException {
+    if(count == buf.length) {
+      flushBuffer();
+    }
     buf[count++] = (byte)b;
     if(count == buf.length) {
       flushBuffer();
