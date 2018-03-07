@@ -297,7 +297,12 @@ public class TimelineClientImpl extends TimelineClient {
       return new TimelinePutResponse();
     }
     TimelineEntities entitiesContainer = new TimelineEntities();
-    entitiesContainer.addEntities(Arrays.asList(entities));
+    for (TimelineEntity entity : entities) {
+      if (entity.getEntityId() == null || entity.getEntityType() == null) {
+        throw new YarnException("Incomplete entity without entity id/type");
+      }
+      entitiesContainer.addEntity(entity);
+    }
     ClientResponse resp = doPosting(entitiesContainer, null);
     return resp.getEntity(TimelinePutResponse.class);
   }
