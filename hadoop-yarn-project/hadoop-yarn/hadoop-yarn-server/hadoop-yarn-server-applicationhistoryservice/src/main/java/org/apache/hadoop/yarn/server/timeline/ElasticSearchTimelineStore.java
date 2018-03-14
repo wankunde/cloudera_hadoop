@@ -1,25 +1,32 @@
 package org.apache.hadoop.yarn.server.timeline;
 
-import com.google.gson.*;
-import org.apache.commons.logging.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.net.*;
-import org.apache.hadoop.service.*;
+import com.google.gson.Gson;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timeline.*;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.search.*;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.transport.*;
-import org.elasticsearch.common.settings.*;
-import org.elasticsearch.common.transport.*;
-import org.elasticsearch.index.query.*;
-import org.elasticsearch.search.*;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.sort.SortBuilder;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * Created by wankun on 2018/2/6.
@@ -48,7 +55,8 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
 
   private BlockingQueue<TimelineDomain> esDomains = new LinkedBlockingDeque<>();
 
-  private Timer timer;
+  private Thread entityPoster;
+  private Thread domainPoster;
 
   public ElasticSearchTimelineStore() {
     super(ElasticSearchTimelineStore.class.getName());
@@ -64,84 +72,121 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
     }
     ES_CLUSTER_NAME = conf.get(TIMELINE_SERVICE_CLUSTER_NAME);
 
-    TimerTask task = new TimerTask() {
+    entityPoster = new Thread(new Runnable() {
       @Override
       public void run() {
         Gson gson = new Gson();
         // Deal with entity
         TimelineEntity entity;
         int i = 0;
+        long ts1 = System.currentTimeMillis();
         BulkRequestBuilder bulkRequest = ESUtil.getEsClient(ES_CLUSTER_NAME, ES_NODES).prepareBulk();
-        while ((entity = esEntities.poll()) != null) {
-          String docId = entity.getEntityType() + "_" + entity.getEntityId();
+        while (true) {
+          try {
+            entity = esEntities.take();
+            String docId = entity.getEntityType() + "_" + entity.getEntityId();
 
-          // Just for es mapping
-          if ("TEZ_APPLICATION".equals(entity.getEntityType())) {
-            Map<String, String> config = (Map<String, String>) entity.getOtherInfo().get("config");
-            Map<String, String> newConfig = new HashMap<>(config.size());
-            for (String key : config.keySet()) {
-              newConfig.put(key.replaceAll("\\.", "__"), config.get(key));
-            }
-            entity.getOtherInfo().put("config", newConfig);
-          }
-
-          String json = gson.toJson(entity);
-          bulkRequest.add(new UpdateRequest(ES_INDEX, ES_TYPE_ENTITY, docId).doc(json).upsert(json));
-          // bulkRequest.add(new IndexRequest(ES_INDEX, ES_TYPE_ENTITY, docId).source(gson.toJson(entity)));
-          i++;
-          if (i >= ES_BATCH_SIZE) {
-            BulkResponse bulkResponse = bulkRequest.get();
-            if (bulkResponse.hasFailures()) {
-              LOG.error("Es Exception:" + bulkResponse.buildFailureMessage());
+            // Just for es mapping
+            if ("TEZ_APPLICATION".equals(entity.getEntityType())) {
+              Map<String, String> config = (Map<String, String>) entity.getOtherInfo().get("config");
+              Map<String, String> newConfig = new HashMap<>(config.size());
+              for (String key : config.keySet()) {
+                newConfig.put(key.replaceAll("\\.", "__"), config.get(key));
+              }
+              entity.getOtherInfo().put("config", newConfig);
+              if (entity.getStartTime() == null)
+                entity.setStartTime(System.currentTimeMillis());
             }
 
-            i = 0;
-            bulkRequest = ESUtil.getEsClient(ES_CLUSTER_NAME, ES_NODES).prepareBulk();
-          }
-        }
-        if (i > 0) {
-          BulkResponse bulkResponse = bulkRequest.get();
-          if (bulkResponse.hasFailures()) {
-            LOG.error("Es Exception:" + bulkResponse.buildFailureMessage());
-          }
-          i = 0;
-          bulkRequest = ESUtil.getEsClient(ES_CLUSTER_NAME, ES_NODES).prepareBulk();
-        }
+            String json = gson.toJson(entity);
+            bulkRequest.add(new UpdateRequest(ES_INDEX, ES_TYPE_ENTITY, docId).doc(json).upsert(json));
+            LOG.debug("add entity id : " + docId);
+            if ("YARN_APPLICATION".equals(entity.getEntityType()))
+              LOG.info("YARN_APPLICATION : " + json);
+            i++;
+            if (i >= ES_BATCH_SIZE || System.currentTimeMillis() > (ts1 + 10000)) {
+              long ts2 = System.currentTimeMillis();
+              BulkResponse bulkResponse = bulkRequest.get();
+              if (bulkResponse.hasFailures()) {
+                LOG.error("Es Exception:" + bulkResponse.buildFailureMessage());
+              }
+              long ts3 = System.currentTimeMillis();
+              LOG.info("entity poster : prepare " + (ts2 - ts1) + ", post " + (ts3 - ts2));
 
-        // Deal with domain
-        TimelineDomain domain;
-        while ((domain = esDomains.poll()) != null) {
-          String json = gson.toJson(domain);
-          bulkRequest.add(new UpdateRequest(ES_INDEX, ES_TYPE_DOMAIN, domain.getId()).doc(json).upsert(json));
-          i++;
-          if (i >= ES_BATCH_SIZE) {
-            BulkResponse bulkResponse = bulkRequest.get();
-            if (bulkResponse.hasFailures()) {
-              LOG.error("Es Exception:" + bulkResponse.buildFailureMessage());
+              ts1 = System.currentTimeMillis();
+              i = 0;
+              bulkRequest = ESUtil.getEsClient(ES_CLUSTER_NAME, ES_NODES).prepareBulk();
             }
-
-            i = 0;
-            bulkRequest = ESUtil.getEsClient(ES_CLUSTER_NAME, ES_NODES).prepareBulk();
-          }
-        }
-        if (i > 0) {
-          BulkResponse bulkResponse = bulkRequest.get();
-          if (bulkResponse.hasFailures()) {
-            LOG.error("Es Exception:" + bulkResponse.buildFailureMessage());
+          } catch (InterruptedException e) {
+            LOG.error("InterruptedException Exception:" + e);
           }
         }
       }
-    };
-    timer = new Timer();
-    long intevalPeriod = 1 * 1000;
-    // schedules the task to be run in an interval
-    timer.scheduleAtFixedRate(task, 0, intevalPeriod);
+    });
+
+
+    entityPoster.start();
+    domainPoster = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        Gson gson = new Gson();
+
+        // Deal with domain
+        TimelineDomain domain;
+        int i = 0;
+        long ts1 = System.currentTimeMillis();
+        BulkRequestBuilder bulkRequest = ESUtil.getEsClient(ES_CLUSTER_NAME, ES_NODES).prepareBulk();
+        while (true) {
+          try {
+            domain = esDomains.take();
+            String json = gson.toJson(domain);
+            bulkRequest.add(new UpdateRequest(ES_INDEX, ES_TYPE_DOMAIN, domain.getId()).doc(json).upsert(json));
+            i++;
+            if (i >= ES_BATCH_SIZE || System.currentTimeMillis() > (ts1 + 10000)) {
+              long ts2 = System.currentTimeMillis();
+              BulkResponse bulkResponse = bulkRequest.get();
+              if (bulkResponse.hasFailures()) {
+                LOG.error("Es Exception:" + bulkResponse.buildFailureMessage());
+              }
+              long ts3 = System.currentTimeMillis();
+              LOG.info("domain poster : prepare " + (ts2 - ts1) + ", post " + (ts3 - ts2));
+
+              ts1 = System.currentTimeMillis();
+              i = 0;
+              bulkRequest = ESUtil.getEsClient(ES_CLUSTER_NAME, ES_NODES).prepareBulk();
+            }
+          } catch (InterruptedException e) {
+            LOG.error("InterruptedException Exception:" + e);
+          }
+
+        }
+      }
+    });
+    domainPoster.start();
+
+
     super.serviceInit(conf);
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    timer.cancel();
+    try {
+      entityPoster.interrupt();
+    } catch (Exception e) {
+      try {
+        entityPoster.join();
+      } catch (Exception e2) {
+      }
+    }
+
+    try {
+      domainPoster.interrupt();
+    } catch (Exception e) {
+      try {
+        domainPoster.join();
+      } catch (Exception e2) {
+      }
+    }
 
     super.serviceStop();
   }
@@ -191,14 +236,21 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
     return null;
   }
 
-  private SearchResponse searchEsEntity(BoolQueryBuilder queryBuilder, String[] fields) {
+  private SearchResponse searchEsEntity(BoolQueryBuilder queryBuilder, String[] fields, Long limit) {
     SearchRequestBuilder searchRequestBuilder = ESUtil.getEsClient(ES_CLUSTER_NAME, ES_NODES)
             .prepareSearch(ES_INDEX)
             .setTypes(ES_TYPE_ENTITY)
             .setQuery(queryBuilder);
 
+    SortBuilder sort = SortBuilders.fieldSort("startTime")
+            .order(SortOrder.DESC)
+            .unmappedType("Long");
+
     if (fields != null)
       searchRequestBuilder.setFetchSource(fields, null);
+    if (limit != null)
+      searchRequestBuilder.setSize(limit.intValue());
+    searchRequestBuilder.addSort(sort);
 
     return searchRequestBuilder.get();
   }
@@ -277,7 +329,7 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
     if (windowEnd != null)
       queryBuilder.filter(QueryBuilders.rangeQuery("starttime").lte(windowEnd));
     if (fromId != null)
-      queryBuilder.must(QueryBuilders.termQuery("entityId", fromId));
+      queryBuilder.filter(QueryBuilders.rangeQuery("entityId").lt(fromId));
     // TODO fromTs 这个是查询哪个字段？
     if (primaryFilter != null) {
       queryBuilder.must(QueryBuilders.termQuery("primaryFilters." + primaryFilter.getName(),
@@ -285,13 +337,16 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
     }
     if (secondaryFilters != null) {
       for (NameValuePair filter : secondaryFilters) {
-        queryBuilder.must(QueryBuilders.termQuery("primaryFilters." + filter.getName(),
-                filter.getValue()));
+        if ("status".equals(filter.getName()) && "RUNNING".equals(filter.getValue()))
+          queryBuilder.mustNot(QueryBuilders.existsQuery("primaryFilters.status"));
+        else
+          queryBuilder.filter(QueryBuilders.termQuery("primaryFilters." + filter.getName(),
+                  filter.getValue()));
       }
     }
 
 //    String[] fields = esEntityFields(fieldsToRetrieve);
-    SearchResponse response = searchEsEntity(queryBuilder, null);
+    SearchResponse response = searchEsEntity(queryBuilder, null, limit);
 
     TimelineEntities timelineEntities = new TimelineEntities();
     for (SearchHit hit : response.getHits().hits()) {
@@ -312,8 +367,9 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
     if (entityType != null)
       queryBuilder.must(QueryBuilders.termQuery("entityType", entityType));
 
+    LOG.debug("getEntity queryBuilder : " + queryBuilder);
 //    String[] fields = esEntityFields(fieldsToRetrieve);
-    SearchResponse response = searchEsEntity(queryBuilder, null);
+    SearchResponse response = searchEsEntity(queryBuilder, null, 1l);
 
     if (response.getHits().totalHits() > 0) {
       SearchHit[] hits = response.getHits().hits();
@@ -345,10 +401,15 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
       }
     }
 
+    SortBuilder sort = SortBuilders.fieldSort("startTime")
+            .order(SortOrder.DESC)
+            .unmappedType("Long");
+
     SearchResponse response = ESUtil.getEsClient(ES_CLUSTER_NAME, ES_NODES)
             .prepareSearch(ES_INDEX)
             .setTypes(ES_TYPE_ENTITY)
             .setQuery(queryBuilder)
+            .addSort(sort)
             .setSize(limit.intValue()).get();
 
     TimelineEvents events = new TimelineEvents();
