@@ -887,4 +887,24 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
     return toBePreempted;
   }
+
+  @Override
+  public String toString() {
+    StringBuilder resourceRequests = new StringBuilder();
+    synchronized (this) {
+      for (Priority p : getPriorities()) {
+        for (ResourceRequest r : getResourceRequests(p).values()) {
+          Resource total = Resources.multiply(r.getCapability(), r.getNumContainers());
+          resourceRequests.append("{" + p.getPriority() + ":" + total + "},");
+        }
+      }
+    }
+    if (resourceRequests.length() > 0)
+      resourceRequests.deleteCharAt(resourceRequests.length() - 1);
+
+    return "{name: " + getName() + ",priority: " + priority + ", demand:" + demand
+            + ", consumption:" + getCurrentConsumption() + "{"
+            + ",ResourceWeights:" + resourceWeights + ",ResourceRequests:" + resourceRequests.toString()
+            + ",fairShare:" + fairShare + "}";
+  }
 }
