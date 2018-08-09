@@ -211,20 +211,31 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public Resource assignContainer(FSSchedulerNode node) {
-    Resource assigned = Resources.none();
-
-    // If this queue is over its limit, reject
-    if (!assignContainerPreCheck(node)) {
-      return assigned;
-    }
-
+  public void sortChildren(){
     // Hold the write lock when sorting childQueues
     writeLock.lock();
     try {
       Collections.sort(childQueues, policy.getComparator());
     } finally {
       writeLock.unlock();
+    }
+    readLock.lock();
+    try {
+      for (FSQueue child : childQueues) {
+        child.sortChildren();
+      }
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public Resource assignContainer(FSSchedulerNode node) {
+    Resource assigned = Resources.none();
+
+    // If this queue is over its limit, reject
+    if (!assignContainerPreCheck(node)) {
+      return assigned;
     }
 
     /*

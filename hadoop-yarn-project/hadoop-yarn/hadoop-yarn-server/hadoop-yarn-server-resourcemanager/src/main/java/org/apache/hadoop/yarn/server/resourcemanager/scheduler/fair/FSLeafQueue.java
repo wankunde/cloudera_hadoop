@@ -300,6 +300,17 @@ public class FSLeafQueue extends FSQueue {
   }
 
   @Override
+  public void sortChildren(){
+    Comparator<Schedulable> comparator = policy.getComparator();
+    writeLock.lock();
+    try {
+      Collections.sort(runnableApps, comparator);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  @Override
   public Resource assignContainer(FSSchedulerNode node) {
     Resource assigned = Resources.none();
     if (LOG.isDebugEnabled()) {
@@ -311,13 +322,6 @@ public class FSLeafQueue extends FSQueue {
       return assigned;
     }
 
-    Comparator<Schedulable> comparator = policy.getComparator();
-    writeLock.lock();
-    try {
-      Collections.sort(runnableApps, comparator);
-    } finally {
-      writeLock.unlock();
-    }
     readLock.lock();
     try {
       for (FSAppAttempt sched : runnableApps) {

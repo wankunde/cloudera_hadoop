@@ -314,4 +314,9 @@ public abstract class FSQueue implements Queue, Schedulable {
     // TODO, add implementation for FS
     return null;
   }
+
+  /**
+   * sort children by policy
+   */
+  public abstract void sortChildren();
 }

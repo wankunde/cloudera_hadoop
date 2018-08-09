@@ -143,6 +143,11 @@ public class FairScheduler extends
   // timeout to join when we stop this service
   protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
 
+  @VisibleForTesting
+  // Start sort children thread
+  SortChildrenThread sortChildrenThread;
+  protected final long SORT_CHILDREN_THREAD_SLEEP_MS = 1000;
+
   // Aggregate metrics
   FSQueueMetrics rootMetrics;
   FSOpDurations fsOpDurations;
@@ -298,6 +303,32 @@ public class FairScheduler extends
           LOG.warn("Continuous scheduling thread interrupted. Exiting.", e);
           return;
         }
+      }
+    }
+  }
+
+  class SortChildrenThread extends Thread {
+    private FSParentQueue rootQueue;
+    private FairScheduler scheduler;
+
+    public SortChildrenThread(FSParentQueue rootQueue,FairScheduler scheduler) {
+      this.rootQueue = rootQueue;
+      this.scheduler = scheduler;
+      setDaemon(true);
+      setName("QueueManager sort children thread");
+    }
+
+    @Override
+    public void run() {
+      try {
+        while (true) {
+          synchronized (scheduler) {
+            rootQueue.sortChildren();
+          }
+          Thread.currentThread().sleep(SORT_CHILDREN_THREAD_SLEEP_MS);
+        }
+      } catch (Exception e) {
+        LOG.error("Sort Schdulers Worker Error!",e);
       }
     }
   }
@@ -1362,6 +1393,9 @@ public class FairScheduler extends
         schedulingThread.setName("FairSchedulerContinuousScheduling");
         schedulingThread.setDaemon(true);
       }
+
+      // Start sort children thread
+      sortChildrenThread = new SortChildrenThread(queueMgr.getRootQueue(), this);
     }
 
     allocsLoader.init(conf);
@@ -1385,6 +1419,7 @@ public class FairScheduler extends
       schedulingThread.start();
     }
     allocsLoader.start();
+    sortChildrenThread.start();
   }
 
   @Override
