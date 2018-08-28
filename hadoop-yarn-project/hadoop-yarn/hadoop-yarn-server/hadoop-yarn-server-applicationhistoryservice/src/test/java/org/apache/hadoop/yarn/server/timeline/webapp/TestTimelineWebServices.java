@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter;
+import org.apache.hadoop.yarn.util.*;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.junit.Assert;
@@ -470,6 +471,48 @@ public class TestTimelineWebServices extends JerseyTest {
         .accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    TimelinePutResponse putResposne =
+        response.getEntity(TimelinePutResponse.class);
+    Assert.assertNotNull(putResposne);
+    Assert.assertEquals(0, putResposne.getErrors().size());
+    // verify the entity exists in the store
+    response = r.path("ws").path("v1").path("timeline")
+        .path("test type 1").path("test id 1")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    entity = response.getEntity(TimelineEntity.class);
+    Assert.assertNotNull(entity);
+    Assert.assertEquals("test id 1", entity.getEntityId());
+    Assert.assertEquals("test type 1", entity.getEntityType());
+  }
+
+  @Test
+  public void testPostEntitiesV2() throws Exception {
+    TimelineEntities entities = new TimelineEntities();
+    TimelineEntity entity = new TimelineEntity();
+    entity.setEntityId("test id 1");
+    entity.setEntityType("test type 1");
+    entity.setStartTime(System.currentTimeMillis());
+    entity.setDomainId("domain_id_1");
+    entities.addEntity(entity);
+    byte[] bys = KryoSerializer.serialize(entities);
+    WebResource r = resource();
+    // No owner, will be rejected
+    ClientResponse response = r.path("ws").path("v1").path("timeline").path("entitiesV2")
+        .accept(MediaType.APPLICATION_JSON)
+        .type(MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class, bys);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(ClientResponse.Status.FORBIDDEN,
+        response.getClientResponseStatus());
+
+    response = r.path("ws").path("v1").path("timeline").path("entitiesV2")
+        .queryParam("user.name", "tester")
+        .accept(MediaType.APPLICATION_JSON)
+        .type(MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class, bys);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     TimelinePutResponse putResposne =
         response.getEntity(TimelinePutResponse.class);

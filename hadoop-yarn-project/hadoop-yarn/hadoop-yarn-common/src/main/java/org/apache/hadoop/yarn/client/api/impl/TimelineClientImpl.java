@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.util.*;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -303,7 +304,8 @@ public class TimelineClientImpl extends TimelineClient {
       }
       entitiesContainer.addEntity(entity);
     }
-    ClientResponse resp = doPosting(entitiesContainer, null);
+    byte[] bys = KryoSerializer.serialize(entitiesContainer);
+    ClientResponse resp = doPosting(bys, "entitiesV2");
     return resp.getEntity(TimelinePutResponse.class);
   }
 
@@ -317,7 +319,8 @@ public class TimelineClientImpl extends TimelineClient {
       }
       return;
     }
-    doPosting(domain, "domain");
+    byte[] bys = KryoSerializer.serialize(domain);
+    doPosting(bys, "domainV2");
   }
 
   private ClientResponse doPosting(Object obj, String path) throws IOException, YarnException {
@@ -477,7 +480,7 @@ public class TimelineClientImpl extends TimelineClient {
       return webResource.accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, object);
-    } else if (path.equals("domain")) {
+    } else if (path.equals("domain") || path.equals("entitiesV2") || path.equals("domainV2")) {
       return webResource.path(path).accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .put(ClientResponse.class, object);

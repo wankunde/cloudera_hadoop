@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
+import org.apache.hadoop.yarn.util.*;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -266,6 +267,32 @@ public class TimelineWebServices {
     }
   }
 
+  @POST
+  @Path("/entitiesV2")
+  @Consumes({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
+  public TimelinePutResponse postEntitiesV2(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      byte[] bys) {
+    init(res);
+    UserGroupInformation callerUGI = getUser(req);
+    if (callerUGI == null) {
+      String msg = "The owner of the posted timeline entities is not set";
+      LOG.error(msg);
+      throw new ForbiddenException(msg);
+    }
+    try {
+      TimelineEntities entities = KryoSerializer.deserialize(bys, TimelineEntities.class);
+      return timelineDataManager.postEntities(entities, callerUGI);
+    } catch (BadRequestException bre) {
+      throw bre;
+    } catch (Exception e) {
+      LOG.error("Error putting entities", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   /**
    * Store the given domain into the timeline store, and return the errors
    * that happen during storing.
@@ -286,6 +313,36 @@ public class TimelineWebServices {
     }
     domain.setOwner(callerUGI.getShortUserName());
     try {
+      timelineDataManager.putDomain(domain, callerUGI);
+    } catch (YarnException e) {
+      // The user doesn't have the access to override the existing domain.
+      LOG.error(e.getMessage(), e);
+      throw new ForbiddenException(e);
+    } catch (IOException e) {
+      LOG.error("Error putting domain", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
+    }
+    return new TimelinePutResponse();
+  }
+
+  @PUT
+  @Path("/domainV2")
+  @Consumes({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
+  public TimelinePutResponse putDomainV2(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      byte[] bys) {
+    init(res);
+    UserGroupInformation callerUGI = getUser(req);
+    if (callerUGI == null) {
+      String msg = "The owner of the posted timeline domain is not set";
+      LOG.error(msg);
+      throw new ForbiddenException(msg);
+    }
+    try {
+      TimelineDomain domain = KryoSerializer.deserialize(bys, TimelineDomain.class);
+      domain.setOwner(callerUGI.getShortUserName());
       timelineDataManager.putDomain(domain, callerUGI);
     } catch (YarnException e) {
       // The user doesn't have the access to override the existing domain.
