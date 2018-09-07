@@ -112,6 +112,8 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
               }
               long ts3 = System.currentTimeMillis();
               LOG.info("entity poster : prepare " + (ts2 - ts1) + ", post " + (ts3 - ts2));
+              if ((ts3 - ts2) > 30000 || bulkResponse.hasFailures())
+                ESUtil.transportClient = null;
 
               ts1 = System.currentTimeMillis();
               i = 0;
@@ -150,6 +152,8 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
               }
               long ts3 = System.currentTimeMillis();
               LOG.info("domain poster : prepare " + (ts2 - ts1) + ", post " + (ts3 - ts2));
+              if ((ts3 - ts2) > 30000 || bulkResponse.hasFailures())
+                ESUtil.transportClient = null;
 
               ts1 = System.currentTimeMillis();
               i = 0;
@@ -460,7 +464,7 @@ public class ElasticSearchTimelineStore extends AbstractService implements Timel
   }
 
   static class ESUtil {
-    private static TransportClient transportClient = null;
+    public static TransportClient transportClient = null;
 
     public static TransportClient getEsClient(String clusterName, List<InetSocketAddress> esNodes) {
       return getEsClient(clusterName, esNodes.toArray(new InetSocketAddress[esNodes.size()]));
