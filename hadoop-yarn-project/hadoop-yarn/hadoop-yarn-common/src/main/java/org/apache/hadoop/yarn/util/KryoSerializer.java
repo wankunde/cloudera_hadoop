@@ -23,29 +23,23 @@ import java.io.ByteArrayInputStream;
 import com.esotericsoftware.kryo.*;
 import com.esotericsoftware.shaded.org.objenesis.strategy.*;
 import org.apache.commons.io.output.ByteArrayOutputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import org.apache.hadoop.yarn.api.records.timeline.*;
 
 /**
  * Created by wankun on 2018/8/25.
  */
 public class KryoSerializer {
-  private static final Log LOG = LogFactory.getLog(KryoSerializer.class);
 
   public static ThreadLocal<Kryo> timelineSerializationKryo = new ThreadLocal<Kryo>() {
-    @Override protected synchronized Kryo initialValue() {
+    @Override
+    protected synchronized Kryo initialValue() {
       Kryo kryo = new Kryo();
-      kryo.setClassLoader(Thread.currentThread().getContextClassLoader());
-      kryo.register(TimelineEntities.class);
       kryo.setInstantiatorStrategy(new StdInstantiatorStrategy());
+      kryo.setClassLoader(Thread.currentThread().getContextClassLoader());
       return kryo;
     }
-
-    ;
   };
 
   public static byte[] serialize(Object object) {
@@ -58,8 +52,8 @@ public class KryoSerializer {
     return stream.toByteArray();
   }
 
-  public static <T> T deserialize(byte[] buffer, Class<T> clazz) {
+  public static <T> T deserialize(byte[] payload, Class<T> clazz) {
     return timelineSerializationKryo.get()
-        .readObject(new Input(new ByteArrayInputStream(buffer)), clazz);
+        .readObject(new Input(new ByteArrayInputStream(payload)), clazz);
   }
 }

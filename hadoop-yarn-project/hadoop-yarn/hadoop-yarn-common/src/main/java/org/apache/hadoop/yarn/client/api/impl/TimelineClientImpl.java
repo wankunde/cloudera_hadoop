@@ -41,6 +41,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -305,7 +306,7 @@ public class TimelineClientImpl extends TimelineClient {
       entitiesContainer.addEntity(entity);
     }
     byte[] bys = KryoSerializer.serialize(entitiesContainer);
-    ClientResponse resp = doPosting(bys, "entitiesV2");
+    ClientResponse resp = doPosting(Base64.encodeBase64String(bys), "entitiesV2");
     return resp.getEntity(TimelinePutResponse.class);
   }
 
@@ -320,7 +321,7 @@ public class TimelineClientImpl extends TimelineClient {
       return;
     }
     byte[] bys = KryoSerializer.serialize(domain);
-    doPosting(bys, "domainV2");
+    doPosting(Base64.encodeBase64String(bys), "domainV2");
   }
 
   private ClientResponse doPosting(Object obj, String path) throws IOException, YarnException {

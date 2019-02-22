@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -39,6 +41,7 @@ import javax.servlet.ServletException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
@@ -489,6 +492,60 @@ public class TestTimelineWebServices extends JerseyTest {
   }
 
   @Test
+  public void testSerDesEntities() throws Exception {
+    TimelineEntities entities = new TimelineEntities();
+    TimelineEntity entity = new TimelineEntity();
+    entity.setEntityId("test id 1");
+    entity.setEntityType("test type 1");
+    entity.setStartTime(System.currentTimeMillis());
+    entity.setDomainId("domain_id_1");
+
+    List<TimelineEvent> events = new ArrayList<>();
+    TimelineEvent event1 = new TimelineEvent();
+    event1.setTimestamp(System.currentTimeMillis());
+    event1.setEventType("TEST1");
+    event1.addEventInfo("test_event_key","test_event_value");
+    events.add(event1);
+    TimelineEvent event2 = new TimelineEvent();
+    event2.setTimestamp(System.currentTimeMillis());
+    event2.setEventType("TEST2");
+    event2.addEventInfo("test_event_key_2","test_event_value_2");
+    events.add(event2);
+    entity.setEvents(events);
+
+    entities.addEntity(entity);
+
+    // serialization
+    byte[] payload = KryoSerializer.serialize(entities);
+    String serial = Base64.encodeBase64String(payload);
+
+    // deserialization
+    byte[] payload2 = Base64.decodeBase64(serial);
+    assertArrayEquals(payload, payload2);
+    TimelineEntities entities2 = KryoSerializer.deserialize(payload2, TimelineEntities.class);
+    List<TimelineEntity> list = entities2.getEntities();
+    assertEquals(entity, list.get(0));
+  }
+
+  @Test
+  public void testSerDesDomain() throws Exception {
+    TimelineDomain domain = new TimelineDomain();
+    domain.setId("test_domain_id");
+    domain.setDescription("test_description");
+    domain.setOwner("test_owner");
+    // serialization
+    byte[] payload = KryoSerializer.serialize(domain);
+    String serial = Base64.encodeBase64String(payload);
+
+    // deserialization
+    byte[] payload2 = Base64.decodeBase64(serial);
+    TimelineDomain domain2 = KryoSerializer.deserialize(payload2, TimelineDomain.class);
+    assertEquals(domain.getId(), domain2.getId());
+    assertEquals(domain.getDescription(), domain2.getDescription());
+    assertEquals(domain.getOwner(), domain2.getOwner());
+  }
+
+  @Test
   public void testPostEntitiesV2() throws Exception {
     TimelineEntities entities = new TimelineEntities();
     TimelineEntity entity = new TimelineEntity();
@@ -503,7 +560,7 @@ public class TestTimelineWebServices extends JerseyTest {
     ClientResponse response = r.path("ws").path("v1").path("timeline").path("entitiesV2")
         .accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class, bys);
+        .post(ClientResponse.class, Base64.encodeBase64String(bys));
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     assertEquals(ClientResponse.Status.FORBIDDEN,
         response.getClientResponseStatus());
@@ -512,7 +569,7 @@ public class TestTimelineWebServices extends JerseyTest {
         .queryParam("user.name", "tester")
         .accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class, bys);
+        .post(ClientResponse.class, Base64.encodeBase64String(bys));
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     TimelinePutResponse putResposne =
         response.getEntity(TimelinePutResponse.class);
@@ -524,10 +581,8 @@ public class TestTimelineWebServices extends JerseyTest {
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    entity = response.getEntity(TimelineEntity.class);
-    Assert.assertNotNull(entity);
-    Assert.assertEquals("test id 1", entity.getEntityId());
-    Assert.assertEquals("test type 1", entity.getEntityType());
+    TimelineEntity entity2 = response.getEntity(TimelineEntity.class);
+    Assert.assertEquals(entity, entity2);
   }
 
   @Test
