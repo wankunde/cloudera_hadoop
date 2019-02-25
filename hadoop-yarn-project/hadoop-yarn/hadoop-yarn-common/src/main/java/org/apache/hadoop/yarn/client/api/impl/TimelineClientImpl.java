@@ -305,8 +305,7 @@ public class TimelineClientImpl extends TimelineClient {
       }
       entitiesContainer.addEntity(entity);
     }
-    byte[] bys = KryoSerializer.serialize(entitiesContainer);
-    ClientResponse resp = doPosting(Base64.encodeBase64String(bys), "entitiesV2");
+    ClientResponse resp = doPosting(entitiesContainer, "entities");
     return resp.getEntity(TimelinePutResponse.class);
   }
 
@@ -320,8 +319,7 @@ public class TimelineClientImpl extends TimelineClient {
       }
       return;
     }
-    byte[] bys = KryoSerializer.serialize(domain);
-    doPosting(Base64.encodeBase64String(bys), "domainV2");
+    doPosting(domain, "domain");
   }
 
   private ClientResponse doPosting(Object obj, String path) throws IOException, YarnException {
